@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspired</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+  :root {
+    --bg-deep: #111d09;
+    --bg-mid: #182610;
+    --bg-card: #1f3014;
+    --bg-panel: #141f0c;
+    --border: rgba(110,160,50,0.28);
+    --border-bright: rgba(140,200,75,0.65);
+    --gold: #8fc44a;
+    --gold-light: #b0dc6a;
+    --gold-dim: #4a7020;
+    --red: #c95050;
+    --red-light: #e07070;
+    --green: #5ab840;
+    --green-light: #78d458;
+    --blue: #4a90c0;
+    --blue-light: #6aaee0;
+    --purple: #8060b8;
+    --purple-light: #a080d8;
+    --text: #e8f2d0;
+    --text-dim: #88a860;
+    --text-muted: #3a5025;
+    --legendary: #d4a832;
+    --common: #6a8850;
+    --radius: 12px;
+    --radius-sm: 6px;
+    --glow-gold: 0 0 20px rgba(143,196,74,0.35);
+    --glow-red: 0 0 20px rgba(201,80,80,0.4);
+    --glow-green: 0 0 20px rgba(90,184,64,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Lora', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== LOBBY ===== */
+  #lobby {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: 
+                radial-gradient(ellipse at 50% -10%, rgba(232,200,64,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse at 20% 80%, rgba(90,184,64,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 90%, rgba(74,144,192,0.06) 0%, transparent 45%),
+                linear-gradient(180deg, #0e1a08 0%, #111d09 40%, #141f0c 100%);
+  }
+
+  .lobby-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 700;
+    color: var(--gold-light);
+    text-align: center;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 40px rgba(201,168,76,0.5), 0 2px 4px rgba(0,0,0,0.8);
+    margin-bottom: 0.3rem;
+  }
+
+  .lobby-subtitle {
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .lobby-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .lobby-box h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .input-group {
+    margin-bottom: 1rem;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #4a8e28, #6ab83a, #4a8e28);
+    color: #0e1e06;
+    box-shadow: 0 4px 16px rgba(90,184,58,0.35);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(90,184,58,0.5);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--gold);
+    margin-top: 0.75rem;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(201,168,76,0.08);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .game-code-display {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+    margin: 1rem 0;
+  }
+
+  .game-code-display .code {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--gold-light);
+    letter-spacing: 0.3em;
+    text-shadow: var(--glow-gold);
+  }
+
+  .game-code-display .code-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  .status-msg {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-top: 1rem;
+    min-height: 1.5rem;
+  }
+
+  .status-msg.error { color: var(--red-light); }
+  .status-msg.success { color: var(--green-light); }
+
+  /* ===== GAME BOARD ===== */
+  #game { display: none; min-height: 100vh; flex-direction: column; }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .game-title-small {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--gold-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .round-info {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .round-info span {
+    color: var(--gold);
+  }
+
+  /* Timer */
+  .timer-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+
+  .timer-bar {
+    height: 100%;
+    background: var(--gold);
+    transition: width 1s linear, background 0.5s;
+    box-shadow: var(--glow-gold);
+  }
+
+  .timer-bar.urgent { background: var(--red); box-shadow: var(--glow-red); }
+
+  /* Main board layout */
+  .board {
+    flex: 1;
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
+    gap: 0;
+    padding: 0;
+    min-height: 0;
+  }
+
+  /* Opponent zone */
+  .opponent-zone {
+    padding: 1rem 1.5rem 0.75rem;
+    background: linear-gradient(180deg, rgba(90,184,64,0.05) 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .player-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .hero-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-portrait {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    background: var(--bg-card);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .hero-portrait.you { border-color: var(--green-light); box-shadow: 0 0 16px rgba(76,168,108,0.3); }
+  .hero-portrait.opponent { border-color: var(--red); box-shadow: 0 0 16px rgba(201,76,76,0.3); }
+
+  .hero-info { flex: 1; }
+
+  .hero-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .health-bar-wrap {
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.2rem;
+  }
+
+  .health-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .health-bar.you { background: linear-gradient(90deg, var(--green), var(--green-light)); box-shadow: var(--glow-green); }
+  .health-bar.opponent { background: linear-gradient(90deg, var(--red), var(--red-light)); box-shadow: var(--glow-red); }
+
+  .health-text {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .health-text strong { color: var(--text); }
+
+  .status-tags {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+  }
+
+  .tag {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    font-family: 'Playfair Display', serif;
+    text-transform: uppercase;
+  }
+
+  .tag.blessing { background: rgba(140,76,201,0.2); border: 1px solid rgba(140,76,201,0.5); color: var(--purple-light); }
+  .tag.quest { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.4); color: var(--gold); }
+  .tag.hindered { background: rgba(201,76,76,0.15); border: 1px solid rgba(201,76,76,0.4); color: var(--red-light); }
+  .tag.blocked { background: rgba(76,122,201,0.15); border: 1px solid rgba(76,122,201,0.4); color: var(--blue-light); }
+
+  /* Opponent hand (face down) */
+  .opponent-hand {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .card-back {
+    width: 44px;
+    height: 62px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #1e1e2e, #2a2a3e);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    color: var(--border);
+  }
+
+  /* Arena - played cards this round */
+  .arena {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    position: relative;
+  }
+
+  .arena-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 90px;
+  }
+
+  .arena-label {
+    position: absolute;
+    left: 1.5rem;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .arena-label.top { top: 1rem; }
+  .arena-label.bottom { bottom: 1rem; }
+
+  .arena-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .arena-divider::after {
+    content: '🌿';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-deep);
+    padding: 0 0.75rem;
+    color: var(--border-bright);
+    font-size: 0.9rem;
+  }
+
+  /* Cards */
+  .card {
+    width: 90px;
+    height: 128px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .card:hover:not(.no-hover) {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--gold);
+    box-shadow: var(--glow-gold);
+    z-index: 10;
+  }
+
+  .card.selected {
+    border-color: var(--gold-light);
+    box-shadow: 0 0 0 2px var(--gold), var(--glow-gold);
+    transform: translateY(-8px) scale(1.03);
+    z-index: 20;
+  }
+
+  .card.legendary {
+    border-color: var(--legendary);
+  }
+
+  .card.legendary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(212,168,50,0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .card-art {
+    height: 52px;
+    background: linear-gradient(135deg, #1a2e0e, #0f1e08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.5rem;
+    font-weight: 600;
+    color: var(--text);
+    padding: 0.3rem 0.4rem 0.2rem;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .card-text {
+    font-size: 0.52rem;
+    color: var(--text-dim);
+    padding: 0 0.4rem;
+    line-height: 1.35;
+    flex: 1;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .card-rarity {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .card-rarity.legendary { background: var(--gold); box-shadow: 0 0 4px var(--gold); }
+  .card-rarity.common { background: var(--common); }
+
+  /* Played card in arena (larger) */
+  .card-played {
+    width: 100px;
+    height: 142px;
+    animation: cardReveal 0.4s ease-out;
+  }
+
+  .card-played .card-art { height: 60px; font-size: 2rem; }
+  .card-played .card-name { font-size: 0.58rem; }
+  .card-played .card-text { font-size: 0.56rem; }
+
+  @keyframes cardReveal {
+    from { opacity: 0; transform: scale(0.8) rotateY(90deg); }
+    to { opacity: 1; transform: scale(1) rotateY(0deg); }
+  }
+
+  .card-face-down {
+    width: 100px;
+    height: 142px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #1a1a28, #22223a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--border);
+  }
+
+  /* Player zone */
+  .player-zone {
+    padding: 0.75rem 1.5rem 1rem;
+    background: linear-gradient(0deg, rgba(143,196,74,0.07) 0%, transparent 100%);
+    border-top: 1px solid var(--border);
+  }
+
+  /* Hand */
+  .hand-area {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    min-height: 148px;
+  }
+
+  /* Action bar */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 1rem;
+  }
+
+  .action-info {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  .action-info strong { color: var(--gold); }
+
+  .timer-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    min-width: 48px;
+    text-align: center;
+    transition: color 0.3s;
+  }
+
+  .timer-display.urgent { color: var(--red-light); text-shadow: var(--glow-red); }
+
+  .btn-confirm {
+    padding: 0.65rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #2a5e18, #3a7e28);
+    color: #d0f0b8;
+    box-shadow: 0 4px 12px rgba(90,184,58,0.3);
+  }
+
+  .btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(90,184,58,0.5); }
+  .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-confirm.confirmed {
+    background: linear-gradient(135deg, #162810, #1e3818);
+    color: var(--green-light);
+    box-shadow: none;
+  }
+
+  /* Deck/graveyard counters */
+  .pile-counters {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .pile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  .pile-count {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .pile-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Overlays */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+  }
+
+  .overlay-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8), var(--glow-gold);
+  }
+
+  .overlay-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--gold-light);
+    margin-bottom: 0.5rem;
+    text-shadow: var(--glow-gold);
+  }
+
+  .overlay-sub {
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Round log */
+  .round-log {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+
+  .log-entry { color: var(--text-dim); }
+  .log-entry.damage { color: var(--red-light); }
+  .log-entry.heal { color: var(--green-light); }
+  .log-entry.effect { color: var(--gold); }
+  .log-entry.system { color: var(--text-muted); font-style: italic; }
+
+  /* Quest display */
+  .quests-display {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+
+  .quest-pill {
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.62rem;
+    color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .quest-pill .progress {
+    background: var(--gold);
+    color: #0e1e06;
+    border-radius: 10px;
+    padding: 0 0.3rem;
+    font-size: 0.6rem;
+  }
+
+  .blessing-pill {
+    background: rgba(140,76,201,0.12);
+    border: 1px solid rgba(140,76,201,0.4);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.65rem;
+    color: var(--purple-light);
+    margin-top: 0.4rem;
+    display: inline-block;
+  }
+
+  /* Choose overlay */
+  .choose-options {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .btn-choose {
+    padding: 0.7rem 1.2rem;
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel);
+    color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-choose:hover {
+    background: rgba(201,168,76,0.1);
+    border-color: var(--gold);
+    transform: translateY(-2px);
+  }
+
+  /* Graveyard viewer */
+  .graveyard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 1rem;
+  }
+
+  /* Damage floater */
+  .damage-floater {
+    position: fixed;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 200;
+    animation: floatUp 1.5s ease-out forwards;
+  }
+
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Waiting pulse */
+  .waiting-dot {
+    display: inline-block;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  .hidden { display: none !important; }
+
+  /* Tooltip */
+  .card-tooltip {
+    position: fixed;
+    background: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    padding: 1rem;
+    max-width: 240px;
+    z-index: 300;
+    pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    transition: opacity 0.1s;
+  }
+
+  .card-tooltip h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+
+  .card-tooltip p {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .card-tooltip .rarity-badge {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.4rem;
+  }
+
+  .rarity-badge.legendary { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <div class="lobby-title">Inspired</div>
+  <div class="lobby-subtitle">Every card. Every valley. Every choice.</div>
+
+  <div class="lobby-box" id="lobby-main">
+    <h2>Enter the Arena</h2>
+    <div class="input-group">
+      <label>Your name</label>
+      <input type="text" id="player-name" placeholder="Hero name..." maxlength="20" />
+    </div>
+    <button class="btn btn-primary" onclick="createGame()">Create new game</button>
+    <div class="divider">or join existing</div>
+    <div class="input-group">
+      <label>Game code</label>
+      <input type="text" id="join-code" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:0.3em;text-align:center;font-size:1.5rem;" oninput="this.value=this.value.toUpperCase()" />
+    </div>
+    <button class="btn btn-secondary" onclick="joinGame()">Join game</button>
+    <div class="status-msg" id="lobby-status"></div>
+  </div>
+
+  <div class="lobby-box hidden" id="lobby-waiting" style="text-align:center;">
+    <h2>Game created!</h2>
+    <div class="game-code-display">
+      <div class="code" id="display-code">----</div>
+      <div class="code-label">Share this code with your opponent</div>
+    </div>
+    <p style="color:var(--text-dim);font-size:0.9rem;margin-top:0.5rem;">Waiting for opponent<span class="waiting-dot">.</span><span class="waiting-dot" style="animation-delay:0.3s">.</span><span class="waiting-dot" style="animation-delay:0.6s">.</span></p>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" style="display:none;flex-direction:column;min-height:100vh;">
+
+  <!-- Header -->
+  <div class="game-header">
+    <div class="game-title-small">Inspired</div>
+    <div class="round-info">Round <span id="round-number">1</span> &nbsp;·&nbsp; <span id="phase-label">Waiting...</span></div>
+    <div style="display:flex;gap:1rem;align-items:center;">
+      <div class="pile-counters">
+        <div class="pile">
+          <div class="pile-count" id="deck-count">40</div>
+          <div class="pile-label">Deck</div>
+        </div>
+        <div class="pile">
+          <div class="pile-count" id="grave-count">0</div>
+          <div class="pile-label" style="cursor:pointer;" onclick="showGraveyard()">Grave ▾</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer bar -->
+  <div class="timer-bar-wrap">
+    <div class="timer-bar" id="timer-bar" style="width:100%"></div>
+  </div>
+
+  <!-- Board -->
+  <div class="board" style="display:flex;flex-direction:column;flex:1;">
+
+    <!-- Opponent zone -->
+    <div class="opponent-zone">
+      <div class="player-label">Opponent</div>
+      <div class="hero-row">
+        <div class="hero-portrait opponent">🌲</div>
+        <div class="hero-info">
+          <div class="hero-name" id="opp-name">—</div>
+          <div class="health-bar-wrap">
+            <div class="health-bar opponent" id="opp-health-bar" style="width:100%"></div>
+          </div>
+          <div class="health-text"><strong id="opp-hp">150</strong> / <span id="opp-maxhp">150</span> HP</div>
+          <div class="status-tags" id="opp-status-tags"></div>
+          <div id="opp-blessing" class="hidden"></div>
+          <div class="quests-display" id="opp-quests"></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="opponent-hand" id="opp-hand"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arena -->
+    <div class="arena" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.75rem;padding:1rem 1.5rem;position:relative;">
+      <span class="arena-label top">Opponent plays</span>
+      <div class="arena-row" id="arena-opp"></div>
+      <div class="arena-divider"></div>
+      <div class="arena-row" id="arena-you"></div>
+      <span class="arena-label bottom">You play</span>
+    </div>
+
+    <!-- Your zone -->
+    <div class="player-zone">
+      <div class="hero-row" style="margin-bottom:0.5rem;">
+        <div class="hero-portrait you">🌱</div>
+        <div class="hero-info">
+          <div class="hero-name" id="you-name">You</div>
+          <div class="health-bar-wrap">
+            <div class="health-bar you" id="you-health-bar" style="width:100%"></div>
+          </div>
+          <div class="health-text"><strong id="you-hp">150</strong> / <span id="you-maxhp">150</span> HP</div>
+          <div class="status-tags" id="you-status-tags"></div>
+          <div id="you-blessing" class="hidden"></div>
+          <div class="quests-display" id="you-quests"></div>
+        </div>
+      </div>
+
+      <!-- Hand -->
+      <div class="hand-area" id="hand-area"></div>
+    </div>
+
+  </div>
+
+  <!-- Action bar -->
+  <div class="action-bar">
+    <div class="action-info" id="action-info">Select up to <strong>2 cards</strong> to play this round.</div>
+    <div class="timer-display" id="timer-display">60</div>
+    <button class="btn-confirm" id="confirm-btn" onclick="confirmCards()">Confirm →</button>
+  </div>
+
+</div>
+
+<!-- OVERLAYS -->
+
+<!-- Round result overlay -->
+<div class="overlay hidden" id="result-overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="result-title">Round Complete</div>
+    <div class="overlay-sub" id="result-sub"></div>
+    <div class="round-log" id="round-log"></div>
+    <button class="btn btn-primary" onclick="continueRound()" style="margin-top:1rem;" id="continue-btn">Continue →</button>
+  </div>
+</div>
+
+<!-- Choose overlay -->
+<div class="overlay hidden" id="choose-overlay">
+  <div class="overlay-box">
+    <div class="overlay-title">Choose</div>
+    <div class="overlay-sub" id="choose-prompt"></div>
+    <div class="choose-options" id="choose-options"></div>
+  </div>
+</div>
+
+<!-- Graveyard overlay -->
+<div class="overlay hidden" id="grave-overlay">
+  <div class="overlay-box" style="max-width:600px;">
+    <div class="overlay-title">Graveyard</div>
+    <div class="overlay-sub">Cards played this game (most recent on top)</div>
+    <div class="graveyard-grid" id="graveyard-grid"></div>
+    <button class="btn btn-secondary" onclick="closeGraveyard()" style="margin-top:1.5rem;width:200px;margin-left:auto;margin-right:auto;display:block;">Close</button>
+  </div>
+</div>
+
+<!-- Game over overlay -->
+<div class="overlay hidden" id="gameover-overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="gameover-title">Game Over</div>
+    <div class="overlay-sub" id="gameover-sub"></div>
+    <button class="btn btn-primary" onclick="location.reload()" style="margin-top:1.5rem;">Play again</button>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="card-tooltip hidden" id="card-tooltip">
+  <h4 id="tt-name"></h4>
+  <p id="tt-text"></p>
+  <div class="rarity-badge" id="tt-rarity"></div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDkdiTTJlJN85knDfDVzn7-RgjqHB2Nnv0",
+  authDomain: "inspired-e3b5e.firebaseapp.com",
+  databaseURL: "https://inspired-e3b5e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "inspired-e3b5e",
+  storageBucket: "inspired-e3b5e.firebasestorage.app",
+  messagingSenderId: "772511597371",
+  appId: "1:772511597371:web:a2d3f7a4e5207fc7fdad1e"
+};
+
+// ===== CARD DATABASE =====
+// IMPORTANT: No functions here — only plain data that Firebase can store
+const CARDS_DATA = [
+  { id: 'bulrog',         name: 'Bulrog',          text: 'Deal 15 damage.',                                          rarity: 'common',    emoji: '👹' },
+  { id: 'star_relocrater',name: 'Star Relocrater',  text: 'Deal 20 damage.',                                          rarity: 'common',    emoji: '☄️' },
+  { id: 'kraken',         name: 'Kraken',           text: 'Deal 10 true damage.',                                     rarity: 'common',    emoji: '🐙' },
+  { id: 'akya',           name: 'Akya',             text: 'Block.',                                                   rarity: 'common',    emoji: '🐺' },
+  { id: 'externus',       name: 'EXTERNUS',         text: 'Blessing: each time you deal damage, you deal 5 more.',   rarity: 'legendary', emoji: '🔥' },
+];
+
+// Effects are defined separately — never stored in Firebase
+const CARD_EFFECTS = {
+  bulrog:          (gs, player) => { dealDamage(gs, opponent(player), 15, false); addLog(gs[player].name + ' plays Bulrog — deals 15 damage!', 'damage'); },
+  star_relocrater: (gs, player) => { dealDamage(gs, opponent(player), 20, false); addLog(gs[player].name + ' plays Star Relocrater — deals 20 damage!', 'damage'); },
+  kraken:          (gs, player) => { dealDamage(gs, opponent(player), 10, true);  addLog(gs[player].name + ' plays Kraken — deals 10 true damage!', 'damage'); },
+  akya:            (gs, player) => { gs[player].blocked = true; addLog(gs[player].name + ' plays Akya — Block activated!', 'effect'); },
+  externus:        (gs, player) => { gs[player].blessing = { id: 'externus', name: 'EXTERNUS', text: 'Each time you deal damage, deal 5 more.' }; addLog(gs[player].name + ' plays EXTERNUS — Blessing active!', 'effect'); },
+};
+
+function buildTestDeck() {
+  const deck = [];
+  CARDS_DATA.forEach(card => {
+    const copies = card.rarity === 'legendary' ? 2 : 8;
+    for (let i = 0; i < copies; i++) {
+      // Only plain data — no functions — safe for Firebase
+      deck.push({ id: card.id, name: card.name, text: card.text, rarity: card.rarity, emoji: card.emoji, uid: Math.random().toString(36).slice(2) });
+    }
+  });
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck.slice(0, 40);
+}
+
+// ===== GAME STATE =====
+let db, gameRef, gameCode, myRole, myName;
+let localState = null;
+let timerInterval = null;
+let secondsLeft = 60;
+let mySelectedCards = [];
+let confirmed = false;
+let logEntries = [];
+let chooseResolve = null;
+
+const TIMER_SECONDS = 60;
+
+function opponent(role) { return role === 'p1' ? 'p2' : 'p1'; }
+
+function dealDamage(gs, target, amount, trueDmg) {
+  if (!trueDmg && gs[target].blocked) {
+    addLog(`  → Blocked by ${gs[target].name}!`, 'effect');
+    return;
+  }
+  // Blessing: externus
+  const atk = target === 'p1' ? 'p2' : 'p1';
+  let dmg = amount;
+  if (gs[atk].blessing?.id === 'externus') {
+    dmg += 5;
+    addLog(`  → EXTERNUS adds 5 damage (${dmg} total)`, 'effect');
+  }
+  gs[target].hp = Math.max(0, gs[target].hp - dmg);
+  showDamageFloater(target, dmg, trueDmg);
+}
+
+function healPlayer(gs, target, amount) {
+  gs[target].hp = Math.min(gs[target].maxHp, gs[target].hp + amount);
+  showDamageFloater(target, amount, false, true);
+}
+
+function addLog(msg, type = 'log') {
+  logEntries.push({ msg, type });
+}
+
+// ===== FIREBASE =====
+async function initFirebase() {
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    return true;
+  } catch(e) {
+    console.error('Firebase init failed:', e);
+    return false;
+  }
+}
+
+async function createGame() {
+  const name = document.getElementById('player-name').value.trim() || 'Hero';
+  myName = name;
+  myRole = 'p1';
+
+  // Generate 4-char code
+  gameCode = Math.random().toString(36).slice(2,6).toUpperCase();
+
+  const ok = await initFirebase();
+  if (!ok) {
+    setLobbyStatus('Could not connect to server. Check your connection.', 'error');
+    return;
+  }
+
+  gameRef = ref(db, `games/${gameCode}`);
+
+  // Build initial game state
+  const deck = buildTestDeck();
+  const hand = deck.splice(0, 4);
+  const initState = {
+    status: 'waiting',
+    round: 1,
+    p1: {
+      name,
+      hp: 150,
+      maxHp: 150,
+      deck: deck,
+      hand: hand,
+      graveyard: [],
+      blessing: null,
+      quests: [],
+      blocked: false,
+      hindered: false,
+      extraDrawNextRound: 0,
+      noDrawNextRound: false,
+      selectedCards: [],
+      confirmed: false,
+    },
+    p2: null,
+    phase: 'waiting',
+    roundLog: [],
+    alAkirCountdown: null,
+  };
+
+  await set(gameRef, initState);
+
+  document.getElementById('lobby-main').classList.add('hidden');
+  document.getElementById('lobby-waiting').classList.remove('hidden');
+  document.getElementById('display-code').textContent = gameCode;
+
+  // Listen for p2 joining
+  onValue(gameRef, snap => {
+    const gs = snap.val();
+    if (!gs) return;
+    if (gs.status === 'active' && gs.p2) {
+      startGame(gs);
+    }
+  });
+};
+
+async function joinGame() {
+  const name = document.getElementById('player-name').value.trim() || 'Hero';
+  myName = name;
+  myRole = 'p2';
+  gameCode = document.getElementById('join-code').value.trim().toUpperCase();
+
+  if (gameCode.length !== 4) {
+    setLobbyStatus('Enter a valid 4-letter code.', 'error');
+    return;
+  }
+
+  const ok = await initFirebase();
+  if (!ok) {
+    setLobbyStatus('Could not connect.', 'error');
+    return;
+  }
+
+  gameRef = ref(db, `games/${gameCode}`);
+  const snap = await get(gameRef);
+  if (!snap.exists()) {
+    setLobbyStatus('Game not found. Check the code.', 'error');
+    return;
+  }
+
+  const gs = snap.val();
+  if (gs.status !== 'waiting') {
+    setLobbyStatus('This game is already in progress.', 'error');
+    return;
+  }
+
+  // Join as p2
+  const deck = buildTestDeck();
+  const hand = deck.splice(0, 6);
+
+  await update(gameRef, {
+    'p2/name': name,
+    'p2/hp': 150,
+    'p2/maxHp': 150,
+    'p2/deck': deck,
+    'p2/hand': hand,
+    'p2/graveyard': [],
+    'p2/blessing': null,
+    'p2/quests': [],
+    'p2/blocked': false,
+    'p2/hindered': false,
+    'p2/extraDrawNextRound': 0,
+    'p2/noDrawNextRound': false,
+    'p2/selectedCards': [],
+    'p2/confirmed': false,
+    'status': 'active',
+    'phase': 'select',
+  });
+
+  setLobbyStatus('Joined! Starting...', 'success');
+
+  onValue(gameRef, snap => {
+    const gs = snap.val();
+    if (gs?.status === 'active') {
+      startGame(gs);
+    }
+  });
+};
+
+function setLobbyStatus(msg, type = '') {
+  const el = document.getElementById('lobby-status');
+  el.textContent = msg;
+  el.className = 'status-msg ' + type;
+}
+
+// ===== GAME START =====
+function startGame(gs) {
+  localState = gs;
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+
+  // Listen for game state changes
+  onValue(gameRef, snap => {
+    const newGs = snap.val();
+    if (!newGs) return;
+    const prevPhase = localState?.phase;
+    localState = newGs;
+    renderBoard(newGs);
+
+    if (newGs.phase === 'select' && prevPhase !== 'select') {
+      startSelectPhase();
+    } else if (newGs.phase === 'resolve' && prevPhase !== 'resolve') {
+      resolveRound(newGs);
+    }
+  });
+}
+
+// ===== RENDER =====
+function me() { return localState?.[myRole]; }
+function opp() { return localState?.[opponent(myRole)]; }
+
+function renderBoard(gs) {
+  if (!gs || !gs.p1 || !gs.p2) return;
+
+  const myData = gs[myRole];
+  const oppData = gs[opponent(myRole)];
+
+  // Hero info - you
+  document.getElementById('you-name').textContent = myData.name;
+  document.getElementById('you-hp').textContent = myData.hp;
+  document.getElementById('you-maxhp').textContent = myData.maxHp;
+  const youBar = document.getElementById('you-health-bar');
+  youBar.style.width = Math.max(0, (myData.hp / myData.maxHp * 100)) + '%';
+
+  // Hero info - opponent
+  document.getElementById('opp-name').textContent = oppData.name;
+  document.getElementById('opp-hp').textContent = oppData.hp;
+  document.getElementById('opp-maxhp').textContent = oppData.maxHp;
+  const oppBar = document.getElementById('opp-health-bar');
+  oppBar.style.width = Math.max(0, (oppData.hp / oppData.maxHp * 100)) + '%';
+
+  // Deck/grave
+  document.getElementById('deck-count').textContent = (myData.deck || []).length;
+  document.getElementById('grave-count').textContent = (myData.graveyard || []).length;
+
+  // Round
+  document.getElementById('round-number').textContent = gs.round;
+  document.getElementById('phase-label').textContent =
+    gs.phase === 'select' ? 'Choose cards' :
+    gs.phase === 'resolve' ? 'Resolving...' :
+    gs.phase === 'waiting' ? 'Waiting for opponent' : gs.phase;
+
+  // Opponent hand (face down)
+  const oppHand = document.getElementById('opp-hand');
+  oppHand.innerHTML = '';
+  const oppHandCount = (oppData.hand || []).length;
+  for (let i = 0; i < Math.min(oppHandCount, 8); i++) {
+    const cb = document.createElement('div');
+    cb.className = 'card-back';
+    cb.textContent = '🂠';
+    oppHand.appendChild(cb);
+  }
+
+  // Status tags - you
+  renderStatusTags('you-status-tags', myData);
+  renderStatusTags('opp-status-tags', oppData);
+
+  // Blessings
+  renderBlessing('you-blessing', myData.blessing);
+  renderBlessing('opp-blessing', oppData.blessing);
+
+  // Quests
+  renderQuests('you-quests', myData.quests || []);
+  renderQuests('opp-quests', oppData.quests || []);
+
+  // Hand
+  renderHand(myData.hand || []);
+
+  // Arena (if in resolve phase, show played cards)
+  renderArena(gs);
+}
+
+function renderStatusTags(elId, playerData) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  if (playerData.hindered) el.innerHTML += '<span class="tag hindered">Hindered</span>';
+  if (playerData.blocked) el.innerHTML += '<span class="tag blocked">Blocked</span>';
+}
+
+function renderBlessing(elId, blessing) {
+  const el = document.getElementById(elId);
+  if (blessing) {
+    el.className = 'blessing-pill';
+    el.textContent = '✨ ' + blessing.name + ': ' + blessing.text;
+  } else {
+    el.className = 'hidden';
+    el.textContent = '';
+  }
+}
+
+function renderQuests(elId, quests) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  (quests || []).forEach(q => {
+    const pill = document.createElement('div');
+    pill.className = 'quest-pill';
+    pill.textContent = '📜 ' + q.name;
+    if (q.progress !== undefined) {
+      const prog = document.createElement('span');
+      prog.className = 'progress';
+      prog.textContent = q.progress + '/' + q.goal;
+      pill.appendChild(prog);
+    }
+    el.appendChild(pill);
+  });
+}
+
+function renderHand(hand) {
+  const area = document.getElementById('hand-area');
+  area.innerHTML = '';
+
+  hand.forEach((card, idx) => {
+    const el = createCardEl(card, true);
+    el.addEventListener('click', () => toggleSelectCard(idx, el));
+    el.addEventListener('mouseenter', (e) => showTooltip(card, e));
+    el.addEventListener('mouseleave', hideTooltip);
+    if (mySelectedCards.includes(idx)) el.classList.add('selected');
+    area.appendChild(el);
+  });
+
+  // Confirm button state
+  const btn = document.getElementById('confirm-btn');
+  if (confirmed) {
+    btn.textContent = 'Waiting for opponent...';
+    btn.classList.add('confirmed');
+    btn.disabled = true;
+  } else {
+    btn.textContent = 'Confirm →';
+    btn.classList.remove('confirmed');
+    btn.disabled = false;
+  }
+}
+
+function renderArena(gs) {
+  const arenaOpp = document.getElementById('arena-opp');
+  const arenaYou = document.getElementById('arena-you');
+  arenaOpp.innerHTML = '';
+  arenaYou.innerHTML = '';
+
+  if (gs.phase === 'resolve' || gs.phase === 'done') {
+    const myCards = gs[myRole].selectedCards || [];
+    const oppCards = gs[opponent(myRole)].selectedCards || [];
+
+    oppCards.forEach(card => {
+      const el = createCardEl(card, false);
+      el.classList.add('card-played', 'no-hover');
+      arenaOpp.appendChild(el);
+    });
+
+    myCards.forEach(card => {
+      const el = createCardEl(card, false);
+      el.classList.add('card-played', 'no-hover');
+      arenaYou.appendChild(el);
+    });
+  }
+}
+
+function createCardEl(card, inHand) {
+  const el = document.createElement('div');
+  el.className = 'card ' + (card.rarity || 'common');
+  el.dataset.cardId = card.uid || card.id;
+
+  el.innerHTML = `
+    <div class="card-art">${card.emoji || '🃏'}</div>
+    <div class="card-name">${card.name}</div>
+    <div class="card-text">${card.text}</div>
+    <div class="card-rarity ${card.rarity}"></div>
+  `;
+
+  return el;
+}
+
+// ===== SELECT PHASE =====
+function startSelectPhase() {
+  mySelectedCards = [];
+  confirmed = false;
+  secondsLeft = TIMER_SECONDS;
+  logEntries = [];
+
+  document.getElementById('action-info').innerHTML = 'Select up to <strong>2 cards</strong> to play this round.';
+
+  renderBoard(localState);
+  startTimer();
+}
+
+function toggleSelectCard(idx, el) {
+  if (confirmed) return;
+  if (localState?.[myRole]?.hindered) {
+    document.getElementById('action-info').innerHTML = '<strong style="color:var(--red-light)">You are hindered — you cannot play cards this round.</strong>';
+    return;
+  }
+
+  const pos = mySelectedCards.indexOf(idx);
+  if (pos >= 0) {
+    mySelectedCards.splice(pos, 1);
+    el.classList.remove('selected');
+  } else {
+    if (mySelectedCards.length >= 2) {
+      document.getElementById('action-info').innerHTML = 'Max <strong>2 cards</strong> per round. Deselect one first.';
+      return;
+    }
+    mySelectedCards.push(idx);
+    el.classList.add('selected');
+  }
+
+  const count = mySelectedCards.length;
+  document.getElementById('action-info').innerHTML =
+    count === 0 ? 'Select up to <strong>2 cards</strong> to play this round.' :
+    count === 1 ? '<strong>1 card</strong> selected. Select one more or confirm.' :
+    '<strong>2 cards</strong> selected. Confirm when ready.';
+}
+
+async function confirmCards() {
+  if (confirmed) return;
+  confirmed = true;
+
+  clearInterval(timerInterval);
+
+  const myData = localState[myRole];
+  const hand = [...(myData.hand || [])];
+  const selectedCardObjs = mySelectedCards.map(i => hand[i]);
+
+  // Remove selected from hand
+  const newHand = hand.filter((_, i) => !mySelectedCards.includes(i));
+
+  const updates = {};
+  updates[`${myRole}/selectedCards`] = selectedCardObjs;
+  updates[`${myRole}/confirmed`] = true;
+  updates[`${myRole}/hand`] = newHand;
+
+  await update(gameRef, updates);
+
+  const btn = document.getElementById('confirm-btn');
+  btn.textContent = 'Waiting...';
+  btn.classList.add('confirmed');
+  btn.disabled = true;
+
+  document.getElementById('action-info').innerHTML = 'Waiting for opponent<span class="waiting-dot">.</span><span class="waiting-dot" style="animation-delay:0.3s">.</span><span class="waiting-dot" style="animation-delay:0.6s">.</span>';
+
+  // Check if both confirmed → trigger resolve (p1 does it)
+  checkBothConfirmed();
+};
+
+async function checkBothConfirmed() {
+  const snap = await get(gameRef);
+  const gs = snap.val();
+  if (gs.p1.confirmed && gs.p2.confirmed && gs.phase === 'select') {
+    if (myRole === 'p1') {
+      await update(gameRef, { phase: 'resolve' });
+    }
+  }
+}
+
+// ===== TIMER =====
+function startTimer() {
+  clearInterval(timerInterval);
+  secondsLeft = TIMER_SECONDS;
+  updateTimerUI();
+
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    updateTimerUI();
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!confirmed) {
+        window.confirmCards();
+      }
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const bar = document.getElementById('timer-bar');
+  const display = document.getElementById('timer-display');
+  const pct = (secondsLeft / TIMER_SECONDS) * 100;
+  bar.style.width = pct + '%';
+
+  const urgent = secondsLeft <= 10;
+  bar.classList.toggle('urgent', urgent);
+  display.classList.toggle('urgent', urgent);
+  display.textContent = secondsLeft;
+}
+
+// ===== RESOLVE ROUND =====
+async function resolveRound(gs) {
+  clearInterval(timerInterval);
+  updateTimerUI();
+
+  // Work on a local copy
+  const state = JSON.parse(JSON.stringify(gs));
+  logEntries = [];
+
+  addLog(`⚔ Round ${state.round} begins`, 'system');
+
+  // Reset block from previous round
+  state.p1.blocked = false;
+  state.p2.blocked = false;
+
+  // Process P1 cards first (left to right)
+  const p1Cards = state.p1.selectedCards || [];
+  const p2Cards = state.p2.selectedCards || [];
+
+  // First pass: activate all Block cards immediately (both players)
+  [...p1Cards, ...p2Cards].forEach(card => {
+    if (card && cardHasEffect(card, 'block')) {
+      const role = p1Cards.includes(card) ? 'p1' : 'p2';
+      state[role].blocked = true;
+      addLog(`${state[role].name} plays ${card.name} — Block!`, 'effect');
+    }
+  });
+
+  // Process P1 cards (non-block)
+  for (const card of p1Cards) {
+    if (!card) continue;
+    if (!cardHasEffect(card, 'block')) {
+      await applyCardEffect(card, 'p1', state);
+    }
+    state.p1.graveyard = [card, ...(state.p1.graveyard || [])];
+  }
+
+  // Process P2 cards (non-block)
+  for (const card of p2Cards) {
+    if (!card) continue;
+    if (!cardHasEffect(card, 'block')) {
+      await applyCardEffect(card, 'p2', state);
+    }
+    state.p2.graveyard = [card, ...(state.p2.graveyard || [])];
+  }
+
+  // Apply active blessings (end of round effects)
+  await applyBlessingEndOfRound(state);
+
+  // Reset per-round state
+  state.p1.blocked = false;
+  state.p2.blocked = false;
+  state.p1.selectedCards = [];
+  state.p2.selectedCards = [];
+  state.p1.confirmed = false;
+  state.p2.confirmed = false;
+
+  // Check al'akir countdown
+  if (state.alAkirCountdown !== null) {
+    state.alAkirCountdown--;
+    if (state.alAkirCountdown <= 0) {
+      // Determine who played it
+      const winner = state.alAkirPlayer;
+      showGameOver(winner === myRole, 'Al\'Akir\'s countdown reached zero!');
+      return;
+    } else {
+      addLog(`⏳ Al'Akir countdown: ${state.alAkirCountdown} rounds remaining`, 'effect');
+    }
+  }
+
+  // Check win condition
+  const p1Dead = state.p1.hp <= 0;
+  const p2Dead = state.p2.hp <= 0;
+
+  if (p1Dead || p2Dead) {
+    const iWon = (myRole === 'p2' && p1Dead) || (myRole === 'p1' && p2Dead);
+    // Save final state then game over
+    await update(gameRef, {
+      p1: state.p1,
+      p2: state.p2,
+      phase: 'gameover',
+      winner: iWon ? myRole : opponent(myRole),
+    });
+    if (myRole === 'p1') {
+      showGameOver(iWon, iWon ? 'Your opponent has fallen.' : 'You have been defeated.');
+    }
+    return;
+  }
+
+  // Draw phase
+  if (!state.p1.noDrawNextRound && !state.p1.hindered) {
+    const draws = 2 + (state.p1.extraDrawNextRound || 0);
+    drawCards(state, 'p1', draws);
+  }
+  if (!state.p2.noDrawNextRound && !state.p2.hindered) {
+    const draws = 2 + (state.p2.extraDrawNextRound || 0);
+    drawCards(state, 'p2', draws);
+  }
+
+  // Reset next-round flags
+  state.p1.extraDrawNextRound = 0;
+  state.p2.extraDrawNextRound = 0;
+  state.p1.noDrawNextRound = false;
+  state.p2.noDrawNextRound = false;
+  state.p1.hindered = false;
+  state.p2.hindered = false;
+
+  state.round++;
+  state.phase = 'result';
+
+  // Only p1 writes the resolved state
+  if (myRole === 'p1') {
+    await update(gameRef, {
+      p1: state.p1,
+      p2: state.p2,
+      round: state.round,
+      alAkirCountdown: state.alAkirCountdown,
+      alAkirPlayer: state.alAkirPlayer || null,
+      phase: 'result',
+    });
+  }
+
+  showRoundResult(state, gs);
+}
+
+function drawCards(state, role, count) {
+  const deck = state[role].deck || [];
+  const hand = state[role].hand || [];
+  let drawn = 0;
+  for (let i = 0; i < count; i++) {
+    if (deck.length === 0) {
+      addLog(`${state[role].name}'s deck is empty!`, 'system');
+      break;
+    }
+    if (hand.length >= 8) {
+      addLog(`${state[role].name}'s hand is full — card lost!`, 'system');
+      deck.shift();
+      continue;
+    }
+    const card = deck.shift();
+    hand.push(card);
+    drawn++;
+
+    // Xhilang tentacle when-drawn effect
+    if (card.id === 'xhilang_right_tentacle') {
+      if (!state[role].playedXhilang) {
+        dealDamage(state, role, 20, false);
+        addLog(`Xhilang's Right Tentacle enters hand — deals 20 damage to ${state[role].name}!`, 'damage');
+      } else {
+        dealDamage(state, opponent(role), 20, false);
+        addLog(`Xhilang's Right Tentacle enters hand — Xhilang's power redirects 20 damage to opponent!`, 'damage');
+      }
+    }
+    if (card.id === 'xhilang_left_tentacle') {
+      if (!state[role].playedXhilang) {
+        // Discard 4
+        const discarded = hand.splice(-4);
+        state[role].graveyard = [...discarded, ...(state[role].graveyard || [])];
+        addLog(`Xhilang's Left Tentacle enters hand — discards 4 cards from ${state[role].name}'s hand!`, 'effect');
+      } else {
+        // Draw 4 instead
+        drawCards(state, role, 4);
+        addLog(`Xhilang's Left Tentacle enters hand — Xhilang's power: draw 4 instead!`, 'effect');
+      }
+    }
+  }
+  state[role].deck = deck;
+  state[role].hand = hand;
+  if (drawn > 0) addLog(`${state[role].name} draws ${drawn} card${drawn > 1 ? 's' : ''}.`, 'system');
+}
+
+async function applyCardEffect(card, role, state) {
+  // Look up effect from local CARD_EFFECTS — never from Firebase data
+  const effect = CARD_EFFECTS[card.id];
+  if (effect) effect(state, role);
+}
+
+async function applyBlessingEndOfRound(state) {
+  ['p1', 'p2'].forEach(role => {
+    const b = state[role].blessing;
+    if (!b) return;
+    if (b.id === 'evil_within') {
+      dealDamage(state, 'p1', 20, false);
+      dealDamage(state, 'p2', 20, false);
+      addLog(`Evil Within blessing triggers — both players take 20 damage!`, 'damage');
+    }
+    if (b.id === 'trias_snapjaw') {
+      dealDamage(state, 'p1', 5, false);
+      dealDamage(state, 'p2', 5, false);
+      addLog(`Trias Snapjaw blessing triggers — both players take 5 damage!`, 'damage');
+    }
+    if (b.id === 'oracle_murloc') {
+      // Handled inline when opponent heals
+    }
+  });
+}
+
+function cardHasEffect(card, effectType) {
+  if (effectType === 'block') {
+    return ['akya', 'monsieur_void', 'kazakus', 'chefs_hammer'].includes(card.id);
+  }
+  return false;
+}
+
+// ===== ROUND RESULT OVERLAY =====
+function showRoundResult(newState, oldState) {
+  const overlay = document.getElementById('result-overlay');
+  const log = document.getElementById('round-log');
+
+  document.getElementById('result-title').textContent = `Round ${newState.round - 1} Complete`;
+
+  const myOldHp = oldState[myRole].hp;
+  const myNewHp = newState[myRole].hp;
+  const oppOldHp = oldState[opponent(myRole)].hp;
+  const oppNewHp = newState[opponent(myRole)].hp;
+
+  let subtext = '';
+  if (myOldHp !== myNewHp) subtext += `You: ${myOldHp} → ${myNewHp} HP  `;
+  if (oppOldHp !== oppNewHp) subtext += `Opponent: ${oppOldHp} → ${oppNewHp} HP`;
+  document.getElementById('result-sub').textContent = subtext || 'No health changes this round.';
+
+  log.innerHTML = logEntries.map(e =>
+    `<div class="log-entry ${e.type}">${e.msg}</div>`
+  ).join('');
+
+  overlay.classList.remove('hidden');
+}
+
+async function continueRound() {
+  document.getElementById('result-overlay').classList.add('hidden');
+
+  // p1 sets phase to select
+  if (myRole === 'p1') {
+    await update(gameRef, { phase: 'select' });
+  }
+
+  mySelectedCards = [];
+  confirmed = false;
+  startSelectPhase();
+};
+
+// ===== GAME OVER =====
+function showGameOver(iWon, reason) {
+  document.getElementById('gameover-overlay').classList.remove('hidden');
+  document.getElementById('gameover-title').textContent = iWon ? '⚔ Victory!' : '💀 Defeat';
+  document.getElementById('gameover-sub').textContent = reason;
+}
+
+// ===== GRAVEYARD =====
+function showGraveyard() {
+  const grid = document.getElementById('graveyard-grid');
+  grid.innerHTML = '';
+  const grave = localState?.[myRole]?.graveyard || [];
+  if (grave.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted);font-style:italic;text-align:center;">No cards yet.</p>';
+  } else {
+    grave.forEach(card => {
+      const el = createCardEl(card, false);
+      el.classList.add('no-hover');
+      grid.appendChild(el);
+    });
+  }
+  document.getElementById('grave-overlay').classList.remove('hidden');
+};
+
+function closeGraveyard() {
+  document.getElementById('grave-overlay').classList.add('hidden');
+};
+
+// ===== TOOLTIP =====
+function showTooltip(card, e) {
+  const tt = document.getElementById('card-tooltip');
+  document.getElementById('tt-name').textContent = card.name;
+  document.getElementById('tt-text').textContent = card.text;
+  const rarityEl = document.getElementById('tt-rarity');
+  rarityEl.textContent = card.rarity === 'legendary' ? '★ Legendary' : '◆ Common';
+  rarityEl.className = 'rarity-badge ' + card.rarity;
+  tt.classList.remove('hidden');
+  positionTooltip(e);
+}
+
+function hideTooltip() {
+  document.getElementById('card-tooltip').classList.add('hidden');
+}
+
+document.addEventListener('mousemove', e => {
+  const tt = document.getElementById('card-tooltip');
+  if (!tt.classList.contains('hidden')) positionTooltip(e);
+});
+
+function positionTooltip(e) {
+  const tt = document.getElementById('card-tooltip');
+  let x = e.clientX + 16;
+  let y = e.clientY - 20;
+  if (x + 250 > window.innerWidth) x = e.clientX - 260;
+  if (y + 180 > window.innerHeight) y = e.clientY - 180;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+// ===== DAMAGE FLOATER =====
+function showDamageFloater(target, amount, trueDmg, isHeal = false) {
+  const isMe = target === myRole;
+  const youBar = document.getElementById('you-health-bar');
+  const oppBar = document.getElementById('opp-health-bar');
+  const anchorEl = isMe ? youBar : oppBar;
+  const rect = anchorEl.getBoundingClientRect();
+
+  const el = document.createElement('div');
+  el.className = 'damage-floater';
+  el.style.left = (rect.left + rect.width/2) + 'px';
+  el.style.top = rect.top + 'px';
+  el.style.color = isHeal ? '#6dcc8c' : (trueDmg ? '#e86d6d' : '#ff9966');
+  el.textContent = (isHeal ? '+' : '-') + amount;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+// ===== GAMEOVER LISTENER (for p2) =====
+// Already handled via onValue listening for phase === gameover
+
+// Expose all functions to window so onclick="" works with module scripts
+window.createGame = createGame;
+window.joinGame = joinGame;
+window.confirmCards = confirmCards;
+window.continueRound = continueRound;
+window.showGraveyard = showGraveyard;
+window.closeGraveyard = closeGraveyard;
+</script>
+
+</body>
+</html>
