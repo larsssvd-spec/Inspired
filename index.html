@@ -641,10 +641,39 @@ body {
 
 <!-- Round result -->
 <div class="overlay hidden" id="ov-result">
-  <div class="ov-box">
+  <div class="ov-box" style="max-width:600px;padding:1.5rem 2rem;">
     <div class="ov-title" id="res-title">Round Complete</div>
-    <div class="ov-sub" id="res-sub"></div>
-    <div class="round-log" id="res-log"></div>
+
+    <!-- HP bars summary -->
+    <div style="display:flex;gap:1rem;margin:1rem 0;align-items:stretch;">
+      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.75rem 1rem;">
+        <div style="font-size:0.7rem;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">You</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--green2)" id="res-you-hp">—</div>
+        <div class="hp-bar-wrap" style="margin-top:0.4rem"><div class="hp-bar you" id="res-you-bar" style="width:100%"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--text3)">⚔</div>
+      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.75rem 1rem;">
+        <div style="font-size:0.7rem;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">Opponent</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--red2)" id="res-opp-hp">—</div>
+        <div class="hp-bar-wrap" style="margin-top:0.4rem"><div class="hp-bar opp" id="res-opp-bar" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <!-- Cards played -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div>
+        <div style="font-size:0.65rem;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;text-align:center;">Opponent played</div>
+        <div style="display:flex;gap:0.4rem;justify-content:center;min-height:90px;align-items:center;" id="res-opp-cards"></div>
+      </div>
+      <div>
+        <div style="font-size:0.65rem;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;text-align:center;">You played</div>
+        <div style="display:flex;gap:0.4rem;justify-content:center;min-height:90px;align-items:center;" id="res-you-cards"></div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="round-log" id="res-log" style="margin-bottom:1rem;max-height:120px;"></div>
+
     <button class="btn btn-green" id="btn-continue">Next round →</button>
   </div>
 </div>
@@ -1039,10 +1068,17 @@ async function onResolvePhase(gs){
     if(b.id==='trias_snapjaw'){ dealDmg(state,'p1',5,false); dealDmg(state,'p2',5,false); log('Trias Snapjaw — both take 5!','damage'); }
   });
 
+  // Store played cards for result display
+  const p1played = [...(state.p1.selectedCards||[])];
+  const p2played = [...(state.p2.selectedCards||[])];
+
   // Reset
   state.p1.blocked=false; state.p2.blocked=false;
   state.p1.selectedCards=[]; state.p2.selectedCards=[];
   state.p1.confirmed=false; state.p2.confirmed=false;
+  // Store for result screen
+  state.p1.lastPlayed = p1played;
+  state.p2.lastPlayed = p2played;
 
   // Win check
   if(state.p1.hp<=0||state.p2.hp<=0){
@@ -1087,12 +1123,30 @@ function drawCards(state, r, n, skip){
 
 function showResult(newGs, oldGs){
   const my=me(newGs), th=them(newGs);
-  const myOld=me(oldGs), thOld=them(oldGs);
-  document.getElementById('res-title').textContent='Round '+(newGs.round-1)+' complete';
-  const parts=[];
-  if(myOld.hp!==my.hp) parts.push('You: '+myOld.hp+' → '+my.hp+' HP');
-  if(thOld.hp!==th.hp) parts.push('Opponent: '+thOld.hp+' → '+th.hp+' HP');
-  document.getElementById('res-sub').textContent=parts.join('   ')||'No HP changes this round.';
+  const myOld=me(oldGs||newGs), thOld=them(oldGs||newGs);
+  const round = (newGs.round||1)-1;
+  document.getElementById('res-title').textContent = 'Round '+round+' complete';
+
+  // HP display
+  const myDmg = (myOld.hp||150) - my.hp;
+  const thDmg = (thOld.hp||150) - th.hp;
+  document.getElementById('res-you-hp').textContent = my.hp+' / '+my.maxHp+' HP'+(myDmg>0?' (-'+myDmg+')':'');
+  document.getElementById('res-opp-hp').textContent = th.hp+' / '+th.maxHp+' HP'+(thDmg>0?' (-'+thDmg+')':'');
+  document.getElementById('res-you-bar').style.width = Math.max(0,my.hp/my.maxHp*100)+'%';
+  document.getElementById('res-opp-bar').style.width = Math.max(0,th.hp/th.maxHp*100)+'%';
+
+  // Cards played this round - use lastPlayed (stored before clearing)
+  const myCards = me(newGs).lastPlayed || me(oldGs||newGs).selectedCards||[];
+  const thCards = them(newGs).lastPlayed || them(oldGs||newGs).selectedCards||[];
+  const youCardsEl = document.getElementById('res-you-cards');
+  const oppCardsEl = document.getElementById('res-opp-cards');
+  youCardsEl.innerHTML=''; oppCardsEl.innerHTML='';
+  if(myCards.length===0) youCardsEl.innerHTML='<span style="color:var(--text3);font-style:italic;font-size:0.8rem">No cards played</span>';
+  myCards.forEach(c=>{ if(c){ const el=makeCardEl(c); el.style.width='72px'; el.style.height='104px'; el.style.cursor='default'; youCardsEl.appendChild(el); }});
+  if(thCards.length===0) oppCardsEl.innerHTML='<span style="color:var(--text3);font-style:italic;font-size:0.8rem">No cards played</span>';
+  thCards.forEach(c=>{ if(c){ const el=makeCardEl(c); el.style.width='72px'; el.style.height='104px'; el.style.cursor='default'; oppCardsEl.appendChild(el); }});
+
+  // Log
   document.getElementById('res-log').innerHTML=logs.map(l=>`<div class="log-entry ${l.type}">${l.msg}</div>`).join('');
   document.getElementById('ov-result').classList.remove('hidden');
 }
