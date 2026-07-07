@@ -184,8 +184,8 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .card-played .card-name { font-size:0.54rem; }
 .card-played .card-text { font-size:0.52rem; }
 @keyframes reveal { from{opacity:0;transform:scale(0.75) rotateY(90deg)} to{opacity:1;transform:scale(1) rotateY(0deg)} }
-.you-area { padding:0.5rem 1.5rem 0.6rem; background:transparent; border-top:none; flex-shrink:0; overflow:visible; position:relative; z-index:500; }
-.hand { display:flex; gap:0.4rem; align-items:flex-end; justify-content:center; overflow-x:auto; overflow-y:visible; padding:0.4rem 0 0; min-height:126px; position:relative; z-index:500; }
+.you-area { padding:0.5rem 1.5rem 0.6rem; background:transparent; border-top:none; flex-shrink:0; overflow:visible; position:relative; z-index:50; }
+.hand { display:flex; gap:0.4rem; align-items:flex-end; justify-content:center; overflow-x:auto; overflow-y:visible; padding:0.4rem 0 0; min-height:126px; position:relative; z-index:50; }
 .hand::-webkit-scrollbar { height:3px; }
 .hand::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
 .action-bar { display:flex; align-items:center; gap:0.8rem; padding:0.65rem 1rem; background:rgba(13,20,8,0.4); backdrop-filter:blur(2px); border-top:1px solid rgba(130,190,60,0.15); flex-shrink:0; }
@@ -202,7 +202,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .pile-lbl { font-size:0.55rem; color:var(--text3); letter-spacing:0.08em; text-transform:uppercase; }
 
 /* OVERLAYS */
-.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:100; padding:1.5rem; }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:100000; padding:1.5rem; }
 .overlay.hidden { display:none!important; }
 .ov-box { background:var(--panel); border:1px solid var(--border2); border-radius:var(--r); padding:2rem 2.2rem; max-width:480px; width:100%; text-align:center; box-shadow:0 0 80px rgba(0,0,0,0.9),0 0 30px rgba(126,200,50,0.1); }
 .ov-title { font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--green2); margin-bottom:0.4rem; text-shadow:0 0 30px rgba(168,224,80,0.4); }
@@ -520,6 +520,23 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 </div>
 
+<div class="overlay hidden" id="ov-choose">
+  <div class="ov-box" style="max-width:480px">
+    <div class="ov-title" id="choose-title">Choose</div>
+    <div class="ov-sub" id="choose-sub"></div>
+    <div id="choose-opts" style="display:flex;flex-direction:column;gap:0.6rem;margin-top:1rem"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ov-discard">
+  <div class="ov-box" style="max-width:600px">
+    <div class="ov-title">Choose cards to discard</div>
+    <div class="ov-sub" id="discard-sub">Select cards to send to your graveyard</div>
+    <div class="grave-grid" id="discard-grid" style="max-height:40vh"></div>
+    <button class="btn btn-green" id="btn-discard-confirm" style="margin-top:1rem" disabled>Discard selected</button>
+  </div>
+</div>
+
 <div class="overlay hidden" id="ov-grave">
   <div class="ov-box" style="max-width:560px">
     <div class="ov-title">Graveyard</div>
@@ -570,7 +587,29 @@ const CARDS_DATA = [
   {id:'kraken',         name:'Kraken',          text:'Deal 10 true damage.',                                 rarity:'common',    emoji:'🐙'},
   {id:'akya',           name:'Akya',            text:'Block.',                                               rarity:'common',    emoji:'🐺'},
   {id:'externus',       name:'EXTERNUS',        text:'Blessing: each time you deal damage, deal 5 more.',   rarity:'legendary', emoji:'🔥'},
+  {id:'chefs_hammer',   name:"Chef's Hammer",   text:'Block. Heal for 5.',                                   rarity:'common',    emoji:'🔨'},
+  {id:'imp_collector',  name:'Imp Collector',   text:'Steal 10 health from your opponent.',                  rarity:'common',    emoji:'😈'},
+  {id:'worthless_imp',  name:'Worthless Imp',   text:'Discard 2 cards.',                                     rarity:'common',    emoji:'👺'},
+  {id:'mister_mukala',  name:'Mister Mukala',   text:'Draw cards until you have as many as your opponent.',  rarity:'common',    emoji:'🦍'},
+  {id:'phoenix_thief',  name:'Phoenix Thief',   text:"If you didn't draw cards this round: steal 2 random cards from your opponent.", rarity:'legendary', emoji:'🦅'},
+  {id:'nemesis',        name:'Nemesis',         text:'Deal 25 damage. You are hindered next round.',         rarity:'common',    emoji:'🧟'},
+  {id:'small_syn',      name:'Small Syn',       text:'Deal 15 damage. Echo.',                                rarity:'common',    emoji:'🐲', echo:true},
+  {id:'baku',           name:'Baku the Mooneater', text:'Quickplay. Choose: deal 15 damage OR block.',       rarity:'legendary', emoji:'🐍', quickplay:true},
+  {id:'tortolla',       name:'Tortolla',        text:'Split 20: divide between damage and heal.',            rarity:'common',    emoji:'🐢'},
 ];
+
+// Cards where YOU choose which of your own cards to discard: {cardId: count}
+const SELF_DISCARD = { worthless_imp: 2 };
+
+// Cards where you CHOOSE an option. Each option: {key, label}
+const CHOOSE_OPTIONS = {
+  baku: [ {key:'damage', label:'Deal 15 damage'}, {key:'block', label:'Block'} ],
+};
+
+// Cards with SPLIT X: player divides X between damage and heal
+const SPLIT_CARDS = {
+  tortolla: 20,
+};
 
 // ── Effects (local only, never sent to Firebase) ──
 const EFFECTS = {
@@ -579,6 +618,15 @@ const EFFECTS = {
   kraken:          (gs,r)=>{ dealDmg(gs,opp(r),10,true);  log(gs[r].name+' plays Kraken — 10 true damage!','damage'); },
   akya:            (gs,r)=>{ gs[r].blocked=true;           log(gs[r].name+' plays Akya — Block!','effect'); },
   externus:        (gs,r)=>{ gs[r].blessing={id:'externus',name:'EXTERNUS',text:'Each time you deal damage, deal 5 more.'}; log(gs[r].name+' plays EXTERNUS — Blessing!','effect'); },
+  chefs_hammer:    (gs,r)=>{ gs[r].blocked=true; heal(gs,r,5); log(gs[r].name+" plays Chef's Hammer — Block & heal 5!",'effect'); },
+  imp_collector:   (gs,r)=>{ stealHealth(gs,r,10); log(gs[r].name+' plays Imp Collector — steals 10 health!','damage'); },
+  worthless_imp:   (gs,r)=>{ const card=(gs[r].selectedCards||[]).find(c=>c&&c.id==='worthless_imp'); const n=discardCards(gs,r,2,card&&card._discardUids); log(gs[r].name+' plays Worthless Imp — discards '+n+' card(s).','effect'); },
+  mister_mukala:   (gs,r)=>{ const o=opp(r); const diff=(gs[o].hand||[]).length-(gs[r].hand||[]).length; if(diff>0){const d=drawExtra(gs,r,diff); log(gs[r].name+' plays Mister Mukala — draws '+d+' card(s).','effect');} else { log(gs[r].name+' plays Mister Mukala — no cards to draw.','effect'); } },
+  phoenix_thief:   (gs,r)=>{ if(!gs[r].drewThisRound){ const s=stealCard(gs,r,2); log(gs[r].name+' plays Phoenix Thief — steals '+s+' card(s)!','effect'); } else { log(gs[r].name+' plays Phoenix Thief — no effect (drew cards this round).','effect'); } },
+  nemesis:         (gs,r)=>{ dealDmg(gs,opp(r),25,false); gs[r].hindered=true; log(gs[r].name+' plays Nemesis — 25 damage! Hindered next round.','damage'); },
+  small_syn:       (gs,r)=>{ dealDmg(gs,opp(r),15,false); log(gs[r].name+' plays Small Syn — 15 damage! (Echo: returns to deck)','damage'); },
+  baku:            (gs,r)=>{ const card=(gs[r].selectedCards||[]).find(c=>c&&c.id==='baku'); const choice=(card&&card._choice)||'damage'; if(choice==='block'){ gs[r].blocked=true; log(gs[r].name+' plays Baku — Block!','effect'); } else { dealDmg(gs,opp(r),15,false); log(gs[r].name+' plays Baku — 15 damage!','damage'); } },
+  tortolla:        (gs,r)=>{ const card=(gs[r].selectedCards||[]).find(c=>c&&c.id==='tortolla'); const sp=(card&&card._split)||{dmg:20,heal:0}; if(sp.dmg>0) dealDmg(gs,opp(r),sp.dmg,false); if(sp.heal>0) heal(gs,r,sp.heal); log(gs[r].name+' plays Tortolla — '+sp.dmg+' damage, '+sp.heal+' heal.','damage'); },
 };
 
 // ── State ──
@@ -611,6 +659,109 @@ function dealDmg(gs,target,amt,trueDmg){
   if(gs[attacker].blessing?.id==='externus'){dmg+=5;log('  → EXTERNUS: +5 ('+dmg+' total)','effect');}
   gs[target].hp=Math.max(0,gs[target].hp-dmg);
   spawnFloater(target,'-'+dmg,false);
+  gs[attacker].dmgDealtThisRound=(gs[attacker].dmgDealtThisRound||0)+dmg;
+}
+
+// ── KEYWORD HELPERS ──
+function heal(gs,r,amt){
+  gs[r].hp=Math.min(gs[r].maxHp,gs[r].hp+amt);
+  gs[r].healedThisRound=(gs[r].healedThisRound||0)+1;
+  spawnFloater(r,'+'+amt,true);
+  const o=opp(r);
+  if(gs[o].blessing?.id==='oracle_murloc'){ gs[o].hp=Math.min(gs[o].maxHp,gs[o].hp+5); log('  → Oracle Murloc: '+gs[o].name+' heals 5','heal'); }
+}
+
+function stealHealth(gs,r,amt){
+  const o=opp(r);
+  const taken=Math.min(amt, gs[o].hp);
+  gs[o].hp=Math.max(0,gs[o].hp-taken);
+  gs[r].hp=Math.min(gs[r].maxHp,gs[r].hp+taken);
+  spawnFloater(o,'-'+taken,false);
+  spawnFloater(r,'+'+taken,true);
+}
+
+function discardCards(gs,r,n,chosenUids){
+  const hand=gs[r].hand||[];
+  let discarded=0;
+  if(chosenUids && chosenUids.length){
+    // Discard specific chosen cards (player's own choice)
+    chosenUids.forEach(uid=>{
+      const idx=hand.findIndex(c=>c.uid===uid);
+      if(idx>=0){ const c=hand.splice(idx,1)[0]; gs[r].graveyard=[c,...(gs[r].graveyard||[])]; discarded++; }
+    });
+  } else {
+    // Random discard (used for opponent-forced discards)
+    for(let i=0;i<n && hand.length>0;i++){
+      const idx=Math.floor(Math.random()*hand.length);
+      const c=hand.splice(idx,1)[0];
+      gs[r].graveyard=[c,...(gs[r].graveyard||[])];
+      discarded++;
+    }
+  }
+  gs[r].hand=hand;
+  gs[r].discardedThisRound=(gs[r].discardedThisRound||0)+discarded;
+  return discarded;
+}
+
+function stealCard(gs,r,n){
+  const o=opp(r);
+  const ohand=gs[o].hand||[];
+  const myhand=gs[r].hand||[];
+  let stolen=0;
+  for(let i=0;i<n && ohand.length>0;i++){
+    if(myhand.length>=8) break;
+    const idx=Math.floor(Math.random()*ohand.length);
+    const c=ohand.splice(idx,1)[0];
+    c.stolen=true;
+    myhand.push(c);
+    stolen++;
+  }
+  gs[o].hand=ohand; gs[r].hand=myhand;
+  return stolen;
+}
+
+function shuffleDeck(gs,r){
+  const d=gs[r].deck||[];
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  gs[r].deck=d;
+}
+
+function drawExtra(gs,r,n){
+  const deck=gs[r].deck||[], hand=gs[r].hand||[];
+  let drawn=0;
+  for(let i=0;i<n;i++){
+    if(deck.length===0) break;
+    if(hand.length>=8){ deck.shift(); continue; }
+    hand.push(deck.shift()); drawn++;
+  }
+  gs[r].deck=deck; gs[r].hand=hand;
+  return drawn;
+}
+
+// ── QUEST SYSTEM ──
+// Quest definitions: what advances them + reward when complete
+const QUEST_DEFS = {
+  cute_animals: { name:'Cute Animals', goal:3, desc:'Play 3 Cute animals', reward:'heal30',
+                  advance:(c)=> c && c.tags && c.tags.includes('cute') },
+  heal_thrice:  { name:'Healer',       goal:3, desc:'Heal 3 times',        reward:'draw2',
+                  advance:(c,gs,r)=> gs[r]._healedThisCard },
+};
+
+function advanceQuestsFor(gs,r,card){
+  (gs[r].quests||[]).forEach(q=>{
+    if(q.done) return;
+    const def=QUEST_DEFS[q.id];
+    if(!def) return;
+    if(def.advance(card,gs,r)){
+      q.progress=(q.progress||0)+1;
+      if(q.progress>=def.goal){
+        q.done=true;
+        log('  ★ Quest complete: '+def.name+'!','effect');
+        if(def.reward==='heal30') heal(gs,r,30);
+        if(def.reward==='draw2') drawExtra(gs,r,2);
+      }
+    }
+  });
 }
 
 // ── Lobby buttons ──
@@ -751,7 +902,7 @@ function renderArena(){
   const aOpp=document.getElementById('arena-opp');
   const aYou=document.getElementById('arena-you');
   aOpp.innerHTML=''; aYou.innerHTML='';
-  if(localGs.phase==='resolve'||localGs.phase==='result'){
+  if(localGs.phase==='reveal'||localGs.phase==='resolve'||localGs.phase==='result'){
     (them().selectedCards||[]).forEach(c=>{if(c){const el=makeCardEl(c);el.classList.add('card-played');aOpp.appendChild(el);}});
     (me().selectedCards||[]).forEach(c=>{if(c){const el=makeCardEl(c);el.classList.add('card-played');aYou.appendChild(el);}});
   }
@@ -788,31 +939,54 @@ function toggleCard(idx,el){
 
 document.getElementById('btn-confirm').onclick=async()=>{
   if(didConfirm) return;
-  didConfirm=true;
-  clearInterval(timerInt);
 
   const hand=[...(me().hand||[])];
   const played=selected.map(i=>hand[i]).filter(Boolean);
+
+  // Check if any played card requires the player to choose their own discards
+  const remainingHand=hand.filter((_,i)=>!selected.includes(i));
+  const discardCard=played.find(c=>SELF_DISCARD[c.id]);
+  if(discardCard && remainingHand.length>0){
+    const count=Math.min(SELF_DISCARD[discardCard.id], remainingHand.length);
+    const chosen=await pickDiscards(remainingHand, count, discardCard.name);
+    discardCard._discardUids=chosen;
+  }
+
+  didConfirm=true;
+  clearInterval(timerInt);
+
   const newHand=hand.filter((_,i)=>!selected.includes(i));
 
   if(soloMode){
-    // Update local state
     localGs[myRole].selectedCards=played;
     localGs[myRole].hand=newHand;
     localGs[myRole].confirmed=true;
-    // CPU picks random cards
     const p2hand=[...(localGs.p2.hand||[])];
     const n=Math.min(Math.floor(Math.random()*3),p2hand.length);
-    localGs.p2.selectedCards=p2hand.splice(0,n);
+    const p2played=p2hand.splice(0,n);
+    p2played.forEach(c=>{
+      if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
+      if(SPLIT_CARDS[c.id]){ const t=SPLIT_CARDS[c.id]; const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
+    });
+    localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2hand;
     localGs.p2.confirmed=true;
     renderHand(newHand);
-    document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
-    setTimeout(()=>resolveRound(localGs),600);
+
+    // REVEAL first: show both players cards on the board
+    localGs.phase='reveal';
+    renderBoard();
+    document.getElementById('action-info').innerHTML='<em>Cards revealed…</em>';
+
+    setTimeout(async()=>{
+      for(const c of played){ if(CHOOSE_OPTIONS[c.id]) c._choice=await pickChoice(CHOOSE_OPTIONS[c.id], c.name); }
+      for(const c of played){ if(SPLIT_CARDS[c.id]) c._split=await pickSplit(SPLIT_CARDS[c.id], c.name); }
+      document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
+      setTimeout(()=>resolveRound(localGs),300);
+    }, 900);
     return;
   }
 
-  // Multiplayer
   const u={};
   u[myRole+'/selectedCards']=played;
   u[myRole+'/confirmed']=true;
@@ -828,6 +1002,84 @@ document.getElementById('btn-confirm').onclick=async()=>{
     }
   }
 };
+
+// ── Discard picker: returns a promise resolving to array of chosen uids ──
+function pickDiscards(hand, count, cardName){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('ov-discard');
+    const grid=document.getElementById('discard-grid');
+    const sub=document.getElementById('discard-sub');
+    const btn=document.getElementById('btn-discard-confirm');
+    sub.textContent=cardName+': choose '+count+' card'+(count>1?'s':'')+' to discard.';
+    const chosen=[];
+    grid.innerHTML='';
+    hand.forEach(c=>{
+      const el=makeCardEl(c);
+      el.style.cursor='pointer';
+      el.addEventListener('click',()=>{
+        const pos=chosen.indexOf(c.uid);
+        if(pos>=0){ chosen.splice(pos,1); el.classList.remove('selected'); }
+        else{
+          if(chosen.length>=count) return;
+          chosen.push(c.uid); el.classList.add('selected');
+        }
+        btn.disabled = chosen.length!==count;
+      });
+      grid.appendChild(el);
+    });
+    btn.disabled=true;
+    btn.onclick=()=>{
+      ov.classList.add('hidden');
+      resolve(chosen);
+    };
+    ov.classList.remove('hidden');
+  });
+}
+
+// ── Choose picker: returns chosen option key ──
+function pickChoice(options, cardName){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('ov-choose');
+    const sub=document.getElementById('choose-sub');
+    const opts=document.getElementById('choose-opts');
+    document.getElementById('choose-title').textContent=cardName;
+    sub.textContent='Choose one:';
+    opts.innerHTML='';
+    options.forEach(o=>{
+      const b=document.createElement('button');
+      b.className='btn btn-outline';
+      b.textContent=o.label;
+      b.style.marginTop='0';
+      b.onclick=()=>{ ov.classList.add('hidden'); resolve(o.key); };
+      opts.appendChild(b);
+    });
+    ov.classList.remove('hidden');
+  });
+}
+
+// ── Split picker: returns {dmg, heal} ──
+function pickSplit(total, cardName){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('ov-choose');
+    const sub=document.getElementById('choose-sub');
+    const opts=document.getElementById('choose-opts');
+    document.getElementById('choose-title').textContent=cardName;
+    sub.textContent='Split '+total+' between damage and heal:';
+    opts.innerHTML='';
+    // Build options in steps of 5 (or 1 if small)
+    const step = total%5===0 ? 5 : 1;
+    for(let dmg=total; dmg>=0; dmg-=step){
+      const heal=total-dmg;
+      const b=document.createElement('button');
+      b.className='btn btn-outline';
+      b.style.marginTop='0';
+      b.textContent=dmg+' damage  /  '+heal+' heal';
+      b.onclick=()=>{ ov.classList.add('hidden'); resolve({dmg,heal}); };
+      opts.appendChild(b);
+    }
+    ov.classList.remove('hidden');
+  });
+}
 
 // ── Timer ──
 function startTimer(){
@@ -859,8 +1111,13 @@ function resolveRound(gs){
   const state=JSON.parse(JSON.stringify(gs));
   log('⚔ Round '+state.round+' — cards revealed','system');
 
-  // Reset block
-  state.p1.blocked=false; state.p2.blocked=false;
+  // Reset block + per-round trackers
+  ['p1','p2'].forEach(r=>{
+    state[r].blocked=false;
+    state[r].dmgDealtThisRound=0;
+    state[r].healedThisRound=0;
+    state[r].discardedThisRound=0;
+  });
 
   const p1c=state.p1.selectedCards||[];
   const p2c=state.p2.selectedCards||[];
@@ -869,27 +1126,49 @@ function resolveRound(gs){
   state.p1.lastPlayed=[...p1c];
   state.p2.lastPlayed=[...p2c];
 
-  // Block first
+  // Cards that ONLY block (activated in the block-first pass, not re-run later)
+  const BLOCK_ONLY=['akya','monsieur_void'];
+  // Block first — any card that grants block gets it before damage resolves
   [...p1c,...p2c].forEach(c=>{
     if(!c) return;
-    if(['akya','monsieur_void','kazakus'].includes(c.id)){
+    if(['akya','monsieur_void','kazakus','chefs_hammer'].includes(c.id)){
       const r=p1c.includes(c)?'p1':'p2';
-      if(!state[r].blocked){state[r].blocked=true;log(state[r].name+' plays '+c.name+' — Block!','effect');}
+      if(!state[r].blocked){state[r].blocked=true;}
     }
   });
 
-  // P1 effects
-  p1c.forEach(c=>{
-    if(!c||['akya','monsieur_void'].includes(c.id)) return;
-    if(EFFECTS[c.id]) EFFECTS[c.id](state,'p1');
-    state.p1.graveyard=[c,...(state.p1.graveyard||[])];
-  });
-  // P2 effects
-  p2c.forEach(c=>{
-    if(!c||['akya','monsieur_void'].includes(c.id)) return;
-    if(EFFECTS[c.id]) EFFECTS[c.id](state,'p2');
-    state.p2.graveyard=[c,...(state.p2.graveyard||[])];
-  });
+  // Helper: run one card's effect and send to graveyard OR back to deck (Echo)
+  function runCard(c,r){
+    if(!c||BLOCK_ONLY.includes(c.id)) return;
+    if(EFFECTS[c.id]) EFFECTS[c.id](state,r);
+    advanceQuestsFor(state,r,c);
+    if(c.echo){
+      // Echo: return to deck and shuffle instead of graveyard
+      state[r].deck=[...(state[r].deck||[]),c];
+      shuffleDeck(state,r);
+      log('  ↺ '+c.name+' echoes back into the deck.','effect');
+    } else {
+      state[r].graveyard=[c,...(state[r].graveyard||[])];
+    }
+  }
+
+  // QUICKPLAY cards resolve first (before everything else)
+  const p1quick=p1c.filter(c=>c&&c.quickplay);
+  const p2quick=p2c.filter(c=>c&&c.quickplay);
+  // If both have quickplay, random order; else p1 first
+  let quickOrder=[];
+  if(p1quick.length&&p2quick.length){
+    if(Math.random()<0.5) quickOrder=[['p1',p1quick],['p2',p2quick]];
+    else quickOrder=[['p2',p2quick],['p1',p1quick]];
+  } else {
+    quickOrder=[['p1',p1quick],['p2',p2quick]];
+  }
+  quickOrder.forEach(([r,cards])=>cards.forEach(c=>runCard(c,r)));
+
+  // Then normal P1 cards (non-quickplay)
+  p1c.forEach(c=>{ if(c&&!c.quickplay) runCard(c,'p1'); });
+  // Then normal P2 cards (non-quickplay)
+  p2c.forEach(c=>{ if(c&&!c.quickplay) runCard(c,'p2'); });
 
   // Blessing end-of-round
   ['p1','p2'].forEach(r=>{
@@ -912,9 +1191,13 @@ function resolveRound(gs){
     return;
   }
 
-  // Draw 2 each
-  drawCards(state,'p1',2+(state.p1.extraDraw||0),state.p1.hindered||state.p1.noDraw);
-  drawCards(state,'p2',2+(state.p2.extraDraw||0),state.p2.hindered||state.p2.noDraw);
+  // Draw 2 each (Hindered = no draw this round)
+  ['p1','p2'].forEach(r=>{
+    const skip=state[r].hindered||state[r].noDraw;
+    const before=(state[r].hand||[]).length;
+    drawCards(state,r,2+(state[r].extraDraw||0),skip);
+    state[r].drewThisRound=((state[r].hand||[]).length>before);
+  });
   state.p1.extraDraw=0; state.p2.extraDraw=0;
   state.p1.noDraw=false; state.p2.noDraw=false;
   state.p1.hindered=false; state.p2.hindered=false;
@@ -970,11 +1253,14 @@ function showResult(newGs,oldGs){
   thCards.forEach(c=>{if(c){const el=makeCardEl(c);el.style.cssText='width:70px;height:100px;cursor:default';oppEl.appendChild(el);}});
 
   document.getElementById('res-log').innerHTML=logs.map(l=>`<div class="log-entry ${l.type}">${l.msg}</div>`).join('');
+  hideCardPreview();
+  document.getElementById('hand').style.visibility='hidden';
   document.getElementById('ov-result').classList.remove('hidden');
 }
 
 document.getElementById('btn-continue').onclick=async()=>{
   document.getElementById('ov-result').classList.add('hidden');
+  document.getElementById('hand').style.visibility='visible';
   selected=[]; didConfirm=false;
   if(soloMode){
     localGs.phase='select';
