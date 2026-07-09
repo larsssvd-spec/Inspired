@@ -1275,17 +1275,13 @@ function me(){return localGs[myRole];}
 function them(){return localGs[opp(myRole)];}
 
 function mkCard(c){
-  const card={id:c.id,name:c.name,text:c.text,rarity:c.rarity,emoji:c.emoji,uid:Math.random().toString(36).slice(2,10)};
-  if(c.art) card.art=c.art;                // illustration path — needed for the framed render
-  if(c.type) card.type=c.type;             // normal / quest / blessing
-  if(c.tags) card.tags=c.tags;
-  if(c.endless) card.endless=true;
-  if(c.quickplay) card.quickplay=true;
-  if(c.quest) card.quest=c.quest;
-  if(c.block) card.block=true;
-  if(c.unplayable) card.unplayable=true;   // Phase 3: can't be played normally
-  if(c.hold) card.hold=true;               // Phase 3: has a while-holding effect
-  if(c.journeyDay) card.journeyDay=true;   // Phase 2: a Journey Day (max 1 per round)
+  // Copy every DEFINED data field from the card definition (id, name, text, rarity, emoji,
+  // art, type, tags, and all keyword flags: endless, quickplay, quest, block, unplayable,
+  // hold, journeyDay, immune, dealsDamage, heals, …). Skipping undefined keeps Firebase
+  // happy (it rejects undefined), and any new flag added to a card is carried automatically.
+  const card={};
+  for(const k in c){ if(Object.prototype.hasOwnProperty.call(c,k) && c[k]!==undefined) card[k]=c[k]; }
+  card.uid=Math.random().toString(36).slice(2,10);
   return card;
 }
 function buildDeck(){
