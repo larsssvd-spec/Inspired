@@ -615,10 +615,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   <div class="lobby-box hidden" id="lobby-box">
     <button class="btn-back-link" id="lobby-back">← Menu</button>
     <h2>Multiplayer</h2>
-    <div class="field">
-      <label>Your name</label>
-      <input id="inp-name" type="text" placeholder="Your hero name..." maxlength="20" />
-    </div>
+    <div class="status" id="lb-asname" style="margin-top:0;margin-bottom:1.2rem"></div>
     <button class="btn btn-green" id="btn-create">Create new game</button>
     <div class="divider">or join existing</div>
     <div class="field">
@@ -1778,7 +1775,7 @@ function advanceQuestsFor(gs,r,card){
 
 // ── Lobby buttons ──
 document.getElementById('btn-create').onclick=async()=>{
-  myName=document.getElementById('inp-name').value.trim()||'Hero';
+  myName=(myProfile&&myProfile.name)||'Hero';   // always your account's display name
   myRole='p1'; soloMode=false;
   const code=Math.random().toString(36).slice(2,6).toUpperCase();
   gRef=ref(db,'games/'+code);
@@ -1786,14 +1783,14 @@ document.getElementById('btn-create').onclick=async()=>{
   await set(gRef,{status:'waiting',round:1,phase:'waiting',
     p1:{name:myName,hp:150,maxHp:150,deck,hand,graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
-  document.getElementById('lb-main')||document.querySelector('.lobby-box').classList.add('hidden');
+  document.getElementById('lobby-box').classList.add('hidden');
   document.getElementById('lb-waiting').classList.remove('hidden');
   document.getElementById('lb-code').textContent=code;
   startFirebaseListener();
 };
 
 document.getElementById('btn-join').onclick=async()=>{
-  myName=document.getElementById('inp-name').value.trim()||'Hero';
+  myName=(myProfile&&myProfile.name)||'Hero';   // always your account's display name
   myRole='p2'; soloMode=false;
   const code=document.getElementById('inp-code').value.trim().toUpperCase();
   if(code.length!==4){setStatus('Enter a 4-letter code.','err');return;}
@@ -1909,7 +1906,6 @@ async function loadProfile(user){
       currentUser=user;
       try{ myProfile=await loadProfile(user); }catch(e){ myProfile={name:user.displayName||'Player',collection:{},packs:0}; }
       myName=myProfile.name||user.displayName||'Player';
-      const inp=$('inp-name'); if(inp){ inp.value=myName; }
       hide('auth-box'); show('menu-box');
     } else {
       currentUser=null; myProfile=null;
@@ -1938,7 +1934,6 @@ async function loadProfile(user){
       await update(ref(db,'users/'+currentUser.uid), {name});
       await updateProfile(currentUser,{displayName:name});
       myProfile.name=name; myName=name;
-      const inp=$('inp-name'); if(inp) inp.value=name;
       el.textContent='Saved.'; el.className='status ok';
     }catch(e){ el.textContent='Could not save.'; el.className='status err'; }
   };
@@ -2053,7 +2048,10 @@ function renderCollection(){
   // Singleplayer → (for now) start the solo game directly. Deck-picking comes in step 4.
   $('menu-single').onclick=()=> startSolo();
   // Multiplayer → reveal the create/join panel.
-  $('menu-multi').onclick=()=>{ hide('menu-box'); show('lobby-box'); };
+  $('menu-multi').onclick=()=>{
+    hide('menu-box'); show('lobby-box');
+    $('lb-asname').innerHTML='Playing as <strong style="color:var(--green2)">'+((myProfile&&myProfile.name)||'Hero')+'</strong>';
+  };
   $('lobby-back').onclick=()=>{ hide('lobby-box'); show('menu-box'); };
   // Collection → open the collection screen (gallery filled in step 2).
   $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); colTab='common'; colPage=0; renderCollection(); };
