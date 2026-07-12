@@ -2110,6 +2110,10 @@ function showGameScreen(){
 // ── Render ──
 function renderBoard(){
   if(!localGs?.p1||!localGs?.p2) return;
+  // `selected` holds hand INDICES of cards moved to the field. Once we leave the select
+  // phase those indices refer to a hand that no longer exists — keeping them would hide
+  // real cards and make the hand look empty. Drop them.
+  if(localGs.phase!=='select' && !didConfirm) selected=[];
   const my=me(), th=them();
   document.getElementById('you-name').textContent=my.name;
   document.getElementById('you-hp').textContent=my.hp;
@@ -2904,7 +2908,15 @@ document.getElementById('btn-continue').onclick=async()=>{
   const snap=await get(gRef);
   const gs=snap.val();
   if(gs&&gs.phase==='result'){
+    // First to continue advances the round for both (the listener then fires onSelectPhase).
     await update(gRef,{phase:'select','p1/confirmed':false,'p2/confirmed':false,'p1/selectedCards':[],'p2/selectedCards':[],'p1/choicesReady':false,'p2/choicesReady':false,'p1/choices':null,'p2/choices':null});
+  } else if(gs){
+    // The OTHER player already advanced the phase to 'select', so no Firebase change will
+    // fire our listener again. Re-enter the select phase locally, or this player's board
+    // would stay frozen on the stale (already-resolved) round with an empty-looking hand.
+    localGs=gs;
+    prevPhase='select';
+    onSelectPhase();
   }
 };
 
