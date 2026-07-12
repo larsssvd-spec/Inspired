@@ -2066,6 +2066,7 @@ function setStatus(msg,cls=''){const el=document.getElementById('lb-status');el.
 
 // ── Firebase listener (multiplayer only) ──
 let prevPhase='';
+let lastRenderedRound=0;   // tracks the round we last set up locally (see the listener)
 function startFirebaseListener(){
   onValue(gRef,snap=>{
     const ng=snap.val();
@@ -2077,6 +2078,14 @@ function startFirebaseListener(){
     const prev=prevPhase;
     prevPhase=ng.phase;
     const prevGs=localGs;
+    // A NEW ROUND has begun: wipe the per-round selection state. `selected` holds hand
+    // INDICES of cards moved to the field; carried into the next round those stale indices
+    // hide real cards, making the hand look empty (and confirm do nothing). Must be keyed on
+    // the round, not the phase — the new round arrives already in phase 'select'.
+    if(ng.round !== lastRenderedRound){
+      lastRenderedRound = ng.round;
+      selected=[]; didConfirm=false;
+    }
     localGs=ng;
     renderBoard();
     if(ng.phase==='select'&&prev!=='select') onSelectPhase();
@@ -2110,10 +2119,6 @@ function showGameScreen(){
 // ── Render ──
 function renderBoard(){
   if(!localGs?.p1||!localGs?.p2) return;
-  // `selected` holds hand INDICES of cards moved to the field. Once we leave the select
-  // phase those indices refer to a hand that no longer exists — keeping them would hide
-  // real cards and make the hand look empty. Drop them.
-  if(localGs.phase!=='select' && !didConfirm) selected=[];
   const my=me(), th=them();
   document.getElementById('you-name').textContent=my.name;
   document.getElementById('you-hp').textContent=my.hp;
