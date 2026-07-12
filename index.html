@@ -114,12 +114,74 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .btn-back-link:hover { color:var(--green2); }
 
 /* COLLECTION */
-#screen-collection { flex:1; display:flex; flex-direction:column; min-height:0; background:var(--deep); }
-.col-header { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); flex-shrink:0; }
+/* ── Collection: valley background, glass panels, paged grid, decks sidebar ── */
+#screen-collection { flex:1; display:flex; flex-direction:column; min-height:0; position:relative;
+  background:var(--deep) url('art/collection_bg.png') center/cover no-repeat; }
+#screen-collection::before { content:''; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg, rgba(4,12,18,0.82) 0%, rgba(4,12,18,0.62) 30%, rgba(4,12,18,0.72) 100%); }
+#screen-collection > * { position:relative; z-index:1; }
+
+.col-header { display:flex; align-items:center; gap:1.2rem; padding:1rem 1.6rem; flex-shrink:0;
+  border-bottom:1px solid rgba(126,200,50,0.18); background:linear-gradient(180deg, rgba(4,12,18,0.75), rgba(4,12,18,0.25)); }
 .col-header .btn-back-link { margin-bottom:0; }
-.col-title { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--green2); }
-.col-sub { color:var(--text3); font-size:0.85rem; margin-left:auto; }
-.col-body { flex:1; overflow-y:auto; padding:1.5rem; }
+.col-title { font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--text); letter-spacing:0.14em;
+  text-transform:uppercase; text-shadow:0 2px 12px rgba(0,0,0,0.8); }
+.col-sub { color:var(--text2); font-size:0.82rem; letter-spacing:0.08em; margin-left:auto;
+  background:rgba(6,16,22,0.6); border:1px solid var(--border); border-radius:999px; padding:0.35rem 0.9rem; }
+.col-dust { display:flex; align-items:center; gap:0.45rem; color:var(--gold); font-family:'Playfair Display',serif; font-size:1rem;
+  background:rgba(6,16,22,0.6); border:1px solid rgba(240,200,96,0.35); border-radius:999px; padding:0.35rem 1rem;
+  box-shadow:0 0 18px rgba(240,200,96,0.12); }
+
+/* Tabs */
+.col-tabs { display:flex; gap:0.5rem; padding:0.9rem 1.6rem 0; flex-shrink:0; }
+.col-tab { background:rgba(6,16,22,0.55); border:1px solid var(--border); border-bottom:none; color:var(--text2);
+  font-family:'Playfair Display',serif; font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:0.55rem 1.3rem; border-radius:8px 8px 0 0; cursor:pointer; transition:all 0.18s; }
+.col-tab:hover { color:var(--green2); border-color:var(--border2); }
+.col-tab.active { background:rgba(10,26,34,0.85); color:var(--green2); border-color:rgba(126,200,50,0.45);
+  box-shadow:0 -4px 18px rgba(126,200,50,0.12); }
+
+.col-main { flex:1; display:flex; min-height:0; gap:1.2rem; padding:0 1.6rem 1rem; }
+.col-body { flex:1; display:flex; flex-direction:column; min-height:0; padding:1.2rem 1.4rem 0.5rem;
+  background:rgba(8,20,28,0.62); backdrop-filter:blur(6px); border:1px solid rgba(126,200,50,0.16);
+  border-radius:var(--r); box-shadow:0 12px 48px rgba(0,0,0,0.55); overflow:hidden; }
+.col-grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr);
+  gap:0.7rem 1.1rem; min-height:0; place-items:center; }
+.col-cell { display:flex; flex-direction:column; align-items:center; gap:0.45rem; height:100%; justify-content:center; }
+.col-cardwrap { position:relative; cursor:pointer; transition:transform 0.18s; height:calc(100% - 32px); display:flex; }
+.col-cardwrap:hover { transform:translateY(-6px); }
+.col-cardwrap .card { height:100%; width:auto; }
+.col-cardwrap .card.framed { height:100%; width:auto; aspect-ratio:var(--aspect,0.62); }
+.col-cardwrap .card:not(.framed) { width:auto; aspect-ratio:0.69; height:100%; }
+.col-cardwrap .card:hover, .col-cardwrap .card.framed:hover { transform:none; }
+.col-cardwrap.locked .card { filter:grayscale(1) brightness(0.5); }
+.col-cardwrap.locked .card.framed { filter:grayscale(1) brightness(0.5) drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
+.col-badge { position:absolute; bottom:-5px; right:-5px; background:var(--dark); border:1px solid var(--gold); color:var(--gold);
+  font-family:'Playfair Display',serif; font-size:0.8rem; font-weight:700; border-radius:999px; padding:1px 9px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.7); z-index:2; }
+.col-actions { display:flex; gap:0.35rem; flex-shrink:0; }
+.col-mini { background:rgba(6,16,22,0.85); border:1px solid var(--border2); color:var(--text2); border-radius:999px;
+  font-family:'Playfair Display',serif; font-size:0.7rem; padding:0.24rem 0.6rem; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.col-mini:hover:not(:disabled) { border-color:var(--green2); color:var(--green2); box-shadow:0 0 12px rgba(126,200,50,0.2); }
+.col-mini:disabled { opacity:0.25; cursor:not-allowed; }
+.col-mini.sell:hover:not(:disabled) { border-color:var(--gold); color:var(--gold); box-shadow:0 0 12px rgba(240,200,96,0.2); }
+
+/* Pager */
+.col-pager { display:flex; align-items:center; justify-content:center; gap:1.4rem; padding:0.6rem 0 0.2rem; flex-shrink:0; }
+.col-page-btn { background:rgba(6,16,22,0.8); border:1px solid var(--border2); color:var(--green2); border-radius:999px;
+  font-size:0.95rem; padding:0.35rem 1rem; cursor:pointer; transition:all 0.15s; }
+.col-page-btn:hover:not(:disabled) { border-color:var(--green2); background:rgba(126,200,50,0.12); box-shadow:0 0 14px rgba(126,200,50,0.2); }
+.col-page-btn:disabled { opacity:0.22; cursor:not-allowed; }
+.col-page-label { font-family:'Playfair Display',serif; color:var(--text2); font-size:0.85rem; letter-spacing:0.12em;
+  text-transform:uppercase; min-width:130px; text-align:center; }
+
+/* Decks sidebar */
+.col-decks { width:240px; flex-shrink:0; display:flex; flex-direction:column; padding:1.3rem 1rem;
+  background:rgba(8,20,28,0.62); backdrop-filter:blur(6px); border:1px solid rgba(126,200,50,0.16);
+  border-radius:var(--r); box-shadow:0 12px 48px rgba(0,0,0,0.55); overflow-y:auto; }
+.col-decks h3 { font-family:'Playfair Display',serif; color:var(--green2); font-size:0.82rem; letter-spacing:0.16em;
+  text-transform:uppercase; text-align:center; padding-bottom:0.8rem; border-bottom:1px solid var(--border); }
+.col-deck-empty { color:var(--text3); font-size:0.82rem; font-style:italic; text-align:center; padding:2.5rem 0.6rem; line-height:1.7; }
 .dots span { animation:blink 1.4s infinite; }
 .dots span:nth-child(2){animation-delay:0.2s} .dots span:nth-child(3){animation-delay:0.4s}
 @keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
@@ -483,11 +545,65 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   <div class="lobby-title">Inspired</div>
   <div class="lobby-tagline">Every card. Every valley. Every choice.</div>
 
-  <!-- MAIN MENU (shown first) -->
-  <div class="menu-box" id="menu-box">
+  <!-- AUTH (login / register) — shown before anything else -->
+  <div class="lobby-box hidden" id="auth-box">
+    <h2 id="auth-title">Sign in</h2>
+    <div class="field hidden" id="auth-namefield">
+      <label>Display name</label>
+      <input id="auth-name" type="text" placeholder="Your hero name..." maxlength="20" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-green" id="auth-submit">Sign in</button>
+    <div class="divider" id="auth-divider">or</div>
+    <button class="btn btn-outline" id="auth-toggle">Create an account</button>
+    <div class="status" id="auth-status"></div>
+  </div>
+
+  <!-- MAIN MENU (shown after sign-in) -->
+  <div class="menu-box hidden" id="menu-box">
     <button class="menu-btn" id="menu-single"><span class="menu-ico">⚔️</span><span>Singleplayer</span></button>
     <button class="menu-btn" id="menu-multi"><span class="menu-ico">🌐</span><span>Multiplayer</span></button>
     <button class="menu-btn" id="menu-collection"><span class="menu-ico">🃏</span><span>Collection</span></button>
+    <button class="menu-btn" id="menu-profile"><span class="menu-ico">👤</span><span>Profile</span></button>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="lobby-box hidden" id="profile-box">
+    <button class="btn-back-link" id="profile-back">← Menu</button>
+    <h2>Profile</h2>
+    <div class="field">
+      <label>Display name</label>
+      <input id="prof-name" type="text" maxlength="20" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="prof-email" type="text" disabled style="opacity:0.6" />
+    </div>
+    <div style="display:flex;gap:0.6rem;margin:1rem 0 0.4rem;text-align:center">
+      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
+        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-cards">0</div>
+        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Cards</div>
+      </div>
+      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
+        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-packs">0</div>
+        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Packs</div>
+      </div>
+      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
+        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-dust">0</div>
+        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Dust</div>
+      </div>
+    </div>
+    <button class="btn btn-green" id="prof-save" style="margin-top:1rem">Save name</button>
+    <div class="divider">or</div>
+    <button class="btn btn-outline" id="prof-signout">Sign out</button>
+    <div class="status" id="prof-status"></div>
   </div>
 
   <div class="lobby-box hidden" id="lobby-box">
@@ -525,9 +641,25 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
     <button class="btn-back-link" id="col-back">← Menu</button>
     <div class="col-title">Collection</div>
     <div class="col-sub" id="col-count"></div>
+    <div class="col-dust">✨ <span id="col-dust">0</span></div>
   </div>
-  <div class="col-body" id="col-body">
-    <p style="color:var(--text2);text-align:center;padding:4rem 1rem;font-style:italic">The card gallery arrives in the next step.</p>
+  <div class="col-tabs">
+    <button class="col-tab active" id="tab-common">🃏 Commons</button>
+    <button class="col-tab" id="tab-legendary">👑 Legendaries</button>
+  </div>
+  <div class="col-main">
+    <div class="col-body">
+      <div class="col-grid" id="col-grid"></div>
+      <div class="col-pager">
+        <button class="col-page-btn" id="col-prev">◀</button>
+        <div class="col-page-label" id="col-pagelabel">Page 1</div>
+        <button class="col-page-btn" id="col-next">▶</button>
+      </div>
+    </div>
+    <div class="col-decks">
+      <h3>My Decks</h3>
+      <div class="col-deck-empty">No decks yet.<br>The deck builder is coming next.</div>
+    </div>
   </div>
 </div>
 
@@ -668,6 +800,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const FB = initializeApp({
   apiKey:"AIzaSyDkdiTTJlJN85knDfDVzn7-RgjqHB2Nnv0",
@@ -679,6 +812,7 @@ const FB = initializeApp({
   appId:"1:772511597371:web:a2d3f7a4e5207fc7fdad1e"
 });
 const db = getDatabase(FB);
+const auth = getAuth(FB);
 
 // ── Card data (NO functions — safe for Firebase) ──
 // Data-only card definitions. All behaviour lives in CARD_LOGIC (local, never sent to Firebase).
@@ -775,6 +909,32 @@ const db = getDatabase(FB);
 //   hasTag(card,'celebration') over state[r].hand. At onPlay the played cards are already
 //   out of hand, so a counter naturally excludes itself and cards played that round.
 //   (Fireblast Confetti: 5 dmg +10 per Celebration card still in hand.)
+//
+// ENCHANTED / ENCHANTED ORB:
+//   A card with enchanted:true has an extra "enchanted" part. When you play it AND still
+//   HOLD an Enchanted Orb (id 'enchanted_orb') in hand, you're asked "Use Orb?" at reveal
+//   (like Split/Choose). Yes → the enchanted part fires and 1 Orb is spent (hand→graveyard,
+//   in runCard); no → only the base effect. 1 Orb per enchanted card; the Orb must stay in
+//   hand (not be played). In onPlay, c.useOrb tells the card whether it was enchanted. The
+//   Orb is a normal card that fizzles if actually played. CPU spends Orbs at random.
+//
+// CURSE: a Cursed card has cursedUntil = round+1 → one full round to play it or it rots to
+//   the graveyard (curse sweep). curseCard(state,card) applies it, skipping immune and
+//   already-cursed cards. cursed_draws (Second Day) also skips immune now.
+//
+// onDraw ("when drawn") + CARD VARIANTS (Death Stare):
+//   onDraw fires in the draw step for each newly drawn card (placed copies aren't drawn, so
+//   no loop). A card can carry _variant on its instance to behave/read differently from one
+//   definition. Death Stare: drawer keeps variant 1, opponent gets a variant-2 copy if their
+//   hand isn't full. Variant 1 onPlay halves the variant-2 holder's HP (floor; not damage;
+//   once) IF the opponent also played their Death Stare that round. Variant 2 (hold) takes 5
+//   true damage at each round's end while held. Per-instance text set on draw.
+//   An onDraw returning TRUE consumes the card (straight to graveyard, never playable) —
+//   Scavenger's variant 2 does this; Death Stare's variants stay in hand (return false).
+//
+// SCOPE NOTE — Devour Hope only reacts to cards YOU shuffle into YOUR OWN deck (Endless,
+//   Energies Silk, …). Cards an OPPONENT plants into your deck (Scavenger) bypass the
+//   onShuffleIn hook entirely.
 // ─────────────────────────────────────────────────────────────────────────────
 const CARDS_DATA = [
   {id:'bulrog',         name:'Bulrog',         text:'Deal 15 damage.',                                      rarity:'common',    emoji:'👹', dealsDamage:true},
@@ -799,37 +959,38 @@ const CARDS_DATA = [
 
   // ── Phase 3: while-holding / unplayable / graveyard chain (placeholder emoji, real art later) ──
   {id:'phoenix_charm',  name:'Phoenix Charm',   text:'While holding: the first time you would die, you are revived with 25 health.', rarity:'legendary', emoji:'🪶', hold:true, unplayable:true},
-  {id:'nightlife',      name:'Nightlife',       text:'While holding: the first time your opponent would heal, that healing is stolen by you instead.', rarity:'legendary', emoji:'🌃', hold:true, art:'art/nightlife.png', type:'normal'},
+  {id:'nightlife', collectible:true,      name:'Nightlife',       text:'While holding: the first time your opponent would heal, that healing is stolen by you instead.', rarity:'legendary', emoji:'🌃', hold:true, art:'art/nightlife.png', type:'normal'},
   {id:'vantage',        name:'Vantage',         text:'While holding: the first time your opponent has less health than you, heal 20.', rarity:'common', emoji:'⚖️', hold:true, unplayable:true},
-  {id:'starving_pyrax', name:'Starving Pyrax',  text:'If there are at least 6 cards to eat: eat them and put Hungry Pyrax in your hand.', rarity:'legendary', emoji:'🥚', art:'art/starving_pyrax.png', type:'normal'},
+  {id:'starving_pyrax', collectible:true, name:'Starving Pyrax',  text:'If there are at least 6 cards to eat: eat them and put Hungry Pyrax in your hand.', rarity:'legendary', emoji:'🥚', art:'art/starving_pyrax.png', type:'normal'},
   {id:'hungry_pyrax',   name:'Hungry Pyrax',    text:'If there are at least 22 cards to eat: eat them and put Full Pyrax in your hand.', rarity:'legendary', emoji:'🐉', noDeck:true, art:'art/hungry_pyrax.png', type:'normal'},
   {id:'full_pyrax',     name:'Full Pyrax',      text:'Set your health to 150.',                              rarity:'legendary', emoji:'🐲', noDeck:true, art:'art/full_pyrax.png', type:'normal'},
 
   // ── Phase 2: the Journey line. Opening Ceremony is an auto-active quest that shuffles
   // the 5 Days into your deck. Days are journeyDay cards (Choose one of two maluses on play).
   // Days are noDeck (they enter only via Opening Ceremony, never the normal deck pool).
-  {id:'opening_ceremony', name:'Opening Ceremony', text:'Shuffle all Journey Days into your deck. Quest: play 3 Journey Days. Reward: all Journey effects you chose now apply to your opponent instead of you.', rarity:'legendary', emoji:'🎪', quest:'opening_ceremony', art:'art/opening_ceremony.png', type:'quest'},
+  {id:'opening_ceremony', collectible:true, name:'Opening Ceremony', text:'Shuffle all Journey Days into your deck. Quest: play 3 Journey Days. Reward: all Journey effects you chose now apply to your opponent instead of you.', rarity:'legendary', emoji:'🎪', quest:'opening_ceremony', art:'art/opening_ceremony.png', type:'quest'},
   {id:'first_day',  name:'The First Day',  text:"Choose: for the rest of the game you can't heal OR you can't deal more than 15 damage in one round.", rarity:'legendary', emoji:'🌅', journeyDay:true, noDeck:true, art:'art/first_day.png', type:'normal'},
   {id:'second_day', name:'The Second Day', text:'Choose: for the rest of the game all cards you draw are Cursed OR your maximum hand size is decreased by 2.', rarity:'legendary', emoji:'🌾', journeyDay:true, noDeck:true, art:'art/second_day.png', type:'normal'},
   {id:'third_day',  name:'The Third Day',  text:"Choose: for the rest of the game you can't draw extra cards OR you draw 1 card at the start of each round instead of 2.", rarity:'legendary', emoji:'🌋', journeyDay:true, noDeck:true, art:'art/third_day.png', type:'normal'},
   {id:'fourth_day', name:'The Fourth Day', text:'Choose: for the rest of the game your opponent can see all cards you draw OR you discard 1 card from the bottom of your deck at the end of each round.', rarity:'legendary', emoji:'🏛️', journeyDay:true, noDeck:true, art:'art/fourth_day.png', type:'normal'},
   {id:'fifth_day',  name:'The Fifth Day',  text:"Choose: for the rest of the game you take 5 damage at the start of each round OR you can't play more than 1 card each round.", rarity:'legendary', emoji:'🎏', journeyDay:true, noDeck:true, art:'art/fifth_day.png', type:'normal'},
   // ── New cards (art + metadata; effects/logic added later) ──
-  {id:'death_stare', name:'Death Stare', text:'', rarity:'legendary', type:'normal', art:'art/death_stare.png'},
-  {id:'detective_bubbles', name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, heals:true, type:'normal', art:'art/detective_bubbles.png'},
-  {id:'murloc_things', name:'Murloc Things', text:'', rarity:'common', type:'normal', art:'art/murloc_things.png'},
-  {id:'skywalker', name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
-  {id:'bolvar', name:'Bolvar', text:'For the rest of the game: deal 20 true damage to your opponent after each round they play fewer than 2 cards.', rarity:'legendary', emoji:'🛡️', type:'normal', art:'art/bolvar.png'},
-  {id:'energies_silk', name:'Energies Silk', text:'', rarity:'legendary', type:'normal', art:'art/energies_silk.png'},
-  {id:'scavenger', name:'Scavenger', text:'', rarity:'common', type:'normal', art:'art/scavenger.png'},
-  {id:'devour_hope', name:'Devour Hope', text:'For the rest of the game: destroy each card shuffled into your deck to deal 5 true damage.', rarity:'legendary', emoji:'🕳️', type:'normal', art:'art/devour_hope.png'},
-  {id:'deepception', name:'Deepception', text:'Immune. While holding: revive yourself with 25 health upon death (once per game). Discard this card afterwards.', rarity:'legendary', emoji:'🌀', immune:true, hold:true, type:'normal', art:'art/deepception.png'},
-  {id:'fireblast_confetti', name:'Fireblast Confetti', text:'Celebration. Deal 5 damage. +10 damage for each Celebration card you are holding.', rarity:'common', emoji:'🎆', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/fireblast_confetti.png'},
-  {id:'larry_birthday_hero', name:'Larry, the Birthday Hero', text:'', rarity:'legendary', type:'normal', art:'art/larry_birthday_hero.png'},
-  {id:'arcane_cake_celebration', name:'Arcane Cake Celebration', text:'', rarity:'common', type:'normal', art:'art/arcane_cake_celebration.png'},
-  {id:'hangover_hex', name:'Hangover Hex', text:'', rarity:'common', type:'normal', art:'art/hangover_hex.png'},
-  {id:'prinnys_vanilla_cake', name:'Prinny\'s Vanilla Cake', text:'', rarity:'common', type:'normal', art:'art/prinnys_vanilla_cake.png'},
-  {id:'larrys_lover', name:'Larry\'s Lover', text:'', rarity:'common', type:'normal', art:'art/larrys_lover.png'},
+  {id:'death_stare', collectible:true, name:'Death Stare', text:'When drawn: put a copy in both hands (you keep variant 1, your opponent gets variant 2).', rarity:'legendary', emoji:'👁️', hold:true, type:'normal', art:'art/death_stare.png'},
+  {id:'detective_bubbles', collectible:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, heals:true, type:'normal', art:'art/detective_bubbles.png'},
+  {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
+  {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal'},
+  {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
+  {id:'bolvar', collectible:true, name:'Bolvar', text:'For the rest of the game: deal 20 true damage to your opponent after each round they play fewer than 2 cards.', rarity:'legendary', emoji:'🛡️', type:'normal', art:'art/bolvar.png'},
+  {id:'energies_silk', collectible:true, name:'Energies Silk', text:'Shuffle each Enchanted Orb you used back into your deck.', rarity:'legendary', emoji:'🕸️', type:'normal', art:'art/energies_silk.png'},
+  {id:'scavenger', collectible:true, name:'Scavenger', text:"Shuffle this card into your opponent's deck.", rarity:'common', emoji:'🦅', type:'normal', art:'art/scavenger.png'},
+  {id:'devour_hope', collectible:true, name:'Devour Hope', text:'For the rest of the game: destroy each card shuffled into your deck to deal 5 true damage.', rarity:'legendary', emoji:'🕳️', type:'normal', art:'art/devour_hope.png'},
+  {id:'deepception', collectible:true, name:'Deepception', text:'Immune. While holding: revive yourself with 25 health upon death (once per game). Discard this card afterwards.', rarity:'legendary', emoji:'🌀', immune:true, hold:true, type:'normal', art:'art/deepception.png'},
+  {id:'fireblast_confetti', collectible:true, name:'Fireblast Confetti', text:'Celebration. Deal 5 damage. +10 damage for each Celebration card you are holding.', rarity:'common', emoji:'🎆', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/fireblast_confetti.png'},
+  {id:'larry_birthday_hero', collectible:true, name:'Larry, the Birthday Hero', text:'', rarity:'legendary', type:'normal', art:'art/larry_birthday_hero.png'},
+  {id:'arcane_cake_celebration', collectible:true, name:'Arcane Cake Celebration', text:'', rarity:'common', type:'normal', art:'art/arcane_cake_celebration.png'},
+  {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'', rarity:'common', type:'normal', art:'art/hangover_hex.png'},
+  {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'', rarity:'common', type:'normal', art:'art/prinnys_vanilla_cake.png'},
+  {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'', rarity:'common', type:'normal', art:'art/larrys_lover.png'},
 ];
 
 // Cards where YOU choose which of your own cards to discard: {cardId: count}
@@ -962,6 +1123,7 @@ function buildCtx(state, r, extra){
     state, self:r, opp:opp(r),
     card: extra.card, effState: extra.effState, amount: extra.amount, payload: extra,
     shuffleCard: extra.shuffleCard,   // the card about to enter the deck (onShuffleIn hook)
+    useOrb: !!(extra.card && extra.card._useOrb),   // Enchanted: was an Orb spent on this card?
     // --- action helpers ---
     dealDmg:   (amt, trueDmg)=> dealDmg(state, opp(r), amt, !!trueDmg, r),
     dealDmgTo: (target, amt, trueDmg)=> dealDmg(state, target, amt, !!trueDmg, opp(target)),
@@ -1002,7 +1164,66 @@ function buildCtx(state, r, extra){
 // ── CARD LOGIC register (behaviour per card id; the "steiger"/scaffold cards) ──
 // Placeholder cards kept temporarily as test scaffolding for the engine. They will
 // be removed as the real ~300 cards take their place; a real card's id always wins.
+const DS_V1_TEXT='If you play this the same round your opponent plays their Death Stare: halve their current health.';
+const DS_V2_TEXT="At each round's end while this is in your hand: take 5 true damage. If you play this the same round your opponent plays their Death Stare: halve YOUR current health.";
+const SCAV_V2_TEXT='When drawn: reveal all cards in your hand.';
 const CARD_LOGIC = {
+  // Scavenger — variant 1 (onPlay): plant a variant-2 copy in the OPPONENT's deck and shuffle
+  // it. Deliberately does NOT go through shuffleIntoDeck: Devour Hope only reacts to cards
+  // YOU shuffle into YOUR OWN deck, not to cards an opponent plants in theirs.
+  // Variant 2 (onDraw, in the opponent's hands): reveals their whole hand (immune cards stay
+  // hidden), then consumes itself to the graveyard (returns true).
+  scavenger: {
+    onPlay:(c)=>{
+      if(c.card._variant===2){ c.log(c.state[c.self].name+' plays Scavenger — nothing happens.','system'); return; }
+      const o=c.opp;
+      const copy=mkCard(CARDS_DATA.find(x=>x.id==='scavenger'));
+      copy._variant=2; copy.text=SCAV_V2_TEXT;
+      c.state[o].deck=[...(c.state[o].deck||[]), copy];
+      shuffleDeck(c.state, o);
+      c.log(c.state[c.self].name+" plays Scavenger — a Scavenger is shuffled into "+c.state[o].name+"'s deck!",'effect');
+    },
+    onDraw:(c)=>{
+      if(c.card._variant!==2) return false;
+      const shown=(c.state[c.self].hand||[]).filter(x=>x && x!==c.card && takeable(x));   // immune cards are never revealed
+      c.log('  👁 '+c.state[c.self].name+"'s hand is revealed: "+(shown.length?shown.map(x=>x.name).join(', '):'(nothing)'),'system');
+      return true;   // consume: Scavenger goes straight to the graveyard
+    }
+  },
+  // Death Stare — "when drawn": you keep this as variant 1, and your opponent gets a
+  // variant-2 copy IF their hand isn't full (the copy is placed, not drawn, so no loop).
+  // Variant 1 (onPlay): if the opponent ALSO played their Death Stare this round, halve the
+  // variant-2 holder's HP (floor; not damage; not blockable) — happens once, driven by v1.
+  // Variant 2 (hold.onRoundEnd): 5 true damage to self at each round's end while held.
+  death_stare: {
+    onDraw:(c)=>{
+      c.card._variant=1; c.card.text=DS_V1_TEXT;
+      const o=c.opp;
+      if((c.state[o].hand||[]).length < maxHandSize(c.state,o)){
+        const copy=mkCard(CARDS_DATA.find(x=>x.id==='death_stare'));
+        copy._variant=2; copy.text=DS_V2_TEXT;
+        c.state[o].hand=[...(c.state[o].hand||[]), copy];
+        c.log(c.state[o].name+' is handed a Death Stare (variant 2)!','system');
+      }
+      c.log(c.state[c.self].name+' draws Death Stare (variant 1).','system');
+      return false;   // stays in hand (unlike Scavenger, which consumes itself)
+    },
+    onPlay:(c)=>{
+      if(c.card._variant===2){ c.log(c.state[c.self].name+' plays Death Stare (variant 2).','effect'); return; }
+      const oppPlayedDS=(c.state[c.opp].selectedCards||[]).some(x=>x&&x.id==='death_stare');
+      if(oppPlayedDS){
+        const t=c.opp;   // the variant-2 holder
+        c.state[t].hp=Math.floor(c.state[t].hp/2);
+        c.log("Death Stare locks eyes — "+c.state[t].name+"'s health is halved!",'damage');
+        checkDeath(c.state,t);
+      } else {
+        c.log(c.state[c.self].name+' plays Death Stare (variant 1) — opponent held theirs.','effect');
+      }
+    },
+    hold: {
+      onRoundEnd:(c)=>{ if(c.card._variant===2){ c.dealDmgTo(c.self,5,true); c.log(c.state[c.self].name+' bleeds 5 true damage from Death Stare (still held).','damage'); } }
+    }
+  },
   bulrog:          { onPlay:(c)=>{ c.dealDmg(15);        c.log(c.state[c.self].name+' plays Bulrog — 15 damage!','damage'); } },
   star_relocrater: { onPlay:(c)=>{ c.dealDmg(20);        c.log(c.state[c.self].name+' plays Star Relocrater — 20 damage!','damage'); } },
   kraken:          { onPlay:(c)=>{ c.dealDmg(10, true);  c.log(c.state[c.self].name+' plays Kraken — 10 true damage!','damage'); } },
@@ -1067,6 +1288,38 @@ const CARD_LOGIC = {
   // At resolve the played cards are already out of hand, so this correctly excludes itself
   // and any Celebration cards played this round; a 2nd copy still in hand counts.
   fireblast_confetti: { onPlay:(c)=>{ const held=(c.state[c.self].hand||[]).filter(x=>hasTag(x,'celebration')).length; const dmg=5+10*held; c.dealDmg(dmg); c.log(c.state[c.self].name+' plays Fireblast Confetti — '+dmg+' damage'+(held?(' ('+held+' Celebration held)'):'')+'!','damage'); } },
+  // Murloc Things — uncurse every card in your hand. Enchanted (Orb): for each card you
+  // just uncursed, Curse a random non-immune, not-already-cursed card in the opponent's hand.
+  murloc_things: { onPlay:(c)=>{
+    const hand=c.state[c.self].hand||[];
+    let uncursed=0;
+    hand.forEach(card=>{ if(card && card.cursedUntil!==undefined){ delete card.cursedUntil; uncursed++; } });
+    c.log(c.state[c.self].name+' plays Murloc Things — uncursed '+uncursed+' card'+(uncursed===1?'':'s')+'.','effect');
+    if(c.useOrb && uncursed>0){
+      const oh=c.state[c.opp].hand||[];
+      let cursed=0;
+      for(let i=0;i<uncursed;i++){
+        const pool=oh.filter(x=>x && !isImmune(x) && x.cursedUntil===undefined);
+        if(pool.length===0) break;
+        curseCard(c.state, pool[Math.floor(Math.random()*pool.length)]);
+        cursed++;
+      }
+      c.log('  ✨ Enchanted! Cursed '+cursed+' of '+c.state[c.opp].name+"'s cards.",'system');
+    }
+  } },
+  enchanted_orb: { onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Enchanted Orb — it fizzles (hold it to enchant instead).','system'); } },
+  // Energies Silk — take every used Enchanted Orb from your graveyard and shuffle them back
+  // into your deck (moved, not copied). Covers all rounds AND an Orb used earlier this same
+  // round (already in the graveyard by the time this resolves). Routes through shuffleIntoDeck,
+  // so Devour Hope etc. react to them normally.
+  energies_silk: { onPlay:(c)=>{
+    const gy=c.state[c.self].graveyard||[];
+    const orbs=gy.filter(x=>isOrb(x));
+    if(orbs.length===0){ c.log(c.state[c.self].name+' plays Energies Silk — no used Orbs to recover.','effect'); return; }
+    c.state[c.self].graveyard=gy.filter(x=>!isOrb(x));   // remove them from the graveyard
+    shuffleIntoDeck(c.state, c.self, orbs);              // back into the deck
+    c.log(c.state[c.self].name+' plays Energies Silk — shuffled '+orbs.length+' Enchanted Orb'+(orbs.length===1?'':'s')+' back into the deck.','effect');
+  } },
   tortolla:        { onPlay:(c)=>{ const sp=(c.card&&c.card._split)||{dmg:20,heal:0}; if(sp.dmg>0) c.dealDmg(sp.dmg); if(sp.heal>0) c.heal(sp.heal); c.log(c.state[c.self].name+' plays Tortolla — '+sp.dmg+' damage, '+sp.heal+' heal.','damage'); } },
   cute_wolf:       { onPlay:(c)=>{ c.dealDmg(5); c.log(c.state[c.self].name+' plays Cute Wolf — 5 damage!','damage'); } },
   cute_snake:      { onPlay:(c)=>{ c.dealDmg(5); c.log(c.state[c.self].name+' plays Cute Snake — 5 damage!','damage'); } },
@@ -1193,6 +1446,18 @@ function journeyLabel(dayId, opt){
 function isImmune(card){ return !!(card && card.immune); }
 function takeable(card){ return !isImmune(card); }
 function hasTag(card, tag){ return !!(card && card.tags && card.tags.includes(tag)); }
+// Enchanted: some cards have an extra "enchanted" part that only fires if you spend an
+// Enchanted Orb held in hand (chosen per card at reveal, like Split/Choose). isOrb finds
+// the Orb card; hasEnchanted marks a card that has an enchanted part.
+function isOrb(card){ return !!(card && card.id==='enchanted_orb'); }
+function hasEnchanted(card){ return !!(card && card.enchanted); }
+// Curse a card: it must be played within one full round or it rots away. Immune cards and
+// already-cursed cards are skipped. Returns true if it newly cursed the card.
+function curseCard(state, card){
+  if(!card || isImmune(card) || card.cursedUntil!==undefined) return false;
+  card.cursedUntil=(state.round||1)+1;
+  return true;
+}
 
 // Skywalker forced-play: does this card satisfy a forced type ('damage'/'heal')?
 // unplayable and immune cards can never be forced, regardless of their tags.
@@ -1286,7 +1551,13 @@ function mkCard(c){
 }
 function buildDeck(){
   let d=[];
-  CARDS_DATA.forEach(c=>{if(c.noDeck)return; const n=c.rarity==='legendary'?2:8;for(let i=0;i<n;i++)d.push(mkCard(c));});
+  // Copy counts (test pool). Quests and blessings are unique: max 1 copy. Legendary 2,
+  // common 8 for now — the real deck builder will enforce 1/2 and a fixed 40-card deck.
+  CARDS_DATA.forEach(c=>{
+    if(c.noDeck) return;
+    const n = (c.quest || c.type==='blessing') ? 1 : (c.rarity==='legendary' ? 2 : 8);
+    for(let i=0;i<n;i++) d.push(mkCard(c));
+  });
   for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
   return d.slice(0,40);
 }
@@ -1294,12 +1565,19 @@ function extractQuests(deck){
   const quests=[], remaining=[]; let hasOpening=false;
   const seen=new Set();   // each quest id max once per player; max 2 quests per player
   deck.forEach(c=>{
-    if(c.quest && !seen.has(c.quest) && quests.length<2){
-      seen.add(c.quest);
-      const def=QUEST_DEFS[c.quest];
-      quests.push({id:c.quest,name:def?def.name:c.name,cardName:c.name,progress:0,goal:def?def.goal:3,done:false});
-      if(c.quest==='opening_ceremony') hasOpening=true;
-    } else remaining.push(c);
+    if(c.quest){
+      // Quest cards are never playable cards. If it fits (new id, under the cap of 2) it
+      // becomes an active quest; otherwise it is dropped entirely — it must NEVER stay in
+      // the deck, or it would be drawn into hand as a normal card.
+      if(!seen.has(c.quest) && quests.length<2){
+        seen.add(c.quest);
+        const def=QUEST_DEFS[c.quest];
+        quests.push({id:c.quest,name:def?def.name:c.name,cardName:c.name,progress:0,goal:def?def.goal:3,done:false});
+        if(c.quest==='opening_ceremony') hasOpening=true;
+      }
+      return;   // drop excess/duplicate quest cards
+    }
+    remaining.push(c);
   });
   // Opening Ceremony shuffles all 5 Journey Days into the deck (full reshuffle).
   if(hasOpening){
@@ -1557,6 +1835,210 @@ function startSolo(){
 }
 document.getElementById('btn-solo').onclick=startSolo;
 
+// ── Accounts (Firebase Auth) ─────────────────────────────────────────────────
+// Real accounts: register/sign in with email + password. Each user gets a profile at
+// users/<uid> holding their display name and (from the next step) their card collection.
+// You stay signed in between sessions; the menu only appears once signed in.
+let currentUser=null, myProfile=null;
+
+async function loadProfile(user){
+  const snap=await get(ref(db,'users/'+user.uid));
+  if(snap.exists()) return snap.val();
+  const fresh={ name:user.displayName||'Player', email:user.email, collection:{}, packs:0, fairyDust:0, createdAt:Date.now() };
+  await set(ref(db,'users/'+user.uid), fresh);
+  return fresh;
+}
+
+(function(){
+  const $=id=>document.getElementById(id);
+  const show=id=>$(id).classList.remove('hidden');
+  const hide=id=>$(id).classList.add('hidden');
+  let registerMode=false;
+
+  const setAuthMode=(reg)=>{
+    registerMode=reg;
+    $('auth-title').textContent = reg ? 'Create account' : 'Sign in';
+    $('auth-submit').textContent = reg ? 'Create account' : 'Sign in';
+    $('auth-toggle').textContent = reg ? 'I already have an account' : 'Create an account';
+    $('auth-namefield').classList.toggle('hidden', !reg);
+    $('auth-status').textContent='';
+  };
+  $('auth-toggle').onclick=()=> setAuthMode(!registerMode);
+
+  const authMsg=(m,cls='')=>{ const el=$('auth-status'); el.textContent=m; el.className='status '+cls; };
+
+  $('auth-submit').onclick=async()=>{
+    const email=$('auth-email').value.trim(), pass=$('auth-pass').value;
+    const name=$('auth-name').value.trim();
+    if(!email||!pass) return authMsg('Enter your email and password.','err');
+    if(registerMode && !name) return authMsg('Choose a display name.','err');
+    if(registerMode && pass.length<6) return authMsg('Password must be at least 6 characters.','err');
+    $('auth-submit').disabled=true; authMsg(registerMode?'Creating account…':'Signing in…');
+    try{
+      if(registerMode){
+        const cred=await createUserWithEmailAndPassword(auth,email,pass);
+        await updateProfile(cred.user,{displayName:name});
+        await set(ref(db,'users/'+cred.user.uid), { name, email, collection:{}, packs:0, fairyDust:0, createdAt:Date.now() });
+      } else {
+        await signInWithEmailAndPassword(auth,email,pass);
+      }
+      // onAuthStateChanged takes it from here.
+    }catch(e){
+      const map={
+        'auth/invalid-credential':'Wrong email or password.',
+        'auth/email-already-in-use':'That email already has an account.',
+        'auth/invalid-email':'That email address looks invalid.',
+        'auth/weak-password':'Password must be at least 6 characters.',
+        'auth/network-request-failed':'Network problem — check your connection.'
+      };
+      authMsg(map[e.code] || (e.message||'Something went wrong.'),'err');
+      $('auth-submit').disabled=false;
+    }
+  };
+
+  // Stay signed in between sessions; show the menu only once signed in.
+  onAuthStateChanged(auth, async(user)=>{
+    $('auth-submit').disabled=false;
+    if(user){
+      currentUser=user;
+      try{ myProfile=await loadProfile(user); }catch(e){ myProfile={name:user.displayName||'Player',collection:{},packs:0}; }
+      myName=myProfile.name||user.displayName||'Player';
+      const inp=$('inp-name'); if(inp){ inp.value=myName; }
+      hide('auth-box'); show('menu-box');
+    } else {
+      currentUser=null; myProfile=null;
+      hide('menu-box'); hide('lobby-box'); hide('profile-box');
+      setAuthMode(false); show('auth-box');
+    }
+  });
+
+  // ── Profile screen ──
+  $('menu-profile').onclick=()=>{
+    if(!myProfile) return;
+    $('prof-name').value=myProfile.name||'';
+    $('prof-email').value=(currentUser&&currentUser.email)||'';
+    $('prof-cards').textContent=Object.values(myProfile.collection||{}).reduce((a,b)=>a+(b||0),0);
+    $('prof-packs').textContent=myProfile.packs||0;
+    $('prof-dust').textContent=(myProfile.fairyDust||0).toLocaleString('nl-NL');
+    $('prof-status').textContent='';
+    hide('menu-box'); show('profile-box');
+  };
+  $('profile-back').onclick=()=>{ hide('profile-box'); show('menu-box'); };
+  $('prof-save').onclick=async()=>{
+    const name=$('prof-name').value.trim();
+    const el=$('prof-status');
+    if(!name){ el.textContent='Choose a display name.'; el.className='status err'; return; }
+    try{
+      await update(ref(db,'users/'+currentUser.uid), {name});
+      await updateProfile(currentUser,{displayName:name});
+      myProfile.name=name; myName=name;
+      const inp=$('inp-name'); if(inp) inp.value=name;
+      el.textContent='Saved.'; el.className='status ok';
+    }catch(e){ el.textContent='Could not save.'; el.className='status err'; }
+  };
+  $('prof-signout').onclick=async()=>{ await signOut(auth); };
+})();
+
+// ── Collection (owned cards, crafting, disenchanting) ────────────────────────
+// Only cards flagged collectible:true appear here — placeholders/scaffold cards and
+// cards that are never owned directly (Journey Days, Hungry/Full Pyrax, Enchanted Orb)
+// are excluded. Card DATA is always read live from CARDS_DATA, so renaming/rebalancing a
+// card updates the collection automatically; only {cardId: count} is stored per account.
+const CRAFT_COST   = { common:1000, legendary:4000 };
+const DISENCHANT   = { common:500,  legendary:2000 };
+const MAX_COPIES   = { common:2,    legendary:1    };   // same as the deckbuilding limits
+const collectibleCards = ()=> CARDS_DATA.filter(c=>c.collectible);
+
+function ownedCount(id){ return (myProfile && myProfile.collection && myProfile.collection[id]) || 0; }
+function maxCopies(card){ return MAX_COPIES[card.rarity] || 1; }
+
+async function saveCollection(){
+  if(!currentUser) return;
+  await update(ref(db,'users/'+currentUser.uid), {
+    collection: myProfile.collection || {},
+    fairyDust: myProfile.fairyDust || 0
+  });
+}
+
+async function craftCard(card){
+  const cost=CRAFT_COST[card.rarity];
+  if((myProfile.fairyDust||0) < cost) return;
+  if(ownedCount(card.id) >= maxCopies(card)) return;
+  myProfile.fairyDust=(myProfile.fairyDust||0)-cost;
+  myProfile.collection=myProfile.collection||{};
+  myProfile.collection[card.id]=ownedCount(card.id)+1;
+  await saveCollection();
+  renderCollection();
+}
+
+async function disenchantCard(card){
+  if(ownedCount(card.id) <= 0) return;
+  const value=DISENCHANT[card.rarity];
+  myProfile.collection[card.id]=ownedCount(card.id)-1;
+  if(myProfile.collection[card.id] <= 0) delete myProfile.collection[card.id];
+  myProfile.fairyDust=(myProfile.fairyDust||0)+value;
+  await saveCollection();
+  renderCollection();
+}
+
+// The collection is split into rarity tabs (Commons / Legendaries), each paged 8 at a
+// time (4×2) so you leaf through it like a card binder.
+const CARDS_PER_PAGE = 8;
+let colPage = 0;
+let colTab = 'common';
+
+function renderCollection(){
+  const grid=document.getElementById('col-grid');
+  if(!grid||!myProfile) return;
+  const all=collectibleCards();
+  const cards=all.filter(c=>c.rarity===colTab);
+  const pages=Math.max(1, Math.ceil(cards.length/CARDS_PER_PAGE));
+  colPage=Math.min(Math.max(0,colPage), pages-1);
+
+  const dust=myProfile.fairyDust||0;
+  document.getElementById('col-dust').textContent=dust.toLocaleString('nl-NL');
+  const owned=all.filter(c=>ownedCount(c.id)>0).length;
+  document.getElementById('col-count').textContent=owned+' / '+all.length+' cards';
+
+  document.getElementById('tab-common').classList.toggle('active', colTab==='common');
+  document.getElementById('tab-legendary').classList.toggle('active', colTab==='legendary');
+  document.getElementById('col-pagelabel').textContent='Page '+(colPage+1)+' / '+pages;
+  document.getElementById('col-prev').disabled = colPage===0;
+  document.getElementById('col-next').disabled = colPage>=pages-1;
+
+  grid.innerHTML='';
+  cards.slice(colPage*CARDS_PER_PAGE, colPage*CARDS_PER_PAGE+CARDS_PER_PAGE).forEach(c=>{
+    const have=ownedCount(c.id), max=maxCopies(c);
+    const cell=document.createElement('div'); cell.className='col-cell';
+
+    const wrap=document.createElement('div');
+    wrap.className='col-cardwrap'+(have?'':' locked');
+    wrap.appendChild(makeCardEl(c));
+    if(have){ const b=document.createElement('div'); b.className='col-badge'; b.textContent='×'+have; wrap.appendChild(b); }
+    cell.appendChild(wrap);
+
+    const acts=document.createElement('div'); acts.className='col-actions';
+    const craft=document.createElement('button');
+    craft.className='col-mini';
+    craft.textContent='✨ '+CRAFT_COST[c.rarity];
+    craft.disabled = have>=max || dust<CRAFT_COST[c.rarity];
+    craft.title = have>=max ? 'You already have the maximum ('+max+')' : 'Craft for '+CRAFT_COST[c.rarity]+' dust';
+    craft.onclick=()=>craftCard(c);
+    acts.appendChild(craft);
+
+    const sell=document.createElement('button');
+    sell.className='col-mini sell';
+    sell.textContent='↩ '+DISENCHANT[c.rarity];
+    sell.disabled = have<=0;
+    sell.title = have<=0 ? "You don't own this card" : 'Disenchant for '+DISENCHANT[c.rarity]+' dust';
+    sell.onclick=()=>disenchantCard(c);
+    acts.appendChild(sell);
+
+    cell.appendChild(acts);
+    grid.appendChild(cell);
+  });
+}
+
 // ── Main menu navigation ──
 (function(){
   const $=id=>document.getElementById(id);
@@ -1568,7 +2050,11 @@ document.getElementById('btn-solo').onclick=startSolo;
   $('menu-multi').onclick=()=>{ hide('menu-box'); show('lobby-box'); };
   $('lobby-back').onclick=()=>{ hide('lobby-box'); show('menu-box'); };
   // Collection → open the collection screen (gallery filled in step 2).
-  $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); };
+  $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); colTab='common'; colPage=0; renderCollection(); };
+  $('col-prev').onclick=()=>{ colPage--; renderCollection(); };
+  $('col-next').onclick=()=>{ colPage++; renderCollection(); };
+  $('tab-common').onclick=()=>{ colTab='common'; colPage=0; renderCollection(); };
+  $('tab-legendary').onclick=()=>{ colTab='legendary'; colPage=0; renderCollection(); };
   $('col-back').onclick=()=>{ hide('screen-collection'); show('screen-lobby'); };
 })();
 
@@ -1851,6 +2337,14 @@ async function onRevealPhase(gs){
   for(const c of myCards){
     if(c && SPLIT_CARDS[c.id]){ choices[c.uid]=Object.assign(choices[c.uid]||{}, {split: await pickSplit(SPLIT_CARDS[c.id], c.name)}); }
   }
+  // Enchanted: for each enchanted card played, if I still hold an Orb, ask whether to spend one.
+  let orbsLeft=(me().hand||[]).filter(isOrb).length;
+  for(const c of myCards){
+    if(c && hasEnchanted(c) && orbsLeft>0){
+      const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name);
+      if(use==='yes'){ choices[c.uid]=Object.assign(choices[c.uid]||{}, {useOrb:true}); orbsLeft--; }
+    }
+  }
 
   // Write my choices to Firebase
   await update(gRef, { [myRole+'/choices']: choices, [myRole+'/choicesReady']: true });
@@ -1995,6 +2489,9 @@ document.getElementById('btn-confirm').onclick=async()=>{
       if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
       if(SPLIT_CARDS[c.id]){ const t=SPLIT_CARDS[c.id]; const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
     });
+    // CPU: randomly spend held Orbs on its enchanted cards.
+    let cpuOrbs=p2hand.filter(c=>!p2played.includes(c) && isOrb(c)).length;
+    p2played.forEach(c=>{ if(hasEnchanted(c) && cpuOrbs>0 && Math.random()<0.5){ c._useOrb=true; cpuOrbs--; } });
     localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2hand.filter(c=>!p2played.includes(c));
     localGs.p2.confirmed=true;
@@ -2008,6 +2505,8 @@ document.getElementById('btn-confirm').onclick=async()=>{
     setTimeout(async()=>{
       for(const c of played){ if(CHOOSE_OPTIONS[c.id]) c._choice=await pickChoice(CHOOSE_OPTIONS[c.id], c.name); }
       for(const c of played){ if(SPLIT_CARDS[c.id]) c._split=await pickSplit(SPLIT_CARDS[c.id], c.name); }
+      let orbsLeft=(me().hand||[]).filter(isOrb).length;
+      for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
     }, 900);
@@ -2159,6 +2658,7 @@ function resolveRound(gs){
       if(c && ch[c.uid]){
         if(ch[c.uid].choice!==undefined) c._choice=ch[c.uid].choice;
         if(ch[c.uid].split!==undefined) c._split=ch[c.uid].split;
+        if(ch[c.uid].useOrb!==undefined) c._useOrb=ch[c.uid].useOrb;
       }
     });
   });
@@ -2175,6 +2675,14 @@ function resolveRound(gs){
   function runCard(c,r){
     if(!c) return;
     state[r]._healsThisCard=0;
+    // Enchanted: if this card was enchanted, spend one Orb from hand (→ graveyard). If no
+    // Orb is actually there anymore, cancel the enchant so the enchanted part won't fire.
+    if(c._useOrb){
+      const hand=state[r].hand||[];
+      const oi=hand.findIndex(x=>isOrb(x));
+      if(oi>=0){ const orb=hand.splice(oi,1)[0]; state[r].graveyard=[orb,...(state[r].graveyard||[])]; log('  🔮 '+state[r].name+' uses an Enchanted Orb on '+c.name+'.','effect'); }
+      else c._useOrb=false;
+    }
     const L=CARD_LOGIC[c.id];
     if(L&&L.onPlay) L.onPlay(buildCtx(state,r,{card:c}));
     advanceQuestsFor(state,r,c);
@@ -2269,8 +2777,21 @@ function resolveRound(gs){
     drawCards(state,r,n,n<=0);
     const drawn=(state[r].hand||[]).slice(before);   // the cards newly drawn this round
     state[r].drewThisRound=(drawn.length>0);
+    // "When drawn" trigger — fire onDraw for each newly drawn card (copies placed by an
+    // onDraw are NOT drawn, so they never re-trigger). A card whose onDraw returns true
+    // consumes itself: it goes straight to the graveyard instead of staying in hand.
+    drawn.forEach(dc=>{
+      const L=CARD_LOGIC[dc&&dc.id];
+      if(L&&L.onDraw){
+        const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
+        if(consumed===true){
+          const h=state[r].hand||[]; const i=h.indexOf(dc);
+          if(i>=0){ h.splice(i,1); state[r].graveyard=[dc,...(state[r].graveyard||[])]; }
+        }
+      }
+    });
     // Second Day (cursed_draws): drawn cards must be played next round or they rot away.
-    if(hasJourney(state,r,'cursed_draws')) drawn.forEach(c=>{ c.cursedUntil=(state.round||1)+1; });
+    if(hasJourney(state,r,'cursed_draws')) drawn.forEach(c=>{ if(!isImmune(c)) c.cursedUntil=(state.round||1)+1; });   // Immune cards are never cursed
     // Fourth Day (opp_sees_draws): reveal the drawn cards to the opponent (info only).
     if(drawn.length && hasJourney(state,r,'opp_sees_draws')){
       const shown=drawn.filter(takeable);   // immune cards are not revealed
