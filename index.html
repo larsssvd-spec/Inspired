@@ -158,10 +158,11 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 /* Locked (unowned) cards are greyed out — but light up in full colour while hovered,
    so you can read and admire the card you don't own yet. */
 .col-cardwrap.locked .card { filter:grayscale(1) brightness(0.5); transition:filter 0.2s ease-out; }
-.col-cardwrap.locked .card.framed { filter:grayscale(1) brightness(0.5) drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
-.col-cardwrap.locked:hover .card { filter:none; }
-.col-cardwrap.locked:hover .card.framed { filter:drop-shadow(0 10px 22px rgba(0,0,0,0.75)); }
-.col-cardwrap:hover .card.framed { filter:drop-shadow(0 10px 22px rgba(0,0,0,0.75)); }
+.col-cardwrap.locked .card.framed { filter:grayscale(1) brightness(0.5); }
+.col-cardwrap.locked:hover .card, .col-cardwrap.locked:hover .card.framed { filter:none; }
+/* Shadows live on the frame image (clean silhouette), never on the card box. */
+.col-cardwrap .card.framed .cf-frame { filter:drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
+.col-cardwrap:hover .card.framed .cf-frame { filter:drop-shadow(0 10px 22px rgba(0,0,0,0.75)); }
 .col-badge { position:absolute; bottom:-5px; right:-5px; background:var(--dark); border:1px solid var(--gold); color:var(--gold);
   font-family:'Playfair Display',serif; font-size:0.8rem; font-weight:700; border-radius:999px; padding:1px 9px;
   box-shadow:0 2px 10px rgba(0,0,0,0.7); z-index:2; }
@@ -264,9 +265,15 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 /* ── Framed cards: illustration + rarity frame + name/text drawn on top ──
    One system for every card. Zone positions are percentages so it scales at any size.
    Container units (cqw) make the name/text font scale with the card automatically. */
-.card.framed { background:none; border:none; overflow:visible; container-type:inline-size; width:auto; aspect-ratio:var(--aspect,0.62); filter:drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
-.card.framed:hover { transform:translateY(-6px) scale(1.03); box-shadow:none; border-color:transparent; filter:drop-shadow(0 6px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(168,224,80,0.55)); }
-.card.framed.legendary:hover { filter:drop-shadow(0 6px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 13px rgba(240,200,96,0.6)); }
+/* The drop-shadow must come from the FRAME image only. Applying it to the whole card also
+   shadows the rectangular illustration layer underneath, which shows as a faint square
+   sticking out around the ornate crown. The frame PNG has a clean silhouette, so its shadow
+   traces the frame exactly. */
+.card.framed { background:none; border:none; overflow:visible; container-type:inline-size; width:auto; aspect-ratio:var(--aspect,0.62); }
+.card.framed .cf-frame { filter:drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
+.card.framed:hover { transform:translateY(-6px) scale(1.03); box-shadow:none; border-color:transparent; }
+.card.framed:hover .cf-frame { filter:drop-shadow(0 6px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(168,224,80,0.55)); }
+.card.framed.legendary:hover .cf-frame { filter:drop-shadow(0 6px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 13px rgba(240,200,96,0.6)); }
 .cf-illo  { position:absolute; object-fit:cover; z-index:1; border-radius:3px; }
 .cf-frame { position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none; }
 .cf-name  { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center; text-align:center;
@@ -289,7 +296,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   position:fixed; display:none; z-index:99999; height:400px; pointer-events:none;
 }
 #card-preview .pv-card { height:400px; cursor:default; }
-#card-preview .pv-card.framed { filter:drop-shadow(0 16px 44px rgba(0,0,0,0.85)); }
+#card-preview .pv-card.framed .cf-frame { filter:drop-shadow(0 16px 44px rgba(0,0,0,0.85)); }
 #card-preview .pv-card.framed:hover { transform:none; }
 #card-preview .pv-card:not(.framed) { width:275px; height:400px; box-shadow:0 16px 44px rgba(0,0,0,0.85); border-width:2px; }
 #card-preview .pv-card:not(.framed) .card-art { font-size:5.3rem; height:160px; }
@@ -310,6 +317,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .card.shake-no { animation:shakeNo 0.4s ease; }
 .card.legendary { border-color:rgba(212,168,50,0.5); }
 .card.legendary::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(212,168,50,0.1) 0%,transparent 60%); pointer-events:none; }
+/* That golden sheen is a full-bleed RECTANGLE. On a plain card it just tints the card, but a
+   framed card has an ornate silhouette — the rectangle then sticks out around the frame as a
+   faint square. Framed cards get their gold from the frame art itself, so drop the overlay. */
+.card.framed.legendary::before { content:none; }
 .card-art { height:46px; background:linear-gradient(135deg,#162010,#0d1a08); display:flex; align-items:center; justify-content:center; font-size:1.5rem; border-bottom:1px solid var(--border); flex-shrink:0; }
 .card-name { font-family:'Playfair Display',serif; font-size:0.48rem; font-weight:700; color:var(--text); padding:0.25rem 0.35rem 0.15rem; text-align:center; line-height:1.2; }
 .card-text { font-size:0.48rem; color:var(--text2); padding:0 0.35rem; line-height:1.3; flex:1; overflow:hidden; text-align:center; }
@@ -1779,8 +1790,13 @@ document.getElementById('btn-create').onclick=async()=>{
   myRole='p1'; soloMode=false;
   const code=Math.random().toString(36).slice(2,6).toUpperCase();
   gRef=ref(db,'games/'+code);
-  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck; const hand=deck.splice(0,4);
-  await set(gRef,{status:'waiting',round:1,phase:'waiting',
+  // Turn order is RANDOM per game and independent of who created the lobby. The first player
+  // opens with 4 cards and resolves first; the second player opens with 6 cards and resolves
+  // second (fewer cards ↔ initiative). p1/p2 stay purely technical roles.
+  const firstPlayer = Math.random()<0.5 ? 'p1' : 'p2';
+  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
+  const hand=deck.splice(0, firstPlayer==='p1' ? 4 : 6);
+  await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer,
     p1:{name:myName,hp:150,maxHp:150,deck,hand,graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
   document.getElementById('lobby-box').classList.add('hidden');
@@ -1799,7 +1815,9 @@ document.getElementById('btn-join').onclick=async()=>{
   if(!snap.exists()){setStatus('Game not found!','err');return;}
   const gs=snap.val();
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
-  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck; const hand=deck.splice(0,6);
+  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
+  // Hand size follows the game's random turn order (4 = goes first, 6 = goes second).
+  const hand=deck.splice(0, gs.firstPlayer==='p2' ? 4 : 6);
   await update(gRef,{
     'p2/name':myName,'p2/hp':150,'p2/maxHp':150,'p2/deck':deck,'p2/hand':hand,
     'p2/graveyard':[],'p2/void':[],'p2/blessing':null,'p2/quests':qq.quests,'p2/blocked':false,
@@ -1829,7 +1847,7 @@ function startSolo(){
   let deck2=buildDeck(); deck2.unshift(mkCard(CARDS_DATA.find(c=>c.id==='q_cute')), mkCard(CARDS_DATA.find(c=>c.id==='q_heal')));
   const q2=extractQuests(deck2); deck2=q2.deck; const hand2=deck2.splice(0,6);
   localGs={
-    status:'active',round:1,phase:'select',
+    status:'active',round:1,phase:'select',firstPlayer:(Math.random()<0.5?'p1':'p2'),
     p1:{name:'Player 1',hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:null,quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
   };
@@ -2737,14 +2755,22 @@ function resolveRound(gs){
   // Resolution runs inside the death-gate: the instant anyone hits 0 HP without a
   // revive, checkDeath throws HALT and we stop immediately (design: death is instant).
   try {
-    // ROUND-START triggers (Journey "take 5 at round start", etc.). p1 first, then p2.
+    // Turn order is decided per GAME by state.firstPlayer (set randomly at creation), NOT by
+    // who created the lobby. The first player opened with 4 cards and resolves first; the
+    // second player opened with 6 cards and resolves second. Everything ordered runs in this
+    // order so the advantage/compensation is consistent.
+    const first = state.firstPlayer==='p2' ? 'p2' : 'p1';
+    const second = opp(first);
+    const cardsOf = { p1:p1c, p2:p2c };
+
+    // ROUND-START triggers (Journey "take 5 at round start", etc.), in turn order.
     // Fired before cards resolve, so a Day played this round only starts biting next round.
-    emit(state,'onRoundStart','p1',{});
-    emit(state,'onRoundStart','p2',{});
+    emit(state,'onRoundStart',first,{});
+    emit(state,'onRoundStart',second,{});
 
     // Delayed heals (Detective Bubbles): heal at the START of the round, as real heals so
     // heal-quests count them and Nightlife can steal them. Each queued heal fires separately.
-    ['p1','p2'].forEach(r=>{
+    [first,second].forEach(r=>{
       const pend=state[r].pendingHeals||[];
       if(pend.length){
         state[r].pendingHeals=[];
@@ -2753,20 +2779,20 @@ function resolveRound(gs){
     });
 
     // QUICKPLAY resolves before everything else. Both have it → random order; else the one who does.
-    const p1q=p1c.filter(c=>c&&c.quickplay), p2q=p2c.filter(c=>c&&c.quickplay);
+    const fq=cardsOf[first].filter(c=>c&&c.quickplay), sq=cardsOf[second].filter(c=>c&&c.quickplay);
     let quickOrder;
-    if(p1q.length&&p2q.length) quickOrder = Math.random()<0.5 ? [['p1',p1q],['p2',p2q]] : [['p2',p2q],['p1',p1q]];
-    else quickOrder = [['p1',p1q],['p2',p2q]];
+    if(fq.length&&sq.length) quickOrder = Math.random()<0.5 ? [[first,fq],[second,sq]] : [[second,sq],[first,fq]];
+    else quickOrder = [[first,fq],[second,sq]];
     quickOrder.forEach(([r,cards])=>cards.forEach(c=>runCard(c,r)));
 
-    // Then normal cards, in play order: p1 left→right, then p2 left→right.
-    // (tap order = board placement = resolution order; p1 always has priority)
-    p1c.forEach(c=>{ if(c&&!c.quickplay) runCard(c,'p1'); });
-    p2c.forEach(c=>{ if(c&&!c.quickplay) runCard(c,'p2'); });
+    // Then normal cards, in play order: first player left→right, then second player left→right.
+    // (tap order = board placement = resolution order)
+    cardsOf[first].forEach(c=>{ if(c&&!c.quickplay) runCard(c,first); });
+    cardsOf[second].forEach(c=>{ if(c&&!c.quickplay) runCard(c,second); });
 
-    // End-of-round triggers for persistent effects / blessings (p1 first, then p2).
-    emit(state,'onRoundEnd','p1',{});
-    emit(state,'onRoundEnd','p2',{});
+    // End-of-round triggers for persistent effects / blessings, in turn order.
+    emit(state,'onRoundEnd',first,{});
+    emit(state,'onRoundEnd',second,{});
   } catch(e){
     if(e!==HALT) throw e;   // genuine errors still propagate; HALT just stops resolution
   }
