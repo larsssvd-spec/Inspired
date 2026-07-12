@@ -2081,7 +2081,14 @@ function startFirebaseListener(){
     renderBoard();
     if(ng.phase==='select'&&prev!=='select') onSelectPhase();
     else if(ng.phase==='reveal'&&prev!=='reveal') onRevealPhase(ng);
-    else if(ng.phase==='resolve'&&prev!=='resolve') resolveRound(ng);
+    // Resolution is AUTHORITATIVE and must happen on exactly ONE client: p1. The resolve
+    // contains randomness (random discards/steals, shuffles), so if both clients resolved
+    // they'd compute different outcomes and overwrite each other — cards would vanish for
+    // one player and the phase could get stuck. p2 simply waits for p1's written result.
+    else if(ng.phase==='resolve'&&prev!=='resolve'){
+      if(myRole==='p1') resolveRound(ng);
+      else document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
+    }
     else if(ng.phase==='result'&&prev!=='result') showResult(ng,prevGs);
     else if(ng.phase==='gameover'&&prev!=='gameover') showGameOver(ng.winner===myRole);
 
