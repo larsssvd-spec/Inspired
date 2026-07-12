@@ -2101,9 +2101,16 @@ function startFirebaseListener(){
     else if(ng.phase==='result'&&prev!=='result') showResult(ng,prevGs);
     else if(ng.phase==='gameover'&&prev!=='gameover') showGameOver(ng.winner===myRole);
 
-    // Safety: p1 triggers resolve once BOTH players' choices are ready
-    if(ng.phase==='reveal' && myRole==='p1' && ng.p1 && ng.p2 && ng.p1.choicesReady && ng.p2.choicesReady){
-      update(gRef,{phase:'resolve'});
+    // p1 drives the phase transitions. These must be checked on EVERY snapshot, not only at
+    // the moment p1 clicks confirm — otherwise, if p1 confirms first and p2 second, nobody
+    // ever advances the round and both players sit on "Waiting for opponent…".
+    if(myRole==='p1' && ng.p1 && ng.p2){
+      if(ng.phase==='select' && ng.p1.confirmed && ng.p2.confirmed){
+        update(gRef,{phase:'reveal'});
+      }
+      else if(ng.phase==='reveal' && ng.p1.choicesReady && ng.p2.choicesReady){
+        update(gRef,{phase:'resolve'});
+      }
     }
   });
 }
@@ -2206,12 +2213,13 @@ function renderBlessing(id,p){
 function renderHand(hand){
   const area=document.getElementById('hand');
   area.innerHTML='';
-  hand.forEach((c,i)=>{
-    if(selected.includes(i)) return;   // selected cards are on the field, not in hand
+  hand.forEach((c)=>{
+    if(!c) return;
+    if(selected.includes(c.uid)) return;   // selected cards are on the field, not in hand
     const el=makeCardEl(c);
     const ft=me().forcedType;
     if(ft && matchesForced(c, ft)) el.classList.add('forced');   // Skywalker: highlight forced cards
-    el.addEventListener('click',()=>toggleCard(i,el));
+    el.addEventListener('click',()=>toggleCard(c.uid,el));
     el.addEventListener('mouseenter',ev=>showCardPreview(c,el));
     el.addEventListener('mouseleave',hideCardPreview);
     area.appendChild(el);
@@ -2228,12 +2236,16 @@ function renderArena(){
   if(localGs.phase==='select'){
     // Selected cards are laid onto YOUR half (centered). The opponent's half stays empty —
     // they can't see how many or which cards you're playing until the reveal. Click to return.
+    // After confirming, the played cards leave your hand and live in selectedCards — so look
+    // them up in both, or they'd vanish from the field the moment you confirm.
     const myHand=me().hand||[];
-    selected.forEach(idx=>{
-      const c=myHand[idx]; if(!c) return;
+    const myPlayed=me().selectedCards||[];
+    selected.forEach(uid=>{
+      const c=myHand.find(x=>x&&x.uid===uid) || myPlayed.find(x=>x&&x.uid===uid);
+      if(!c) return;
       const el=makeCardEl(c); el.classList.add('card-played');
-      el.style.cursor='pointer';
-      el.addEventListener('click',()=>toggleCard(idx,el));
+      el.style.cursor=didConfirm?'default':'pointer';
+      if(!didConfirm) el.addEventListener('click',()=>toggleCard(uid,el));
       el.addEventListener('mouseenter',ev=>showCardPreview(c,el));
       el.addEventListener('mouseleave',hideCardPreview);
       aYou.appendChild(el);
@@ -2407,6 +2419,10 @@ async function enforceHandLimit(){
 async function onSelectPhase(){
   clearInterval(timerInt);
   document.getElementById('ov-result').classList.add('hidden');
+  // The hand is hidden during the reveal phase. It was only ever restored by the Continue
+  // button — so if the OPPONENT advanced the round first, this player entered the new round
+  // with an invisible hand (cards present in data, nothing on screen). Always restore it.
+  document.getElementById('hand').style.visibility='visible';
   await enforceHandLimit();
   selected=[]; didConfirm=false;
   const lim=selectLimit(localGs,myRole);
@@ -2420,10 +2436,12 @@ async function onSelectPhase(){
   startTimer();
 }
 
-function toggleCard(idx,el){
+// `selected` holds card UIDs (not hand indices). Indices break the moment the hand changes
+// between rounds: stale positions hide real cards and can play the wrong card. UIDs are stable.
+function toggleCard(uid,el){
   if(didConfirm) return;
-  const card=(me().hand||[])[idx];
-  const p=selected.indexOf(idx);
+  const card=(me().hand||[]).find(c=>c&&c.uid===uid);
+  const p=selected.indexOf(uid);
   if(p>=0){
     selected.splice(p,1);   // deselect → card returns to hand
   } else {
@@ -2435,13 +2453,14 @@ function toggleCard(idx,el){
     }
     const lim=selectLimit(localGs,myRole);
     // Max 1 Journey Day per round.
-    if(card && card.journeyDay && selected.some(i=>(me().hand||[])[i] && (me().hand||[])[i].journeyDay)){
+    const hand=me().hand||[];
+    if(card && card.journeyDay && selected.some(u=>{ const s=hand.find(x=>x&&x.uid===u); return s && s.journeyDay; })){
       el.classList.remove('shake-no'); void el.offsetWidth; el.classList.add('shake-no');
       document.getElementById('action-info').innerHTML='Only <strong>1 Journey Day</strong> can be played per round.';
       return;
     }
     if(selected.length>=lim){document.getElementById('action-info').innerHTML='Max <strong>'+lim+' card'+(lim===1?'':'s')+'</strong>. Deselect one first.';return;}
-    selected.push(idx);   // select → card moves to the field
+    selected.push(uid);   // select → card moves to the field
   }
   // Update the hint text
   const lim=selectLimit(localGs,myRole), n=selected.length;
@@ -2456,7 +2475,9 @@ document.getElementById('btn-confirm').onclick=async()=>{
   if(didConfirm) return;
 
   const hand=[...(me().hand||[])];
-  const played=selected.map(i=>hand[i]).filter(Boolean);
+  // Resolve the selection by UID. Index-based lookups played the wrong card whenever the
+  // hand had shifted since selecting.
+  const played=selected.map(uid=>hand.find(c=>c&&c.uid===uid)).filter(Boolean);
 
   // Skywalker forced-play: the selection must include the required number of forced-type
   // cards (damage/heal) — up to the select limit. Block confirm until satisfied.
@@ -2471,7 +2492,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
   }
 
   // Check if any played card requires the player to choose their own discards
-  const remainingHand=hand.filter((_,i)=>!selected.includes(i));
+  const remainingHand=hand.filter(c=>c && !selected.includes(c.uid));
   const discardCard=played.find(c=>SELF_DISCARD[c.id]);
   if(discardCard){
     const pickable=remainingHand.filter(takeable);   // immune cards can't be chosen to discard
@@ -2485,7 +2506,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
   didConfirm=true;
   clearInterval(timerInt);
 
-  const newHand=hand.filter((_,i)=>!selected.includes(i));
+  const newHand=hand.filter(c=>c && !selected.includes(c.uid));
 
   if(soloMode){
     localGs[myRole].selectedCards=played;
@@ -2540,14 +2561,10 @@ document.getElementById('btn-confirm').onclick=async()=>{
   u[myRole+'/choicesReady']=false;
   await update(gRef,u);
   renderHand(newHand);
+  renderArena();
   document.getElementById('action-info').innerHTML='<em>Waiting for opponent…</em>';
-  if(myRole==='p1'){
-    const snap=await get(gRef);
-    const gs=snap.val();
-    if(gs&&gs.p1.confirmed&&gs.p2.confirmed&&gs.phase==='select'){
-      await update(gRef,{phase:'reveal'});
-    }
-  }
+  // The phase transition to 'reveal' is driven by p1's listener (see startFirebaseListener),
+  // which sees both confirmations regardless of who clicked first.
 };
 
 // ── Discard picker: returns a promise resolving to array of chosen uids ──
