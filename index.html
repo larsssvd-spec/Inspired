@@ -779,6 +779,18 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 </div>
 
+<div class="overlay hidden" id="ov-peek">
+  <div class="ov-box" style="max-width:820px">
+    <div class="ov-title" id="peek-title">Look at your deck</div>
+    <div class="ov-sub" id="peek-sub"></div>
+    <div class="grave-grid" id="peek-grid" style="max-height:44vh"></div>
+    <div style="display:flex;gap:0.6rem;margin-top:1rem">
+      <button class="btn btn-outline" id="btn-peek-keep" style="flex:1">Keep this order</button>
+      <button class="btn btn-green" id="btn-peek-shuffle" style="flex:1">Shuffle my deck</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="ov-discard">
   <div class="ov-box" style="max-width:600px">
     <div class="ov-title">Choose cards to discard</div>
@@ -833,7 +845,8 @@ const auth = getAuth(FB);
 // Keyword flags used here:
 //   block:true      → grants Block in the block-first pass (before damage resolves)
 //   endless:true    → after resolving, returns to deck (shuffled) instead of graveyard (renamed from Echo)
-//   quickplay:true  → resolves before all non-quickplay cards
+//   quickplay:true  → DECKBUILDING: +1 point toward revealing FIRST  (see DESIGN_NOTES)
+//   finale:true     → DECKBUILDING: +1 point toward revealing LAST   (see DESIGN_NOTES)
 //   unplayable:true → cannot be played normally (tapping it shakes "no")   [used from Phase 3 on]
 //   hold:true       → has a while-holding effect (passive while in hand)   [used from Phase 3 on]
 //   quest:'id'      → auto-active quest pulled from deck at game start
@@ -949,6 +962,18 @@ const auth = getAuth(FB);
 // SCOPE NOTE — Devour Hope only reacts to cards YOU shuffle into YOUR OWN deck (Endless,
 //   Energies Silk, …). Cards an OPPONENT plants into your deck (Scavenger) bypass the
 //   onShuffleIn hook entirely.
+// FINALE / QUICKPLAY — who reveals first (DECKBUILDING keywords, not in-round effects):
+//   finale:true    → +1 point toward revealing LAST  (goes second → opens with 6 cards)
+//   quickplay:true → +1 point toward revealing FIRST (goes first  → opens with 4 cards)
+//   Points are counted from the DECK before the game starts (1 per card, so 10 Finale cards
+//   = 10 points). A deck may NEVER mix Finale and Quickplay — once you add one, the other is
+//   locked out (the deck builder must enforce this).
+//   Resolution (decideFirstPlayer): different wishes → both granted, whatever the numbers;
+//   same wish → higher count wins it and the other gets the opposite; equal counts, or neither
+//   player has points → random coin flip. The turn order is therefore decided at JOIN time,
+//   when both decks are known (not at lobby creation).
+//   NOTE: 'quickplay' used to mean "this card resolves before all others" — that meaning is
+//   GONE. Cards now always resolve in play order, first player's cards then the second's.
 // ─────────────────────────────────────────────────────────────────────────────
 const CARDS_DATA = [
   {id:'bulrog',         name:'Bulrog',         text:'Deal 15 damage.',                                      rarity:'common',    emoji:'👹', dealsDamage:true},
@@ -963,7 +988,7 @@ const CARDS_DATA = [
   {id:'phoenix_thief',  name:'Phoenix Thief',   text:"If you didn't draw cards this round: steal 2 random cards from your opponent.", rarity:'legendary', emoji:'🦅'},
   {id:'nemesis',        name:'Nemesis',         text:'Deal 25 damage. You are hindered next round.',         rarity:'common',    emoji:'🧟', dealsDamage:true},
   {id:'small_syn',      name:'Small Syn',       text:'Deal 15 damage. Endless.',                             rarity:'common',    emoji:'🐲', endless:true, dealsDamage:true},
-  {id:'baku',           name:'Baku the Mooneater', text:'Quickplay. Choose: deal 15 damage OR block.',       rarity:'legendary', emoji:'🐍', quickplay:true, dealsDamage:true},
+  {id:'baku',           name:'Baku the Mooneater', text:'Choose: deal 15 damage OR block.',       rarity:'legendary', emoji:'🐍', dealsDamage:true},
   {id:'tortolla',       name:'Tortolla',        text:'Split 20: divide between damage and heal.',            rarity:'common',    emoji:'🐢', dealsDamage:true, heals:true},
   {id:'cute_wolf',      name:'Cute Wolf',       text:'Deal 5 damage.',                                       rarity:'common',    emoji:'🐺', tags:['cute'], dealsDamage:true},
   {id:'cute_snake',     name:'Cute Snake',      text:'Deal 5 damage.',                                       rarity:'common',    emoji:'🐍', tags:['cute'], dealsDamage:true},
@@ -1000,11 +1025,12 @@ const CARDS_DATA = [
   {id:'devour_hope', collectible:true, name:'Devour Hope', text:'For the rest of the game: destroy each card shuffled into your deck to deal 5 true damage.', rarity:'legendary', emoji:'🕳️', type:'normal', art:'art/devour_hope.png'},
   {id:'deepception', collectible:true, name:'Deepception', text:'Immune. While holding: revive yourself with 25 health upon death (once per game). Discard this card afterwards.', rarity:'legendary', emoji:'🌀', immune:true, hold:true, type:'normal', art:'art/deepception.png'},
   {id:'fireblast_confetti', collectible:true, name:'Fireblast Confetti', text:'Celebration. Deal 5 damage. +10 damage for each Celebration card you are holding.', rarity:'common', emoji:'🎆', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/fireblast_confetti.png'},
-  {id:'larry_birthday_hero', collectible:true, name:'Larry, the Birthday Hero', text:'', rarity:'legendary', type:'normal', art:'art/larry_birthday_hero.png'},
-  {id:'arcane_cake_celebration', collectible:true, name:'Arcane Cake Celebration', text:'', rarity:'common', type:'normal', art:'art/arcane_cake_celebration.png'},
-  {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'', rarity:'common', type:'normal', art:'art/hangover_hex.png'},
-  {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'', rarity:'common', type:'normal', art:'art/prinnys_vanilla_cake.png'},
-  {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'', rarity:'common', type:'normal', art:'art/larrys_lover.png'},
+  {id:'larry_birthday_hero', collectible:true, name:'Larry, the Birthday Hero', text:'Celebration. Look at the top 14 cards of your deck: you get all Celebration cards. Then keep the order or shuffle your deck.', rarity:'legendary', emoji:'🎂', tags:['celebration'], peek:14, type:'normal', art:'art/larry_birthday_hero.png'},
+  {id:'pest_doctor', collectible:true, name:'Pest Doctor', text:'Deal 10 damage. If your opponent played a Cursed card this round: deal 25 damage instead.', rarity:'common', emoji:'🦠', dealsDamage:true, type:'normal', art:'art/pest_doctor.png'},
+  {id:'arcane_cake_celebration', collectible:true, name:'Arcane Cake Celebration', text:'Celebration. Shuffle 2 Prinny\'s Vanilla Cakes into your deck. Enchanted: shuffle 4 into your deck.', rarity:'common', emoji:'🎉', tags:['celebration'], enchanted:true, type:'normal', art:'art/arcane_cake_celebration.png'},
+  {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'Celebration. Both players deal half the damage they dealt last round.', rarity:'common', emoji:'🍾', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/hangover_hex.png'},
+  {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'Celebration. Deal 10 damage. Each future Prinny\'s Vanilla Cake deals 5 additional damage.', rarity:'common', emoji:'🍰', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/prinnys_vanilla_cake.png'},
+  {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'Celebration. If you hold another Celebration card: gain a Shield for the next 2 rounds.', rarity:'common', emoji:'💝', tags:['celebration'], type:'normal', art:'art/larrys_lover.png'},
 ];
 
 // Cards where YOU choose which of your own cards to discard: {cardId: count}
@@ -1322,6 +1348,89 @@ const CARD_LOGIC = {
     }
   } },
   enchanted_orb: { onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Enchanted Orb — it fizzles (hold it to enchant instead).','system'); } },
+  // Larry, the Birthday Hero (Celebration) — look at the top 14 cards of your deck. Every
+  // Celebration card among them goes to your hand, in DECK ORDER, until your hand is full;
+  // the rest stay in the deck. Then you keep the order (you now know what's coming) or shuffle.
+  // The keep/shuffle choice is made at reveal (c.card._peek) — see pickPeek.
+  // Larry's Lover (Celebration) — if you still HOLD another Celebration card (this one is
+  // already played, so it doesn't count itself), gain a Shield for the next 2 rounds. Shield
+  // = Block, but multi-round; it starts NEXT round. Re-playing it resets to 2, never stacks.
+  // Prinny's Vanilla Cake (Celebration) — 10 damage, +5 for every Cake YOU already played
+  // this game (1st: 10, 2nd: 15, 3rd: 20 …). The counter is per player, never resets, and
+  // counts within the same round too. Normal damage (Block/Shield stop it).
+  // Hangover Hex (Celebration) — SYMMETRIC: each player deals half the damage THEY dealt last
+  // round to their opponent. Halved, then rounded to the NEAREST multiple of 5, ties going
+  // down (all damage in the game is already a multiple of 5, so the half is either exact or
+  // lands on .5 → 25 becomes 12.5 → 10). Normal damage: Block/Shield stop it. Round 1 → 0.
+  // Arcane Cake Celebration (Celebration, Enchanted) — shuffle 2 fresh Prinny's Vanilla Cakes
+  // into your deck; with an Orb, 4. Each is a brand-new card (own uid) placed at a RANDOM spot
+  // (shuffleIntoDeck shuffles the whole deck). Deckbuilding copy limits don't apply to cards
+  // created mid-game. Routed through shuffleIntoDeck, so Devour Hope devours them (5 true
+  // damage each) instead of letting them enter the deck.
+  // Pest Doctor — 10 damage, or 25 if the opponent PLAYED a Cursed card this round. Reads
+  // their selectedCards (what they put on the table), not what has already resolved, so the
+  // result is the same regardless of who reveals first. One Cursed card is enough (not per card).
+  pest_doctor: { onPlay:(c)=>{
+    const theirs=(c.state[c.opp].selectedCards||[]).filter(Boolean);
+    const cursed=theirs.some(x=>x.cursedUntil!==undefined);
+    const dmg=cursed?25:10;
+    c.dealDmg(dmg);
+    c.log(c.state[c.self].name+' plays Pest Doctor — '+dmg+' damage'+(cursed?' (a Cursed card was played!)':'')+'!','damage');
+  } },
+  arcane_cake_celebration: { onPlay:(c)=>{
+    const n = c.useOrb ? 4 : 2;
+    const def = CARDS_DATA.find(x=>x.id==='prinnys_vanilla_cake');
+    const cakes = Array.from({length:n}, ()=>mkCard(def));
+    const added = shuffleIntoDeck(c.state, c.self, cakes);
+    c.log(c.state[c.self].name+' plays Arcane Cake Celebration — shuffles '+n+" Prinny's Vanilla Cake"+(n===1?'':'s')+' into the deck'+(c.useOrb?' (Enchanted!)':'')+'.','effect');
+    if(added<n) c.log('  (only '+added+' entered the deck)','system');
+  } },
+  hangover_hex: { onPlay:(c)=>{
+    const st=c.state;
+    const near5 = n => Math.max(0, Math.ceil(((n||0)/2)/5 - 0.5) * 5);   // nearest 5, ties down
+    const amounts = { p1: near5(st.p1.dmgDealtLastRound), p2: near5(st.p2.dmgDealtLastRound) };
+    c.log(c.state[c.self].name+' plays Hangover Hex — last round\'s damage echoes back, halved.','effect');
+    // Resolve in turn order so it stays consistent with the rest of the round.
+    const first = st.firstPlayer==='p2' ? 'p2' : 'p1';
+    [first, opp(first)].forEach(r=>{
+      const amt=amounts[r];
+      if(amt>0){
+        dealDmg(st, opp(r), amt, false, r);
+        c.log('  🍾 '+st[r].name+' deals '+amt+' damage (half of '+(st[r].dmgDealtLastRound||0)+').','damage');
+      } else {
+        c.log('  🍾 '+st[r].name+' deals nothing (dealt '+(st[r].dmgDealtLastRound||0)+' last round).','system');
+      }
+    });
+  } },
+  prinnys_vanilla_cake: { onPlay:(c)=>{
+    const st=c.state, r=c.self;
+    const played=st[r].cakesPlayed||0;
+    const dmg=10+5*played;
+    st[r].cakesPlayed=played+1;
+    c.dealDmg(dmg);
+    c.log(st[r].name+" plays Prinny's Vanilla Cake — "+dmg+' damage'+(played?' (cake #'+(played+1)+')':'')+'!','damage');
+  } },
+  larrys_lover: { onPlay:(c)=>{
+    const held=(c.state[c.self].hand||[]).filter(x=>hasTag(x,'celebration')).length;
+    if(held>0){
+      c.state[c.self].shieldRounds = 2;   // reset, not stacked
+      c.log(c.state[c.self].name+" plays Larry's Lover — Shield for the next 2 rounds!",'effect');
+    } else {
+      c.log(c.state[c.self].name+" plays Larry's Lover — no Celebration card held, no Shield.",'system');
+    }
+  } },
+  larry_birthday_hero: { onPlay:(c)=>{
+    const st=c.state, r=c.self;
+    const {top, gained}=larryGains(st, r, 14);
+    if(gained.length){
+      const take=new Set(gained.map(x=>x.uid));
+      st[r].deck=(st[r].deck||[]).filter(x=>!take.has(x.uid));
+      st[r].hand=[...(st[r].hand||[]), ...gained];
+    }
+    c.log(st[r].name+' plays Larry — looked at '+top.length+' cards, took '+gained.length+' Celebration card'+(gained.length===1?'':'s')+'.','effect');
+    if((c.card&&c.card._peek)==='shuffle'){ shuffleDeck(st, r); c.log('  🔀 '+st[r].name+' shuffles their deck.','system'); }
+    else c.log('  📖 '+st[r].name+' keeps the deck order.','system');
+  } },
   // Energies Silk — take every used Enchanted Orb from your graveyard and shuffle them back
   // into your deck (moved, not copied). Covers all rounds AND an Orb used earlier this same
   // round (already in the graveyard by the time this resolves). Routes through shuffleIntoDeck,
@@ -1563,6 +1672,37 @@ function mkCard(c){
   card.uid=Math.random().toString(36).slice(2,10);
   return card;
 }
+// ── FINALE / QUICKPLAY: who reveals first? ───────────────────────────────────
+// Deckbuilding keywords, counted BEFORE the game starts (one point per card in the deck):
+//   finale:true    → "I want to reveal LAST"  (goes second → opens with 6 cards)
+//   quickplay:true → "I want to reveal FIRST" (goes first  → opens with 4 cards)
+// A deck may never mix the two (the deck builder enforces that), so each player has points
+// for at most ONE of them. Resolution:
+//   • Both want different things  → both get their wish, regardless of the numbers.
+//   • Both want the same thing    → the higher count wins it; the other gets the opposite.
+//   • Equal counts, or neither has any points → random coin flip.
+function deckIntent(deck){
+  const cards=deck||[];
+  const fin=cards.filter(c=>c&&c.finale).length;
+  const qck=cards.filter(c=>c&&c.quickplay).length;
+  if(fin>qck) return {want:'last',  points:fin};
+  if(qck>fin) return {want:'first', points:qck};
+  return {want:null, points:0};
+}
+
+function decideFirstPlayer(deckA, deckB){
+  const a=deckIntent(deckA), b=deckIntent(deckB);   // a = p1, b = p2
+  const coin=()=> Math.random()<0.5 ? 'p1' : 'p2';
+  if(!a.want && !b.want) return coin();                       // neither cares
+  if(a.want && !b.want)  return a.want==='first' ? 'p1' : 'p2';
+  if(b.want && !a.want)  return b.want==='first' ? 'p2' : 'p1';
+  if(a.want !== b.want)  return a.want==='first' ? 'p1' : 'p2';   // different wishes → both granted
+  // Same wish → the higher count gets it.
+  if(a.points === b.points) return coin();
+  const winner = a.points > b.points ? 'p1' : 'p2';
+  return a.want==='first' ? winner : opp(winner);             // winner wants LAST → the other goes first
+}
+
 function buildDeck(){
   let d=[];
   // Copy counts (test pool). Quests and blessings are unique: max 1 copy. Legendary 2,
@@ -1790,14 +1930,11 @@ document.getElementById('btn-create').onclick=async()=>{
   myRole='p1'; soloMode=false;
   const code=Math.random().toString(36).slice(2,6).toUpperCase();
   gRef=ref(db,'games/'+code);
-  // Turn order is RANDOM per game and independent of who created the lobby. The first player
-  // opens with 4 cards and resolves first; the second player opens with 6 cards and resolves
-  // second (fewer cards ↔ initiative). p1/p2 stay purely technical roles.
-  const firstPlayer = Math.random()<0.5 ? 'p1' : 'p2';
+  // Turn order depends on BOTH decks (Finale/Quickplay points), so it can't be decided yet —
+  // p2 decides it at join time and deals both opening hands then. We only store the deck here.
   let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
-  const hand=deck.splice(0, firstPlayer==='p1' ? 4 : 6);
-  await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer,
-    p1:{name:myName,hp:150,maxHp:150,deck,hand,graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
+  await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer:null,
+    p1:{name:myName,hp:150,maxHp:150,deck,hand:[],graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
   document.getElementById('lobby-box').classList.add('hidden');
   document.getElementById('lb-waiting').classList.remove('hidden');
@@ -1816,14 +1953,20 @@ document.getElementById('btn-join').onclick=async()=>{
   const gs=snap.val();
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
   let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
-  // Hand size follows the game's random turn order (4 = goes first, 6 = goes second).
-  const hand=deck.splice(0, gs.firstPlayer==='p2' ? 4 : 6);
+  // Both decks are known now, so decide who reveals first (Finale/Quickplay points) and deal
+  // both opening hands: whoever goes FIRST opens with 4 cards, whoever goes SECOND with 6.
+  const p1deck=[...(gs.p1.deck||[])];
+  const firstPlayer=decideFirstPlayer(p1deck, deck);
+  const p1hand=p1deck.splice(0, firstPlayer==='p1' ? 4 : 6);
+  const hand=deck.splice(0, firstPlayer==='p2' ? 4 : 6);
   await update(gRef,{
+    'firstPlayer':firstPlayer,
+    'p1/deck':p1deck,'p1/hand':p1hand,
     'p2/name':myName,'p2/hp':150,'p2/maxHp':150,'p2/deck':deck,'p2/hand':hand,
     'p2/graveyard':[],'p2/void':[],'p2/blessing':null,'p2/quests':qq.quests,'p2/blocked':false,
     'p2/journeyEffects':[],'p2/journeyHistory':[],
     'p2/hindered':false,'p2/extraDraw':0,'p2/noDraw':false,
-    'p2/forcedType':null,'p2/forcedTypeNext':null,'p2/pendingHeals':[],
+    'p2/forcedType':null,'p2/forcedTypeNext':null,'p2/pendingHeals':[],'p2/shieldRounds':0,'p2/cakesPlayed':0,'p2/dmgDealtLastRound':0,
     'p2/selectedCards':[],'p2/confirmed':false,'p2/lastPlayed':[],
     'status':'active','phase':'select'
   });
@@ -1845,11 +1988,14 @@ function startSolo(){
   const hand1 = deck1.splice(0, Math.max(4, testCards.length));
   const graveSeed=[]; for(let i=0;i<6;i++) graveSeed.push(mkCard(CARDS_DATA.find(c=>c.id==='bulrog')));
   let deck2=buildDeck(); deck2.unshift(mkCard(CARDS_DATA.find(c=>c.id==='q_cute')), mkCard(CARDS_DATA.find(c=>c.id==='q_heal')));
-  const q2=extractQuests(deck2); deck2=q2.deck; const hand2=deck2.splice(0,6);
+  const q2=extractQuests(deck2); deck2=q2.deck;
+  // Same rule as multiplayer: Finale/Quickplay points in both decks decide who reveals first.
+  const soloFirst=decideFirstPlayer(deck1, deck2);
+  const hand2=deck2.splice(0, soloFirst==='p2' ? 4 : 6);
   localGs={
-    status:'active',round:1,phase:'select',firstPlayer:(Math.random()<0.5?'p1':'p2'),
-    p1:{name:'Player 1',hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
-    p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:null,quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
+    status:'active',round:1,phase:'select',firstPlayer:soloFirst,
+    p1:{name:'Player 1',hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
+    p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:null,quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
   };
   showGameScreen();
   onSelectPhase();
@@ -2281,8 +2427,8 @@ function renderArena(){
 // Frame zone layout per rarity — where the illustration window, name banner and text
 // box sit, as percentages of the card. Measured from the two frame templates. Tweakable.
 const FRAME_ZONES = {
-  common:    { src:'art/frame_common.png',    illomask:'art/frame_common_mask.png',    aspect:605/986,
-               win:[11,6,79,53], name:[18,60.35,64,5.5], text:[14,69,72,22] },
+  common:    { src:'art/frame_common.png',    illomask:'art/frame_common_mask.png',    aspect:1024/1536,
+               win:[14,9.7,72.3,49], name:[22,60.6,56,5.0], text:[22.5,70,56.6,18] },
   legendary: { src:'art/frame_legendary.png', illomask:'art/frame_legendary_mask.png', aspect:687/1027,
                win:[11,12,78,47], name:[20,59.55,60,5.5], text:[15,68,70,21] },
 };
@@ -2393,6 +2539,16 @@ async function onRevealPhase(gs){
     if(c && hasEnchanted(c) && orbsLeft>0){
       const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name);
       if(use==='yes'){ choices[c.uid]=Object.assign(choices[c.uid]||{}, {useOrb:true}); orbsLeft--; }
+    }
+  }
+
+  // Larry: show the top cards of your deck and ask keep-or-shuffle (the Celebration cards you
+  // gain are highlighted). Done here, not mid-resolve, because only p1 runs the resolve.
+  for(const c of myCards){
+    if(c && c.peek){
+      const {top, gained}=larryGains(localGs, myRole, c.peek);
+      const pick=await pickPeek(top, c.name, gained);
+      choices[c.uid]=Object.assign(choices[c.uid]||{}, {peek:pick});
     }
   }
 
@@ -2551,6 +2707,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     // CPU: randomly spend held Orbs on its enchanted cards.
     let cpuOrbs=p2hand.filter(c=>!p2played.includes(c) && isOrb(c)).length;
     p2played.forEach(c=>{ if(hasEnchanted(c) && cpuOrbs>0 && Math.random()<0.5){ c._useOrb=true; cpuOrbs--; } });
+    p2played.forEach(c=>{ if(c.peek) c._peek = Math.random()<0.5 ? 'keep' : 'shuffle'; });
     localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2hand.filter(c=>!p2played.includes(c));
     localGs.p2.confirmed=true;
@@ -2566,6 +2723,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
       for(const c of played){ if(SPLIT_CARDS[c.id]) c._split=await pickSplit(SPLIT_CARDS[c.id], c.name); }
       let orbsLeft=(me().hand||[]).filter(isOrb).length;
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
+      for(const c of played){ if(c.peek){ const {top,gained}=larryGains(localGs, myRole, c.peek); c._peek=await pickPeek(top, c.name, gained); } }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
     }, 900);
@@ -2586,6 +2744,40 @@ document.getElementById('btn-confirm').onclick=async()=>{
 };
 
 // ── Discard picker: returns a promise resolving to array of chosen uids ──
+// ── Deck peek (Larry): show the top N cards, then keep the order or shuffle ──
+// The choice is gathered in the REVEAL phase (like Choose/Split/Orb) rather than mid-resolve,
+// because in multiplayer only p1 runs the resolve — the other player could never be prompted
+// there. The cards shown are the deck's top N as it stands when you confirm.
+function pickPeek(cards, cardName, gained){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('ov-peek');
+    const grid=document.getElementById('peek-grid');
+    document.getElementById('peek-title').textContent=cardName;
+    document.getElementById('peek-sub').textContent =
+      'The top '+cards.length+' card'+(cards.length===1?'':'s')+' of your deck'+
+      (gained.length ? ' — you take '+gained.length+' Celebration card'+(gained.length===1?'':'s')+'.' : ' — no Celebration cards here.');
+    grid.innerHTML='';
+    cards.forEach(c=>{
+      const el=makeCardEl(c);
+      if(gained.some(g=>g.uid===c.uid)) el.classList.add('selected');   // highlight what you take
+      grid.appendChild(el);
+    });
+    document.getElementById('btn-peek-keep').onclick=()=>{ ov.classList.add('hidden'); resolve('keep'); };
+    document.getElementById('btn-peek-shuffle').onclick=()=>{ ov.classList.add('hidden'); resolve('shuffle'); };
+    ov.classList.remove('hidden');
+  });
+}
+
+// Larry helper: which of the top N cards would you actually gain? (Celebration cards, in deck
+// order, capped by your remaining hand space.) Used both for the preview and the resolve, so
+// what you see is exactly what you get.
+function larryGains(state, r, peekCount){
+  const deck=state[r].deck||[];
+  const top=deck.slice(0, peekCount);
+  const space=Math.max(0, maxHandSize(state,r) - (state[r].hand||[]).length);
+  return { top, gained: top.filter(c=>hasTag(c,'celebration')).slice(0, space) };
+}
+
 function pickDiscards(hand, count, cardName){
   return new Promise(resolve=>{
     const ov=document.getElementById('ov-discard');
@@ -2695,9 +2887,11 @@ function resolveRound(gs){
   state._dead=null; state._winner=null;
   log('⚔ Round '+state.round+' — cards revealed','system');
 
-  // Reset block + per-round trackers
+  // Reset block + per-round trackers. Carry this round's damage over to dmgDealtLastRound
+  // FIRST — Hangover Hex needs it, and the tracker is wiped before any card resolves.
   ['p1','p2'].forEach(r=>{
     state[r].blocked=false;
+    state[r].dmgDealtLastRound=state[r].dmgDealtThisRound||0;
     state[r].dmgDealtThisRound=0;
     state[r].healedThisRound=0;
     state[r].discardedThisRound=0;
@@ -2714,6 +2908,7 @@ function resolveRound(gs){
         if(ch[c.uid].choice!==undefined) c._choice=ch[c.uid].choice;
         if(ch[c.uid].split!==undefined) c._split=ch[c.uid].split;
         if(ch[c.uid].useOrb!==undefined) c._useOrb=ch[c.uid].useOrb;
+        if(ch[c.uid].peek!==undefined) c._peek=ch[c.uid].peek;
       }
     });
   });
@@ -2725,6 +2920,17 @@ function resolveRound(gs){
   // BLOCK-FIRST: any played card flagged block:true raises the shield before any
   // damage resolves. Data-driven now (card.block) — no hardcoded id list.
   [['p1',p1c],['p2',p2c]].forEach(([r,cards])=>cards.forEach(c=>{ if(c&&c.block) state[r].blocked=true; }));
+
+  // SHIELD (Larry's Lover): a multi-round Block. Consumed here, BEFORE cards resolve, so a
+  // Shield granted by a card played THIS round doesn't protect this round — it starts next
+  // round (by design). Same rules as Block: stops normal damage (incl. self-damage), but not
+  // true damage and not steal-health.
+  ['p1','p2'].forEach(r=>{
+    if((state[r].shieldRounds||0) > 0){
+      state[r].blocked = true;
+      state[r].shieldRounds = state[r].shieldRounds - 1;
+    }
+  });
 
   // Run one played card: onPlay hook → quest advance → graveyard OR (Endless) back to deck.
   function runCard(c,r){
@@ -2778,17 +2984,12 @@ function resolveRound(gs){
       }
     });
 
-    // QUICKPLAY resolves before everything else. Both have it → random order; else the one who does.
-    const fq=cardsOf[first].filter(c=>c&&c.quickplay), sq=cardsOf[second].filter(c=>c&&c.quickplay);
-    let quickOrder;
-    if(fq.length&&sq.length) quickOrder = Math.random()<0.5 ? [[first,fq],[second,sq]] : [[second,sq],[first,fq]];
-    else quickOrder = [[first,fq],[second,sq]];
-    quickOrder.forEach(([r,cards])=>cards.forEach(c=>runCard(c,r)));
-
-    // Then normal cards, in play order: first player left→right, then second player left→right.
+    // Cards resolve in play order: first player left→right, then second player left→right.
     // (tap order = board placement = resolution order)
-    cardsOf[first].forEach(c=>{ if(c&&!c.quickplay) runCard(c,first); });
-    cardsOf[second].forEach(c=>{ if(c&&!c.quickplay) runCard(c,second); });
+    // NOTE: 'quickplay' no longer means "resolve before everything else" — it is now a
+    // DECKBUILDING keyword (see FINALE / QUICKPLAY in DESIGN_NOTES) that decides who goes first.
+    cardsOf[first].forEach(c=>{ if(c) runCard(c,first); });
+    cardsOf[second].forEach(c=>{ if(c) runCard(c,second); });
 
     // End-of-round triggers for persistent effects / blessings, in turn order.
     emit(state,'onRoundEnd',first,{});
