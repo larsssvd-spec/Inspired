@@ -976,30 +976,9 @@ const auth = getAuth(FB);
 //   GONE. Cards now always resolve in play order, first player's cards then the second's.
 // ─────────────────────────────────────────────────────────────────────────────
 const CARDS_DATA = [
-  {id:'bulrog',         name:'Bulrog',         text:'Deal 15 damage.',                                      rarity:'common',    emoji:'👹', dealsDamage:true},
-  {id:'star_relocrater',name:'Star Relocrater', text:'Deal 20 damage.',                                      rarity:'common',    emoji:'☄️', dealsDamage:true},
-  {id:'kraken',         name:'Kraken',          text:'Deal 10 true damage.',                                 rarity:'common',    emoji:'🐙', dealsDamage:true},
-  {id:'akya',           name:'Akya',            text:'Block.',                                               rarity:'common',    emoji:'🐺', block:true},
-  {id:'externus',       name:'EXTERNUS',        text:'Blessing: each time you deal damage, deal 5 more.',   rarity:'legendary', emoji:'🔥'},
-  {id:'chefs_hammer',   name:"Chef's Hammer",   text:'Block. Heal for 5.',                                   rarity:'common',    emoji:'🔨', block:true, heals:true},
-  {id:'imp_collector',  name:'Imp Collector',   text:'Steal 10 health from your opponent.',                  rarity:'common',    emoji:'😈'},
-  {id:'worthless_imp',  name:'Worthless Imp',   text:'Discard 2 cards.',                                     rarity:'common',    emoji:'👺'},
-  {id:'mister_mukala',  name:'Mister Mukala',   text:'Draw cards until you have as many as your opponent.',  rarity:'common',    emoji:'🦍'},
-  {id:'phoenix_thief',  name:'Phoenix Thief',   text:"If you didn't draw cards this round: steal 2 random cards from your opponent.", rarity:'legendary', emoji:'🦅'},
-  {id:'nemesis',        name:'Nemesis',         text:'Deal 25 damage. You are hindered next round.',         rarity:'common',    emoji:'🧟', dealsDamage:true},
-  {id:'small_syn',      name:'Small Syn',       text:'Deal 15 damage. Endless.',                             rarity:'common',    emoji:'🐲', endless:true, dealsDamage:true},
-  {id:'baku',           name:'Baku the Mooneater', text:'Choose: deal 15 damage OR block.',       rarity:'legendary', emoji:'🐍', dealsDamage:true},
-  {id:'tortolla',       name:'Tortolla',        text:'Split 20: divide between damage and heal.',            rarity:'common',    emoji:'🐢', dealsDamage:true, heals:true},
-  {id:'cute_wolf',      name:'Cute Wolf',       text:'Deal 5 damage.',                                       rarity:'common',    emoji:'🐺', tags:['cute'], dealsDamage:true},
-  {id:'cute_snake',     name:'Cute Snake',      text:'Deal 5 damage.',                                       rarity:'common',    emoji:'🐍', tags:['cute'], dealsDamage:true},
-  {id:'cute_penguin',   name:'Cute Penguin',    text:'Heal 5.',                                              rarity:'common',    emoji:'🐧', tags:['cute'], heals:true},
-  {id:'q_cute',         name:'Ardana',          text:'Quest: play 3 Cute animals then heal for 30.',         rarity:'legendary', emoji:'📜', quest:'cute_animals'},
-  {id:'q_heal',         name:'Goodwill Her',    text:'Quest: heal 3 times then draw 2 cards.',               rarity:'legendary', emoji:'📜', quest:'heal_thrice'},
 
   // ── Phase 3: while-holding / unplayable / graveyard chain (placeholder emoji, real art later) ──
-  {id:'phoenix_charm',  name:'Phoenix Charm',   text:'While holding: the first time you would die, you are revived with 25 health.', rarity:'legendary', emoji:'🪶', hold:true, unplayable:true},
   {id:'nightlife', collectible:true,      name:'Nightlife',       text:'While holding: the first time your opponent would heal, that healing is stolen by you instead.', rarity:'legendary', emoji:'🌃', hold:true, art:'art/nightlife.png', type:'normal'},
-  {id:'vantage',        name:'Vantage',         text:'While holding: the first time your opponent has less health than you, heal 20.', rarity:'common', emoji:'⚖️', hold:true, unplayable:true},
   {id:'starving_pyrax', collectible:true, name:'Starving Pyrax',  text:'If there are at least 6 cards to eat: eat them and put Hungry Pyrax in your hand.', rarity:'legendary', emoji:'🥚', art:'art/starving_pyrax.png', type:'normal'},
   {id:'hungry_pyrax',   name:'Hungry Pyrax',    text:'If there are at least 22 cards to eat: eat them and put Full Pyrax in your hand.', rarity:'legendary', emoji:'🐉', noDeck:true, art:'art/hungry_pyrax.png', type:'normal'},
   {id:'full_pyrax',     name:'Full Pyrax',      text:'Set your health to 150.',                              rarity:'legendary', emoji:'🐲', noDeck:true, art:'art/full_pyrax.png', type:'normal'},
@@ -1034,11 +1013,10 @@ const CARDS_DATA = [
 ];
 
 // Cards where YOU choose which of your own cards to discard: {cardId: count}
-const SELF_DISCARD = { worthless_imp: 2 };
+const SELF_DISCARD = {};   // cardId → how many cards the player must choose to discard
 
 // Cards where you CHOOSE an option. Each option: {key, label}
 const CHOOSE_OPTIONS = {
-  baku: [ {key:'damage', label:'Deal 15 damage'}, {key:'block', label:'Block'} ],
   skywalker: [ {key:'damage', label:'Force damage cards'}, {key:'heal', label:'Force heal cards'} ],
   // Journey Days — each option maps to a JOURNEY_LOGIC entry (the malus it imposes).
   first_day:  [ {key:'no_heal',        label:"Can't heal (rest of game)"},        {key:'dmg_cap_15',      label:'Deal max 15 damage per round'} ],
@@ -1049,9 +1027,7 @@ const CHOOSE_OPTIONS = {
 };
 
 // Cards with SPLIT X: player divides X between damage and heal
-const SPLIT_CARDS = {
-  tortolla: 20,
-};
+const SPLIT_CARDS = {};   // cardId → total points to split between damage and heal
 
 // ══════════════════════════════════════════════════════════════════════════
 //  ENGINE CORE  (local only, never sent to Firebase)
@@ -1264,23 +1240,18 @@ const CARD_LOGIC = {
       onRoundEnd:(c)=>{ if(c.card._variant===2){ c.dealDmgTo(c.self,5,true); c.log(c.state[c.self].name+' bleeds 5 true damage from Death Stare (still held).','damage'); } }
     }
   },
-  bulrog:          { onPlay:(c)=>{ c.dealDmg(15);        c.log(c.state[c.self].name+' plays Bulrog — 15 damage!','damage'); } },
-  star_relocrater: { onPlay:(c)=>{ c.dealDmg(20);        c.log(c.state[c.self].name+' plays Star Relocrater — 20 damage!','damage'); } },
-  kraken:          { onPlay:(c)=>{ c.dealDmg(10, true);  c.log(c.state[c.self].name+' plays Kraken — 10 true damage!','damage'); } },
-  // akya: block granted in the block-first pass (card.block=true); nothing else to do
-  akya:            { onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Akya — Block!','effect'); } },
-  externus:        {
-    onPlay:(c)=>{ c.setBlessing({id:'externus',name:'EXTERNUS',text:'Each time you deal damage, deal 5 more.'}); c.log(c.state[c.self].name+' plays EXTERNUS — Blessing!','effect'); },
-    // modifyDamage fires while THIS player is dealing damage → +5 (was hardcoded in dealDmg)
-    modifyDamage:(c)=>{ const d=c.amount+5; c.log('  → EXTERNUS: +5 ('+d+' total)','effect'); return d; },
-  },
-  chefs_hammer:    { onPlay:(c)=>{ c.heal(5); c.log(c.state[c.self].name+" plays Chef's Hammer — Block & heal 5!",'effect'); } }, // block via block-first pass
-  imp_collector:   { onPlay:(c)=>{ c.stealHealth(10); c.log(c.state[c.self].name+' plays Imp Collector — steals 10 health!','damage'); } },
-  worthless_imp:   { onPlay:(c)=>{ const n=c.discardOwn(2, c.card&&c.card._discardUids); c.log(c.state[c.self].name+' plays Worthless Imp — discards '+n+' card(s).','effect'); } },
-  mister_mukala:   { onPlay:(c)=>{ const diff=(c.state[c.opp].hand||[]).length-(c.state[c.self].hand||[]).length; if(diff>0){ const d=c.drawExtra(diff); c.log(c.state[c.self].name+' plays Mister Mukala — draws '+d+' card(s).','effect'); } else c.log(c.state[c.self].name+' plays Mister Mukala — no cards to draw.','effect'); } },
-  phoenix_thief:   { onPlay:(c)=>{ if(!c.state[c.self].drewThisRound){ const s=c.stealCard(2); c.log(c.state[c.self].name+' plays Phoenix Thief — steals '+s+' card(s)!','effect'); } else c.log(c.state[c.self].name+' plays Phoenix Thief — no effect (drew cards this round).','effect'); } },
-  nemesis:         { onPlay:(c)=>{ c.dealDmg(25); c.setHindered(); c.log(c.state[c.self].name+' plays Nemesis — 25 damage! Hindered next round.','damage'); } },
-  small_syn:       { onPlay:(c)=>{ c.dealDmg(15); c.log(c.state[c.self].name+' plays Small Syn — 15 damage! (Endless: returns to deck)','damage'); } },
+
+
+
+
+
+
+
+
+
+
+
+
   // Devour Hope — onPlay installs a persistent effect. For the rest of the game, every
   // card shuffled into YOUR deck is destroyed (voided) instead of entering the deck, and
   // deals 5 true damage to the opponent per card. Immune cards are shuffled in normally.
@@ -1315,7 +1286,7 @@ const CARD_LOGIC = {
       }
     }
   },
-  baku:            { onPlay:(c)=>{ const choice=(c.card&&c.card._choice)||'damage'; if(choice==='block'){ c.block(); c.log(c.state[c.self].name+' plays Baku — Block!','effect'); } else { c.dealDmg(15); c.log(c.state[c.self].name+' plays Baku — 15 damage!','damage'); } } },
+
   // Skywalker — Choose damage/heal. Next round the OPPONENT is forced to play cards of
   // that type (up to their select limit). Queued as forcedTypeNext; promoted to forcedType
   // for exactly the next round (see the resolve round-reset). Enforced in confirm (human)
@@ -1443,26 +1414,15 @@ const CARD_LOGIC = {
     shuffleIntoDeck(c.state, c.self, orbs);              // back into the deck
     c.log(c.state[c.self].name+' plays Energies Silk — shuffled '+orbs.length+' Enchanted Orb'+(orbs.length===1?'':'s')+' back into the deck.','effect');
   } },
-  tortolla:        { onPlay:(c)=>{ const sp=(c.card&&c.card._split)||{dmg:20,heal:0}; if(sp.dmg>0) c.dealDmg(sp.dmg); if(sp.heal>0) c.heal(sp.heal); c.log(c.state[c.self].name+' plays Tortolla — '+sp.dmg+' damage, '+sp.heal+' heal.','damage'); } },
-  cute_wolf:       { onPlay:(c)=>{ c.dealDmg(5); c.log(c.state[c.self].name+' plays Cute Wolf — 5 damage!','damage'); } },
-  cute_snake:      { onPlay:(c)=>{ c.dealDmg(5); c.log(c.state[c.self].name+' plays Cute Snake — 5 damage!','damage'); } },
-  cute_penguin:    { onPlay:(c)=>{ c.heal(5); c.log(c.state[c.self].name+' plays Cute Penguin — heal 5!','heal'); } },
+
+
+
+
 
   // ── Phase 3 ──
   // Phoenix Charm — while holding + unplayable. First time the holder would die,
   // cancel the death by reviving to 25 HP, then the card is used up → graveyard.
-  phoenix_charm: {
-    hold: {
-      onDeath:(c)=>{
-        if(c.used()) return;
-        if(c.state[c.self].revivedThisGame) return;   // shared: only one revive per player, per game
-        c.used(true); c.consume();
-        c.state[c.self].revivedThisGame = true;
-        c.reviveTo(25);
-        c.log(c.state[c.self].name+' is revived by Phoenix Charm — 25 HP!','heal');
-      }
-    }
-  },
+
   // Deepception — Immune + while holding. First time the holder would die, revive to
   // 25 HP (shared one-revive-per-game lock), then discard ITSELF to the graveyard.
   // The self-discard goes through consume() (not discardCards), so Immune does not
@@ -1494,18 +1454,7 @@ const CARD_LOGIC = {
   },
   // Vantage — while holding + unplayable. First time the opponent has less health than
   // the holder, heal 20 (then used up).
-  vantage: {
-    hold: {
-      onHpCross:(c)=>{
-        if(c.used()) return;
-        if(c.state[c.opp].hp < c.state[c.self].hp){
-          c.used(true); c.consume();
-          c.heal(20);
-          c.log(c.state[c.self].name+' gains the upper hand — Vantage heals 20!','heal');
-        }
-      }
-    }
-  },
+
   // Pyrax chain — eats cards from the graveyard (into the exile zone) to evolve.
   // "cards to eat" = cards in your graveyard. Check happens BEFORE this card enters
   // the graveyard, so it counts OTHER cards only. Eats EXACTLY the required amount.
@@ -1896,8 +1845,6 @@ function drawExtra(gs,r,n){
 // ── QUEST SYSTEM ──
 // Quest definitions: what advances them + reward when complete
 const QUEST_DEFS = {
-  cute_animals:     { name:'Cute Animals', goal:3, reward:'heal30' },
-  heal_thrice:      { name:'Healer',       goal:3, reward:'draw2'  },
   opening_ceremony: { name:'Opening Ceremony', goal:3, reward:'journey_flip' },
 };
 
@@ -1907,16 +1854,12 @@ function advanceQuestsFor(gs,r,card){
     const def=QUEST_DEFS[q.id];
     if(!def) return;
     let advance=0;
-    if(q.id==='cute_animals' && card && card.tags && card.tags.includes('cute')) advance=1;
-    if(q.id==='heal_thrice') advance=(gs[r]._healsThisCard||0);
     if(q.id==='opening_ceremony' && card && card.journeyDay) advance=1;   // playing a Day advances it
     if(advance>0){
       q.progress=(q.progress||0)+advance;
       if(q.progress>=def.goal && !q.done){
         q.progress=def.goal; q.done=true;
         log('  ★ Quest complete: '+def.name+'!','effect');
-        if(def.reward==='heal30') heal(gs,r,30);
-        if(def.reward==='draw2') drawExtra(gs,r,2);
         // journey_flip fires instantly here — so the 3rd Day's malus never lands on you.
         if(def.reward==='journey_flip') journeyFlip(gs,r);
       }
@@ -1978,7 +1921,7 @@ function startSolo(){
   myName='Player 1'; myRole='p1'; soloMode=true;
   // Solo test: opening_ceremony (auto-active quest) shuffles the 5 Journey Days into the deck.
   let deck1=buildDeck();
-  deck1.unshift(mkCard(CARDS_DATA.find(c=>c.id==='opening_ceremony')), mkCard(CARDS_DATA.find(c=>c.id==='q_cute')), mkCard(CARDS_DATA.find(c=>c.id==='q_heal')));
+  deck1.unshift(mkCard(CARDS_DATA.find(c=>c.id==='opening_ceremony')));
   const q1=extractQuests(deck1); deck1=q1.deck;   // pulls quests + injects the 5 Days
   // ── Solo test hand ── Cards listed here start in your opening hand (edit freely).
   // Set to [] for a fully random opening hand.
@@ -1986,8 +1929,8 @@ function startSolo(){
   const testCards = TEST_HAND.map(id=>mkCard(CARDS_DATA.find(c=>c.id===id))).filter(Boolean);
   deck1 = [...testCards, ...deck1];
   const hand1 = deck1.splice(0, Math.max(4, testCards.length));
-  const graveSeed=[]; for(let i=0;i<6;i++) graveSeed.push(mkCard(CARDS_DATA.find(c=>c.id==='bulrog')));
-  let deck2=buildDeck(); deck2.unshift(mkCard(CARDS_DATA.find(c=>c.id==='q_cute')), mkCard(CARDS_DATA.find(c=>c.id==='q_heal')));
+  const graveSeed=[];   // (Pyrax test seed removed with the placeholder cards)
+  let deck2=buildDeck();
   const q2=extractQuests(deck2); deck2=q2.deck;
   // Same rule as multiplayer: Finale/Quickplay points in both decks decide who reveals first.
   const soloFirst=decideFirstPlayer(deck1, deck2);
