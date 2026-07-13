@@ -24,7 +24,21 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 #screen-lobby {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1rem;
   position:relative; overflow:hidden;
+  /* Two layers: .jpg on top, .jpeg underneath. Whichever file actually exists shows up —
+     so it doesn't matter which extension Windows gave the export. */
+  background-color:var(--deep);
+  background-image:url('art/menu_bg.jpg'), url('art/menu_bg.jpeg');
+  background-position:center center, center center;
+  background-size:cover, cover;
+  background-repeat:no-repeat, no-repeat;
 }
+/* Readability veil over the key art — dark at the bottom where the menu/auth panels sit,
+   light at the top so the logo and sky stay visible. */
+#screen-lobby::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg, rgba(3,8,14,0.18) 0%, rgba(3,8,14,0.35) 45%, rgba(3,8,14,0.72) 100%); }
+/* The painted scene replaces the animated night-ocean scene (kept in the file — flip this
+   to `display:block` and remove the background above to bring it back). */
+.bg-scene { display:none; }
 /* Night ocean scene */
 .bg-scene { position:absolute; inset:0; z-index:0; overflow:hidden; background:#04080f; }
 .ns-sky { position:absolute; inset:0;
@@ -143,7 +157,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 
 .col-main { flex:1; display:flex; min-height:0; gap:1.2rem; padding:0 1.6rem 1rem; }
 .col-body { flex:1; display:flex; flex-direction:column; min-height:0; padding:1.2rem 1.4rem 0.5rem;
-  background:rgba(8,20,28,0.62); backdrop-filter:blur(6px); border:1px solid rgba(126,200,50,0.16);
+  background:rgba(8,20,28,0.78); border:1px solid rgba(126,200,50,0.16);
   border-radius:var(--r); box-shadow:0 12px 48px rgba(0,0,0,0.55); overflow:visible; }
 .col-grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr);
   gap:0.7rem 1.1rem; min-height:0; place-items:center; }
@@ -184,11 +198,63 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 
 /* Decks sidebar */
 .col-decks { width:240px; flex-shrink:0; display:flex; flex-direction:column; padding:1.3rem 1rem;
-  background:rgba(8,20,28,0.62); backdrop-filter:blur(6px); border:1px solid rgba(126,200,50,0.16);
+  background:rgba(8,20,28,0.78); border:1px solid rgba(126,200,50,0.16);
   border-radius:var(--r); box-shadow:0 12px 48px rgba(0,0,0,0.55); overflow-y:auto; }
 .col-decks h3 { font-family:'Playfair Display',serif; color:var(--green2); font-size:0.82rem; letter-spacing:0.16em;
   text-transform:uppercase; text-align:center; padding-bottom:0.8rem; border-bottom:1px solid var(--border); }
 .col-deck-empty { color:var(--text3); font-size:0.82rem; font-style:italic; text-align:center; padding:2.5rem 0.6rem; line-height:1.7; }
+
+/* ── DECK BUILDER ─────────────────────────────────────────────────────────────
+   Lives in the collection sidebar: a list of decks, and an editor for the open one.
+   Clicking a card in the grid adds it to the open deck; the rules (40 cards, copy
+   limits, 2 quests, 1 blessing, no Finale+Quickplay mix) are enforced on add. */
+.dk-count { float:right; font-family:'Lora',serif; font-size:0.68rem; color:var(--text3); letter-spacing:0; text-transform:none; }
+.dk-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.6rem; margin-top:0.5rem;
+  background:rgba(6,16,22,0.7); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all 0.15s; }
+.dk-row:hover { border-color:var(--green2); background:rgba(14,34,44,0.85); transform:translateX(2px); }
+.dk-row-nm { flex:1; min-width:0; font-family:'Playfair Display',serif; font-size:0.82rem; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dk-row-ct { font-size:0.68rem; color:var(--green2); flex-shrink:0; }
+.dk-row-ct.bad { color:var(--gold); }
+.dk-new { margin-top:0.9rem; font-size:0.78rem; padding:0.55rem; }
+.dk-new:disabled { opacity:0.35; cursor:not-allowed; }
+.dk-name { width:100%; margin-bottom:0.5rem; background:rgba(6,16,22,0.8); border:1px solid var(--border2);
+  border-radius:8px; color:var(--text); font-family:'Playfair Display',serif; font-size:0.95rem; padding:0.45rem 0.6rem; }
+.dk-name:focus { outline:none; border-color:var(--green2); }
+.dk-meta { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.6rem; }
+.dk-size { font-family:'Playfair Display',serif; font-size:0.9rem; color:var(--green2); }
+.dk-size.bad { color:var(--gold); }
+.dk-warn { font-size:0.62rem; color:var(--gold); font-style:italic; text-align:right; }
+.dk-tools { display:flex; gap:0.3rem; margin-bottom:0.7rem; }
+.dk-tools .col-mini { flex:1; padding:0.3rem 0.2rem; text-align:center; }
+.dk-cards { display:flex; flex-direction:column; gap:0.2rem; overflow-y:auto; }
+.dk-card { display:flex; align-items:center; gap:0.4rem; padding:0.28rem 0.35rem; border-radius:7px;
+  background:rgba(6,16,22,0.55); border:1px solid transparent; cursor:help; transition:all 0.12s; }
+.dk-card:hover { border-color:var(--border2); background:rgba(14,34,44,0.8); }
+.dk-card.legendary { box-shadow:inset 2px 0 0 var(--gold); }
+.dk-card-nm { flex:1; min-width:0; font-size:0.74rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dk-card-n { font-family:'Playfair Display',serif; font-size:0.72rem; color:var(--gold); flex-shrink:0; }
+.dk-card-x { flex-shrink:0; background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; line-height:1; padding:0 0.15rem; }
+.dk-card-x:hover { color:var(--red2); }
+.dk-empty { color:var(--text3); font-size:0.78rem; font-style:italic; text-align:center; padding:1.6rem 0.5rem; line-height:1.6; }
+
+/* In deck-edit mode the grid becomes a picker: click a card to add it. */
+.col-cardwrap.addable { cursor:copy; }
+.col-cardwrap.blocked .card { filter:grayscale(0.7) brightness(0.55); }
+.col-indeck { position:absolute; top:-5px; left:-5px; background:var(--dark); border:1px solid var(--green2); color:var(--green2);
+  font-family:'Playfair Display',serif; font-size:0.78rem; font-weight:700; border-radius:999px; padding:1px 9px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.7); z-index:2; }
+
+/* Deck picker (before a game) + the "cards were removed" notice */
+.dp-list { display:flex; flex-direction:column; gap:0.4rem; max-height:46vh; overflow-y:auto; text-align:left; margin-top:0.6rem; }
+.dp-item { display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0.8rem; border-radius:10px;
+  background:rgba(6,16,22,0.75); border:1px solid var(--border); cursor:pointer; transition:all 0.15s; }
+.dp-item:hover:not(.dead) { border-color:var(--green2); background:rgba(14,34,44,0.9); transform:translateX(2px); }
+.dp-item.dead { opacity:0.45; cursor:not-allowed; }
+.dp-nm { flex:1; min-width:0; font-family:'Playfair Display',serif; font-size:0.9rem; color:var(--text); }
+.dp-ct { font-size:0.72rem; color:var(--green2); }
+.dp-ct.bad { color:var(--gold); }
+.dp-none { color:var(--text3); font-style:italic; font-size:0.85rem; text-align:center; padding:1.4rem 0.5rem; line-height:1.7; }
 .dots span { animation:blink 1.4s infinite; }
 .dots span:nth-child(2){animation-delay:0.2s} .dots span:nth-child(3){animation-delay:0.4s}
 @keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
@@ -215,6 +281,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .hero-icon { width:44px; height:44px; border-radius:50%; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:1.2rem; background:rgba(30,48,20,0.85); flex-shrink:0; }
 .hero-icon.you { border-color:var(--green); box-shadow:0 0 12px rgba(126,200,50,0.3); }
 .hero-icon.opp { border-color:var(--red); box-shadow:0 0 12px rgba(200,64,64,0.3); }
+
 .hero-info { flex:1; min-width:0; }
 .hero-name { font-family:'Playfair Display',serif; font-size:0.85rem; color:#fff; margin-bottom:0.25rem; text-shadow:0 2px 6px rgba(0,0,0,0.9); }
 .hp-bar-wrap { height:9px; background:rgba(0,0,0,0.5); border-radius:5px; overflow:hidden; margin-bottom:0.25rem; max-width:340px; border:1px solid rgba(0,0,0,0.4); }
@@ -299,7 +366,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 }
 /* Floating enlarged preview — now hosts a full framed card at large size */
 #card-preview {
-  position:fixed; display:none; z-index:99999; height:400px; pointer-events:none;
+  position:fixed; display:none; z-index:100002; height:400px; pointer-events:none;
 }
 #card-preview .pv-card { height:400px; cursor:default; }
 #card-preview .pv-card.framed .cf-frame { filter:drop-shadow(0 16px 44px rgba(0,0,0,0.85)); }
@@ -318,10 +385,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 #card-preview.pv-multi { height:auto; align-items:flex-start; gap:1.5rem; }
 #card-preview.pv-multi::before { content:''; position:fixed; inset:0; z-index:-1;
   background:radial-gradient(ellipse at center, rgba(3,10,14,0.55) 0%, rgba(3,10,14,0.78) 100%);
-  backdrop-filter:blur(3px); animation:pvFade 0.18s ease-out; }
+  animation:pvFade 0.18s ease-out; }
 @keyframes pvFade { from { opacity:0; } to { opacity:1; } }
 #card-preview .pv-col { display:flex; flex-direction:column; align-items:center; gap:0.55rem; }
-#card-preview .pv-col .pv-card { height:330px; }
+#card-preview .pv-col .pv-card { height:var(--pv-side,330px); }
 #card-preview .pv-col.pv-base .pv-card { height:400px; }
 #card-preview .pv-lbl { font-family:'Playfair Display',serif; font-size:0.68rem; letter-spacing:0.16em;
   text-transform:uppercase; white-space:nowrap; color:var(--text2); background:rgba(6,16,22,0.85);
@@ -389,6 +456,76 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .log-entry.effect { color:var(--gold2); }
 .log-entry.system { color:var(--text3); font-style:italic; }
 .log-entry.log    { color:var(--text2); }
+
+/* ── ROUND RESULT ────────────────────────────────────────────────────────────
+   The between-rounds panel: a duel readout (HP + what it cost you), the cards
+   both players committed, and the log of what actually happened. Same dark-teal
+   and gold language as the rest of the game. */
+.rs-box { max-width:940px; padding:1.5rem 1.7rem 1.6rem; text-align:left; position:relative;
+  background:linear-gradient(180deg, rgba(10,26,34,0.97) 0%, rgba(5,14,20,0.98) 100%);
+  border:1px solid rgba(240,200,96,0.34);
+  box-shadow:0 0 90px rgba(0,0,0,0.92), 0 0 40px rgba(240,200,96,0.06), inset 0 1px 0 rgba(240,200,96,0.12); }
+.rs-box::before { content:''; position:absolute; inset:7px; border:1px solid rgba(240,200,96,0.14); border-radius:10px; pointer-events:none; }
+.rs-title { font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--gold); text-align:center;
+  letter-spacing:0.18em; text-transform:uppercase; padding:0.35rem 0 0.7rem;
+  text-shadow:0 2px 20px rgba(240,200,96,0.35), 0 2px 6px rgba(0,0,0,0.9); }
+
+/* Duel readout */
+.rs-duel { display:grid; grid-template-columns:1fr auto 1fr; gap:1rem; align-items:center; margin:0.4rem 0 1.3rem; }
+.rs-side { background:rgba(6,16,22,0.75); border:1px solid var(--border); border-radius:12px; padding:0.75rem 1rem 0.85rem; text-align:center; }
+.rs-side.you { border-color:rgba(126,200,50,0.35); box-shadow:inset 0 0 24px rgba(126,200,50,0.06); }
+.rs-side.opp { border-color:rgba(200,64,64,0.35); box-shadow:inset 0 0 24px rgba(200,64,64,0.06); }
+.rs-side-lbl { font-size:0.64rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--text2); margin-bottom:0.35rem; }
+.rs-side.you .rs-side-lbl { color:var(--green2); }
+.rs-side.opp .rs-side-lbl { color:var(--red2); }
+.rs-hp { display:flex; align-items:baseline; justify-content:center; gap:0.4rem;
+  font-family:'Playfair Display',serif; font-size:1.7rem; color:var(--text); text-shadow:0 2px 8px rgba(0,0,0,0.8); }
+.rs-hp-unit { font-size:0.8rem; color:var(--text2); letter-spacing:0.1em; }
+.rs-delta { font-family:'Lora',serif; font-size:0.78rem; padding:0.08rem 0.5rem; border-radius:999px; margin-left:0.15rem; }
+.rs-delta:empty { display:none; }
+.rs-delta.dmg  { color:var(--red2);   background:rgba(200,64,64,0.14);  border:1px solid rgba(200,64,64,0.4); }
+.rs-delta.heal { color:var(--green2); background:rgba(126,200,50,0.12); border:1px solid rgba(126,200,50,0.4); }
+.rs-bar { margin:0.5rem auto 0; max-width:none; }
+.rs-vs { width:46px; height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:0.82rem; letter-spacing:0.1em; color:var(--gold);
+  background:rgba(6,16,22,0.9); border:1px solid rgba(240,200,96,0.4); border-radius:50%;
+  box-shadow:0 0 20px rgba(240,200,96,0.18), inset 0 0 14px rgba(0,0,0,0.7); }
+
+/* Section rules — a gold hairline running out of a small caps label */
+.rs-rule { display:flex; align-items:center; gap:0.85rem; margin:0.2rem 0 0.7rem;
+  font-family:'Playfair Display',serif; font-size:0.7rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gold2); }
+.rs-rule::before, .rs-rule::after { content:''; flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(240,200,96,0.35), transparent); }
+
+/* The cards each player committed */
+.rs-plays { display:grid; grid-template-columns:1fr 1px 1fr; gap:1.1rem; margin-bottom:1.1rem; }
+.rs-divider { background:linear-gradient(180deg, transparent, rgba(240,200,96,0.22), transparent); }
+.rs-col h5 { text-align:center; font-family:'Playfair Display',serif; font-size:0.68rem; letter-spacing:0.16em;
+  text-transform:uppercase; color:var(--text2); margin-bottom:0.6rem; }
+.rs-col.you h5 { color:var(--green2); }
+.rs-col.opp h5 { color:var(--red2); }
+.rs-cards { display:flex; gap:0.5rem; justify-content:center; align-items:center; flex-wrap:wrap; }
+.rs-card { height:150px; width:auto; cursor:help; }
+.rs-card:not(.framed) { width:104px; height:150px; }
+.rs-slot { width:93px; height:150px; flex-shrink:0; border-radius:8px; border:1px dashed rgba(240,200,96,0.18);
+  background:rgba(6,16,22,0.45); display:flex; align-items:center; justify-content:center;
+  color:rgba(240,200,96,0.22); font-size:1rem; }
+.rs-none { text-align:center; font-style:italic; font-size:0.75rem; color:var(--text3); margin-top:0.5rem; }
+
+/* Log */
+.rs-log { background:rgba(3,10,15,0.85); border:1px solid var(--border); border-radius:12px;
+  padding:0.8rem 1.1rem; text-align:left; max-height:180px; overflow-y:auto; font-size:0.84rem; line-height:1.75; }
+.rs-log::-webkit-scrollbar { width:5px; }
+.rs-log::-webkit-scrollbar-thumb { background:rgba(240,200,96,0.25); border-radius:3px; }
+.rs-actions { display:flex; gap:0.7rem; margin-top:1.2rem; }
+@media (max-width:820px){
+  .rs-duel { grid-template-columns:1fr; }
+  .rs-vs { display:none; }
+  .rs-plays { grid-template-columns:1fr; }
+  .rs-divider { display:none; }
+  .rs-card, .rs-slot { height:118px; }
+  .rs-card:not(.framed), .rs-slot { width:80px; }
+}
 .grave-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:0.4rem; max-height:55vh; overflow-y:auto; margin:1rem 0; }
 .floater { position:fixed; pointer-events:none; z-index:200; font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; animation:floatUp 1.4s ease-out forwards; }
 @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-70px) scale(1.3)} }
@@ -696,8 +833,25 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
       </div>
     </div>
     <div class="col-decks">
-      <h3>My Decks</h3>
-      <div class="col-deck-empty">No decks yet.<br>The deck builder is coming next.</div>
+      <div id="deck-list-view">
+        <h3>My Decks <span class="dk-count" id="deck-count-lbl">0/10</span></h3>
+        <div id="deck-list"></div>
+        <button class="btn btn-outline dk-new" id="deck-new">+ New deck</button>
+      </div>
+      <div id="deck-edit-view" class="hidden">
+        <button class="btn-back-link" id="deck-back">← All decks</button>
+        <input class="dk-name" id="deck-name" maxlength="24" placeholder="Deck name" />
+        <div class="dk-meta">
+          <span class="dk-size" id="deck-size">0 / 40</span>
+          <span class="dk-warn" id="deck-warn"></span>
+        </div>
+        <div class="dk-tools">
+          <button class="col-mini" id="deck-autofill" title="Fill up with random cards from your collection">✨ Auto-fill</button>
+          <button class="col-mini" id="deck-dup" title="Duplicate this deck">⧉ Copy</button>
+          <button class="col-mini sell" id="deck-del" title="Delete this deck">🗑 Delete</button>
+        </div>
+        <div class="dk-cards" id="deck-cards"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -760,36 +914,61 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 </div>
 
 <!-- OVERLAYS -->
+<div class="overlay hidden" id="ov-deckpick">
+  <div class="ov-box" style="max-width:460px">
+    <div class="ov-title">Choose your deck</div>
+    <div class="ov-sub" id="dp-sub">You play with the deck you pick here.</div>
+    <div class="dp-list" id="dp-list"></div>
+    <button class="btn btn-outline" id="dp-cancel" style="margin-top:1rem">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ov-deckchanges">
+  <div class="ov-box" style="max-width:460px">
+    <div class="ov-title">Deck updated</div>
+    <div class="ov-sub">Cards you no longer own have been removed from this deck.</div>
+    <div class="dp-list" id="dc-list"></div>
+    <button class="btn btn-green" id="dc-ok" style="margin-top:1rem">Got it</button>
+  </div>
+</div>
+
 <div class="overlay hidden" id="ov-result">
-  <div class="ov-box" style="max-width:560px;padding:1.5rem 2rem;">
-    <div class="ov-title" id="res-title">Round Complete</div>
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0.75rem;margin:1rem 0;align-items:center;">
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.75rem;">
-        <div style="font-size:0.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.3rem;">You</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;" id="res-you-hp">150 HP</div>
-        <div class="hp-bar-wrap" style="margin-top:0.3rem"><div class="hp-bar you" id="res-you-bar" style="width:100%"></div></div>
+  <div class="ov-box rs-box">
+    <div class="rs-title" id="res-title">Round complete</div>
+
+    <div class="rs-duel">
+      <div class="rs-side you">
+        <div class="rs-side-lbl">You</div>
+        <div class="rs-hp"><span id="res-you-hp">150</span><span class="rs-hp-unit">HP</span><span class="rs-delta" id="res-you-delta"></span></div>
+        <div class="hp-bar-wrap rs-bar"><div class="hp-bar you" id="res-you-bar" style="width:100%"></div></div>
       </div>
-      <div style="color:var(--text3);font-size:1.2rem;">⚔</div>
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.75rem;">
-        <div style="font-size:0.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.3rem;">Opponent</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;" id="res-opp-hp">150 HP</div>
-        <div class="hp-bar-wrap" style="margin-top:0.3rem"><div class="hp-bar opp" id="res-opp-bar" style="width:100%"></div></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-      <div>
-        <div style="font-size:0.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.4rem;text-align:center;">Opponent played</div>
-        <div style="display:flex;gap:0.4rem;justify-content:center;min-height:80px;align-items:center;" id="res-opp-cards"></div>
-      </div>
-      <div>
-        <div style="font-size:0.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.4rem;text-align:center;">You played</div>
-        <div style="display:flex;gap:0.4rem;justify-content:center;min-height:80px;align-items:center;" id="res-you-cards"></div>
+      <div class="rs-vs">VS</div>
+      <div class="rs-side opp">
+        <div class="rs-side-lbl">Opponent</div>
+        <div class="rs-hp"><span id="res-opp-hp">150</span><span class="rs-hp-unit">HP</span><span class="rs-delta" id="res-opp-delta"></span></div>
+        <div class="hp-bar-wrap rs-bar"><div class="hp-bar opp" id="res-opp-bar" style="width:100%"></div></div>
       </div>
     </div>
-    <div class="round-log" id="res-log"></div>
-    <div style="display:flex;gap:0.6rem;">
+
+    <div class="rs-rule">Cards played this round</div>
+    <div class="rs-plays">
+      <div class="rs-col you">
+        <h5>You played</h5>
+        <div class="rs-cards" id="res-you-cards"></div>
+      </div>
+      <div class="rs-divider"></div>
+      <div class="rs-col opp">
+        <h5>Opponent played</h5>
+        <div class="rs-cards" id="res-opp-cards"></div>
+      </div>
+    </div>
+
+    <div class="rs-rule">Round log</div>
+    <div class="rs-log" id="res-log"></div>
+
+    <div class="rs-actions">
       <button class="btn btn-outline" id="btn-view-table" style="flex:1;margin-top:0;">👁 View table</button>
-      <button class="btn btn-green" id="btn-continue" style="flex:2;">Next round →</button>
+      <button class="btn btn-green" id="btn-continue" style="flex:2;margin-top:0;">Next round →</button>
     </div>
   </div>
 </div>
@@ -1035,7 +1214,21 @@ const CARDS_DATA = [
   {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'Celebration. Both players deal half the damage they dealt last round.', rarity:'common', emoji:'🍾', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/hangover_hex.png'},
   {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'Celebration. Deal 10 damage. Each future Prinny\'s Vanilla Cake deals 5 additional damage.', rarity:'common', emoji:'🍰', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/prinnys_vanilla_cake.png'},
   {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'Celebration. If you hold another Celebration card: gain a Shield for the next 2 rounds.', rarity:'common', emoji:'💝', tags:['celebration'], type:'normal', art:'art/larrys_lover.png'},
+
+  // ── The Deep: Zorya + the Four Sins ──
+  // Zorya is an AUTO-ACTIVE QUEST (like Opening Ceremony): she is pulled from your deck at
+  // game start and shuffles the 4 Sins into it. Quest: play all 4 Sins. Once they're all
+  // played you must survive ONE more full round — then you instantly win. The Sins are
+  // noDeck tokens: they can ONLY arrive via Zorya.
+  // TODO: Sins 2-4 are still placeholders — names/texts/effects to be written. sin:true is
+  //       all the quest needs to count them; their own effect can be anything.
+  {id:'zorya', collectible:true, name:'Zorya, Goddess of the Deep', text:'Shuffle the 4 Sins into your deck. Quest: play all 4 Sins. Survive 1 more round afterwards: you instantly win the game.', rarity:'legendary', emoji:'🔱', quest:'zorya', type:'quest', art:'art/zorya.png'},
+  {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
+  {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
+  {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
+  {id:'deep_pride', name:'Deep Pride',      text:'Sin. Set your health to 1 at the end of this round, until the end of next round. Afterwards, revert to your original health.', rarity:'legendary', emoji:'🌔', sin:true, noDeck:true, type:'normal', art:'art/deep_pride.png'},
 ];
+const SIN_IDS = ['deep_envy','deep_greed','deep_lust','deep_pride'];
 
 // Cards where YOU choose which of your own cards to discard: {cardId: count}
 const SELF_DISCARD = {};   // cardId → how many cards the player must choose to discard
@@ -1116,6 +1309,16 @@ function checkDeath(state, r){
   state._dead = r;
   state._winner = opp(r);
   throw HALT;                               // death is immediate — unwind everything
+}
+
+// The win-gate. The mirror image of the death-gate: a card can simply DECLARE a winner
+// (Zorya) without anyone dying. Marks the winner and throws HALT, so nothing else in the
+// round still resolves — the game is over the moment the condition is met.
+function instantWin(state, r, reason){
+  state._winner = r;
+  state._instantWin = true;
+  log('  ★ '+state[r].name+' instantly wins the game — '+(reason||'')+'!','effect');
+  throw HALT;
 }
 
 // HP-cross checkpoint: fire onHpCross for both players so "first time opponent has
@@ -1217,6 +1420,15 @@ const CARD_VARIANTS = {
   scavenger:   [ {label:"Opponent's copy", text:SCAV_V2_TEXT} ],
   death_stare: [ {label:'Variant 1 — yours', text:DS_V1_TEXT}, {label:"Variant 2 — opponent's", text:DS_V2_TEXT} ]
 };
+// ── Token registry ────────────────────────────────────────────────────────────
+// Cards that put OTHER cards into your deck (Zorya → the 4 Sins, Opening Ceremony → the 5
+// Journey Days). Those tokens are noDeck, so they never show up in the collection on their
+// own — hovering their source card is the only place you can read them. Same showcase as
+// the variants: source card centre-screen, tokens lined up to the right.
+const CARD_TOKENS = {
+  zorya:            { label:'Sin',         ids: SIN_IDS },
+  opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
+};
 const CARD_LOGIC = {
   // Scavenger — variant 1 (onPlay): plant a variant-2 copy in the OPPONENT's deck and shuffle
   // it. Deliberately does NOT go through shuffleIntoDeck: Devour Hope only reacts to cards
@@ -1286,6 +1498,103 @@ const CARD_LOGIC = {
 
 
 
+  // ── Zorya, Goddess of the Deep (QUEST) ──
+  // Zorya herself is never played: extractQuests pulls her from the deck at game start and
+  // shuffles the 4 Sins in. advanceQuestsFor counts each Sin you play; completing the quest
+  // installs this effect ARMED with the round number of the 4th Sin. At the END of any LATER
+  // round you're still alive, the win-gate fires. Dying in between throws HALT before
+  // onRoundEnd ever runs, so "survive 1 more round" is enforced by the engine itself.
+  // (4th Sin in round 8 → armed:8 → end of round 9 = win.)
+  zorya: {
+    onRoundEnd:(c)=>{
+      const e=c.effState;
+      if(!e || e.armed===null || e.armed===undefined) return;
+      if((c.state.round||1) > e.armed) instantWin(c.state, c.self, 'Zorya, Goddess of the Deep');
+    }
+  },
+  // Deep Envy (Sin) — hard-set your health to the opponent's current health minus 25.
+  // setHealth is NOT a heal: it ignores can't-heal, isn't stealable, and is clamped to
+  // [0, maxHp]. Landing on 0 is a real death (the opponent wins) — the Sin cuts both ways.
+  deep_envy: {
+    onPlay:(c)=>{
+      const target=Math.max(0, (c.state[c.opp].hp||0) - 25);
+      c.setHealth(target);
+      c.log(c.state[c.self].name+' commits Deep Envy — health set to '+target+' ('+c.state[c.opp].name+"'s health − 25).",'effect');
+    }
+  },
+  // Deep Greed (Sin) — fill your hand, then Curse all of it.
+  // The draw ignores EVERY draw restriction (Hindered, Journey "draw 1", "no extra draw"):
+  // it isn't the round's draw step, it's the Sin forcing cards into your hands. It IS a real
+  // draw though — fireDrawTriggers runs, so Death Stare / Scavenger v2 / cursed-draws all fire.
+  // Deck too thin → you draw what's left and your hand still gets Cursed. curseCard skips
+  // immune and already-cursed cards; the whole hand is cursed, not just the new cards.
+  deep_greed: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      const before=(st[r].hand||[]).length;
+      const space=Math.max(0, maxHandSize(st,r) - before);
+      if(space>0) drawCards(st, r, space);
+      const drawn=(st[r].hand||[]).slice(before);
+      fireDrawTriggers(st, r, drawn);
+      let cursed=0;
+      (st[r].hand||[]).forEach(card=>{ if(curseCard(st, card)) cursed++; });
+      c.log(st[r].name+' commits Deep Greed — draws '+drawn.length+' card'+(drawn.length===1?'':'s')+' and Curses their hand ('+cursed+' cursed).','effect');
+    }
+  },
+  // Deep Lust (Sin) — dump your whole hand and stumble into the next round empty-handed.
+  // Immune cards (Deepception) survive in hand. Every dumped card is a REAL discard, so
+  // fireDiscard runs and "per discard" effects trigger. setHindered kills the draw at the
+  // END of this round → you open the next round with nothing but your immune cards.
+  // Deep Lust itself is already out of hand while it resolves, so it never discards itself.
+  deep_lust: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      const hand=st[r].hand||[];
+      const keep  = hand.filter(x=>x && isImmune(x));
+      const dumped= hand.filter(x=>x && !isImmune(x));
+      st[r].hand=keep;
+      const gy=st[r].graveyard||[];
+      dumped.forEach(card=>gy.unshift(card));
+      st[r].graveyard=gy;
+      dumped.forEach(card=>fireDiscard(st, r, card));   // real discards → onDiscard fires per card
+      c.setHindered();
+      c.log(st[r].name+' commits Deep Lust — discards '+dumped.length+' card'+(dumped.length===1?'':'s')+
+            (keep.length?' (immune cards stay)':'')+' and is Hindered — no draw this round.','effect');
+    }
+  },
+  // Deep Pride (Sin) — a persistent effect in two beats, both at onRoundEnd:
+  //   1. End of the round it was played  → remember your current HP and hard-set it to 1.
+  //   2. End of the NEXT round           → hard-set it back to the remembered value.
+  // In between you walk on 1 HP: ANY damage kills you (the death-gate fires normally and
+  // your opponent wins). Heals DO work while you're down there — healing above 1 makes you
+  // safe again — but the revert restores the remembered HP regardless of what you healed or
+  // took in that window. setHealth is a hard set: not a heal, not stealable, clamped.
+  deep_pride: {
+    onPlay:(c)=>{
+      c.addEffect({id:'deep_pride', round:(c.state.round||1), hp:0, snapped:null});
+      c.log(c.state[c.self].name+' commits Deep Pride — at the end of this round their health drops to 1…','effect');
+    },
+    onRoundEnd:(c)=>{
+      const e=c.effState, st=c.state, r=c.self, round=(st.round||1);
+      if(!e || e.done) return;
+      // Beat 1: the round it was played ends → snap to 1.
+      if(e.snapped===null || e.snapped===undefined){
+        if(round !== e.round) return;   // safety: only snap at the end of its own round
+        e.hp = st[r].hp;
+        e.snapped = round;
+        setHealth(st, r, 1);
+        c.log('  🌔 Deep Pride — '+st[r].name+"'s health drops to 1 (remembered: "+e.hp+' HP).','effect');
+        return;
+      }
+      // Beat 2: the next round ends → revert, whatever happened in between.
+      if(round > e.snapped){
+        setHealth(st, r, e.hp);
+        e.done = true;
+        st[r].effects = (st[r].effects||[]).filter(x=>x!==e);
+        c.log('  🌔 Deep Pride fades — '+st[r].name+' reverts to '+e.hp+' HP.','heal');
+      }
+    }
+  },
   // Devour Hope — onPlay installs a persistent effect. For the rest of the game, every
   // card shuffled into YOUR deck is destroyed (voided) instead of entering the deck, and
   // deals 5 true damage to the opponent per card. Immune cards are shuffled in normally.
@@ -1699,7 +2008,7 @@ function buildDeck(){
   return d.slice(0,40);
 }
 function extractQuests(deck){
-  const quests=[], remaining=[]; let hasOpening=false;
+  const quests=[], remaining=[]; let hasOpening=false, hasZorya=false;
   const seen=new Set();   // each quest id max once per player; max 2 quests per player
   deck.forEach(c=>{
     if(c.quest){
@@ -1711,6 +2020,7 @@ function extractQuests(deck){
         const def=QUEST_DEFS[c.quest];
         quests.push({id:c.quest,name:def?def.name:c.name,cardName:c.name,progress:0,goal:def?def.goal:3,done:false});
         if(c.quest==='opening_ceremony') hasOpening=true;
+        if(c.quest==='zorya') hasZorya=true;
       }
       return;   // drop excess/duplicate quest cards
     }
@@ -1719,6 +2029,12 @@ function extractQuests(deck){
   // Opening Ceremony shuffles all 5 Journey Days into the deck (full reshuffle).
   if(hasOpening){
     ['first_day','second_day','third_day','fourth_day','fifth_day'].forEach(id=>remaining.push(mkCard(CARDS_DATA.find(c=>c.id===id))));
+  }
+  // Zorya shuffles the 4 Sins into the deck — same deal: they enter here and nowhere else.
+  if(hasZorya){
+    SIN_IDS.forEach(id=>{ const def=CARDS_DATA.find(c=>c.id===id); if(def) remaining.push(mkCard(def)); });
+  }
+  if(hasOpening || hasZorya){
     for(let i=remaining.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[remaining[i],remaining[j]]=[remaining[j],remaining[i]];}
   }
   return {deck:remaining, quests};
@@ -1880,6 +2196,7 @@ function drawExtra(gs,r,n){
 // Quest definitions: what advances them + reward when complete
 const QUEST_DEFS = {
   opening_ceremony: { name:'Opening Ceremony', goal:3, reward:'journey_flip' },
+  zorya:            { name:'Zorya — the Four Sins', goal:4, reward:'zorya_arm' },
 };
 
 function advanceQuestsFor(gs,r,card){
@@ -1889,6 +2206,7 @@ function advanceQuestsFor(gs,r,card){
     if(!def) return;
     let advance=0;
     if(q.id==='opening_ceremony' && card && card.journeyDay) advance=1;   // playing a Day advances it
+    if(q.id==='zorya' && card && card.sin) advance=1;                     // playing a Sin advances it
     if(advance>0){
       q.progress=(q.progress||0)+advance;
       if(q.progress>=def.goal && !q.done){
@@ -1896,20 +2214,88 @@ function advanceQuestsFor(gs,r,card){
         log('  ★ Quest complete: '+def.name+'!','effect');
         // journey_flip fires instantly here — so the 3rd Day's malus never lands on you.
         if(def.reward==='journey_flip') journeyFlip(gs,r);
+        // zorya_arm: no instant reward — it ARMS the win. Store the round of the 4th Sin;
+        // CARD_LOGIC.zorya.onRoundEnd claims the game at the end of any LATER round you
+        // survive. (Same round doesn't count: round must be > armed.)
+        if(def.reward==='zorya_arm'){
+          (gs[r].effects||(gs[r].effects=[])).push({id:'zorya', armed:(gs.round||1)});
+          log('  🌊 All four Sins are committed — survive one more round and Zorya takes the game!','effect');
+        }
       }
     }
   });
 }
 
+// ── Deck sidebar wiring ──
+document.getElementById('deck-new').onclick=()=>newDeck();
+document.getElementById('deck-back').onclick=()=>{ colDeck=null; renderCollection(); };
+document.getElementById('deck-autofill').onclick=()=>deckAutoFill();
+document.getElementById('deck-dup').onclick=()=>deckDuplicate();
+document.getElementById('deck-del').onclick=()=>deckDelete();
+document.getElementById('deck-name').onchange=(e)=>deckRename(e.target.value);
+document.getElementById('deck-name').onkeydown=(e)=>{ if(e.key==='Enter') e.target.blur(); };
+
+// ── Deck picker ──
+// Every game starts by choosing a deck. Only decks of exactly 40 cards can be picked;
+// an unfinished deck is shown greyed out with its count, so you know what to go fix.
+let pendingStart=null;   // 'create' | 'join' | 'solo'
+function openDeckPicker(action){
+  pendingStart=action;
+  const list=document.getElementById('dp-list');
+  list.innerHTML='';
+  const ids=Object.keys(allDecks());
+  if(!ids.length){
+    const e=document.createElement('div');
+    e.className='dp-none';
+    e.innerHTML='You have no decks yet.<br>Build one in your Collection first (40 cards).';
+    list.appendChild(e);
+  }
+  ids.sort((a,b)=>(allDecks()[b].updatedAt||0)-(allDecks()[a].updatedAt||0)).forEach(id=>{
+    const d=allDecks()[id];
+    const n=deckSize(d), ok=(n===DECK_SIZE);
+    const row=document.createElement('div');
+    row.className='dp-item'+(ok?'':' dead');
+    row.innerHTML='<div class="dp-nm">'+esc(d.name||'Unnamed')+'</div>'+
+                  '<div class="dp-ct'+(ok?'':' bad')+'">'+(ok?'40 cards':n+'/40 — not playable')+'</div>';
+    if(ok) row.onclick=()=>{ document.getElementById('ov-deckpick').classList.add('hidden'); startWithDeck(d); };
+    list.appendChild(row);
+  });
+  document.getElementById('ov-deckpick').classList.remove('hidden');
+}
+document.getElementById('dp-cancel').onclick=()=>{ pendingStart=null; document.getElementById('ov-deckpick').classList.add('hidden'); };
+document.getElementById('dc-ok').onclick=()=>document.getElementById('ov-deckchanges').classList.add('hidden');
+
+function startWithDeck(d){
+  const action=pendingStart; pendingStart=null;
+  // Hard guard: no deck, or not exactly 40 cards → no game. Nothing may start without one.
+  if(!d || !deckValid(d)){
+    console.warn('Refused to start: no valid 40-card deck.');
+    openDeckPicker(action);
+    return;
+  }
+  if(action==='create')      createGame(d);
+  else if(action==='join')   joinGame(d);
+  else if(action==='solo')   startSolo(d);
+}
+// Expand a saved deck into real card instances and shuffle it.
+function buildDeckFrom(d){
+  const cards=[];
+  deckDefs(d).forEach(({card,n})=>{ for(let i=0;i<n;i++) cards.push(mkCard(card)); });
+  for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
+  return cards;
+}
+
 // ── Lobby buttons ──
-document.getElementById('btn-create').onclick=async()=>{
+document.getElementById('btn-create').onclick=()=>openDeckPicker('create');
+
+async function createGame(chosen){
   myName=(myProfile&&myProfile.name)||'Hero';   // always your account's display name
   myRole='p1'; soloMode=false;
   const code=Math.random().toString(36).slice(2,6).toUpperCase();
   gRef=ref(db,'games/'+code);
   // Turn order depends on BOTH decks (Finale/Quickplay points), so it can't be decided yet —
   // p2 decides it at join time and deals both opening hands then. We only store the deck here.
-  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
+  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck); deck=qq.deck;
   await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer:null,
     p1:{name:myName,hp:150,maxHp:150,deck,hand:[],graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
@@ -1919,7 +2305,13 @@ document.getElementById('btn-create').onclick=async()=>{
   startFirebaseListener();
 };
 
-document.getElementById('btn-join').onclick=async()=>{
+document.getElementById('btn-join').onclick=()=>{
+  const code=document.getElementById('inp-code').value.trim().toUpperCase();
+  if(code.length!==4){setStatus('Enter a 4-letter code.','err');return;}
+  openDeckPicker('join');
+};
+
+async function joinGame(chosen){
   myName=(myProfile&&myProfile.name)||'Hero';   // always your account's display name
   myRole='p2'; soloMode=false;
   const code=document.getElementById('inp-code').value.trim().toUpperCase();
@@ -1929,7 +2321,7 @@ document.getElementById('btn-join').onclick=async()=>{
   if(!snap.exists()){setStatus('Game not found!','err');return;}
   const gs=snap.val();
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
-  let deck=buildDeck(); const qq=extractQuests(deck); deck=qq.deck;
+  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck); deck=qq.deck;
   // Both decks are known now, so decide who reveals first (Finale/Quickplay points) and deal
   // both opening hands: whoever goes FIRST opens with 4 cards, whoever goes SECOND with 6.
   const p1deck=[...(gs.p1.deck||[])];
@@ -1951,33 +2343,33 @@ document.getElementById('btn-join').onclick=async()=>{
   startFirebaseListener();
 };
 
-function startSolo(){
-  myName='Player 1'; myRole='p1'; soloMode=true;
-  // Solo test: opening_ceremony (auto-active quest) shuffles the 5 Journey Days into the deck.
-  let deck1=buildDeck();
-  deck1.unshift(mkCard(CARDS_DATA.find(c=>c.id==='opening_ceremony')));
-  const q1=extractQuests(deck1); deck1=q1.deck;   // pulls quests + injects the 5 Days
-  // ── Solo test hand ── Cards listed here start in your opening hand (edit freely).
-  // Set to [] for a fully random opening hand.
-  const TEST_HAND = ['deepception','devour_hope','bolvar'];
+function startSolo(chosen){
+  if(!chosen || !deckValid(chosen)){ openDeckPicker('solo'); return; }
+  myName=(myProfile&&myProfile.name)||'Player 1'; myRole='p1'; soloMode=true;
+  // You play YOUR deck. The CPU still gets a random test deck (a real CPU deck comes later).
+  let deck1=buildDeckFrom(chosen);
+  const q1=extractQuests(deck1); deck1=q1.deck;   // pulls your quests (and their tokens) out
+  // ── Solo test hand ── Put card ids here to force them into your opening hand while
+  // testing (they must be in the deck you picked). Leave empty for a normal draw.
+  const TEST_HAND = [];
   const testCards = TEST_HAND.map(id=>mkCard(CARDS_DATA.find(c=>c.id===id))).filter(Boolean);
   deck1 = [...testCards, ...deck1];
   const hand1 = deck1.splice(0, Math.max(4, testCards.length));
-  const graveSeed=[];   // (Pyrax test seed removed with the placeholder cards)
-  let deck2=buildDeck();
+  const graveSeed=[];
+  let deck2=buildDeck();   // CPU: random pool deck for now
   const q2=extractQuests(deck2); deck2=q2.deck;
   // Same rule as multiplayer: Finale/Quickplay points in both decks decide who reveals first.
   const soloFirst=decideFirstPlayer(deck1, deck2);
   const hand2=deck2.splice(0, soloFirst==='p2' ? 4 : 6);
   localGs={
     status:'active',round:1,phase:'select',firstPlayer:soloFirst,
-    p1:{name:'Player 1',hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
+    p1:{name:myName,hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:null,quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
   };
   showGameScreen();
   onSelectPhase();
 }
-document.getElementById('btn-solo').onclick=startSolo;
+document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
 
 // ── Accounts (Firebase Auth) ─────────────────────────────────────────────────
 // Real accounts: register/sign in with email + password. Each user gets a profile at
@@ -1985,10 +2377,25 @@ document.getElementById('btn-solo').onclick=startSolo;
 // You stay signed in between sessions; the menu only appears once signed in.
 let currentUser=null, myProfile=null;
 
+// STARTER DUST: every account gets 20.000 Fairy Dust once. New accounts start with it;
+// existing accounts get it topped up the next time they sign in (the grant flag makes sure
+// it happens exactly once, no matter how often they log in).
+const STARTER_DUST = 20000;
+const STARTER_FLAG = 'grant20k';
+
 async function loadProfile(user){
   const snap=await get(ref(db,'users/'+user.uid));
-  if(snap.exists()) return snap.val();
-  const fresh={ name:user.displayName||'Player', email:user.email, collection:{}, packs:0, fairyDust:0, createdAt:Date.now() };
+  if(snap.exists()){
+    const p=snap.val();
+    if(!p[STARTER_FLAG]){
+      p.fairyDust=(p.fairyDust||0)+STARTER_DUST;
+      p[STARTER_FLAG]=true;
+      await update(ref(db,'users/'+user.uid), { fairyDust:p.fairyDust, [STARTER_FLAG]:true });
+    }
+    return p;
+  }
+  const fresh={ name:user.displayName||'Player', email:user.email, collection:{}, packs:0,
+                fairyDust:STARTER_DUST, [STARTER_FLAG]:true, createdAt:Date.now() };
   await set(ref(db,'users/'+user.uid), fresh);
   return fresh;
 }
@@ -2022,7 +2429,7 @@ async function loadProfile(user){
       if(registerMode){
         const cred=await createUserWithEmailAndPassword(auth,email,pass);
         await updateProfile(cred.user,{displayName:name});
-        await set(ref(db,'users/'+cred.user.uid), { name, email, collection:{}, packs:0, fairyDust:0, createdAt:Date.now() });
+        await set(ref(db,'users/'+cred.user.uid), { name, email, collection:{}, packs:0, fairyDust:STARTER_DUST, [STARTER_FLAG]:true, createdAt:Date.now() });
       } else {
         await signInWithEmailAndPassword(auth,email,pass);
       }
@@ -2113,6 +2520,18 @@ async function craftCard(card){
   renderCollection();
 }
 
+// ── DEV HOOKS (temporary) ──
+// Call from the browser console while signed in, e.g.  giveDust(20000)
+// Remove this block when the game goes "live" — it writes straight to your own profile.
+window.giveDust = async (n)=>{
+  if(!myProfile){ console.warn('Not signed in yet.'); return; }
+  myProfile.fairyDust=(myProfile.fairyDust||0)+Number(n||0);
+  await saveCollection();
+  renderCollection();
+  console.log('Fairy dust:', myProfile.fairyDust);
+  return myProfile.fairyDust;
+};
+
 async function disenchantCard(card){
   if(ownedCount(card.id) <= 0) return;
   const value=DISENCHANT[card.rarity];
@@ -2125,6 +2544,233 @@ async function disenchantCard(card){
 
 // The collection is split into rarity tabs (Commons / Legendaries), each paged 8 at a
 // time (4×2) so you leaf through it like a card binder.
+
+// ── DECK BUILDER ─────────────────────────────────────────────────────────────
+// A deck is stored as {name, cards:{cardId:count}} under users/<uid>/decks/<deckId> — never
+// full card objects, so renaming or rebalancing a card updates every deck automatically.
+// RULES (enforced on add, so a saved deck is always legal — only its SIZE can be short):
+//   • exactly 40 cards to be playable        • common max 2, legendary max 1 (MAX_COPIES)
+//   • you must own the copies you put in     • max 2 quests, each quest once
+//   • max 1 blessing (optional)              • a deck may never mix Finale and Quickplay
+// A deck is pruned when you OPEN it (not before): copies you disenchanted in the meantime
+// are dropped and you get a notice. That way disenchanting never silently rewrites decks.
+const DECK_SIZE=40, MAX_DECKS=10, MAX_QUESTS=2, MAX_BLESSINGS=1;
+let colDeck=null;   // id of the deck open in the sidebar (null = deck list)
+
+function allDecks(){ return (myProfile && myProfile.decks) || {}; }
+function deckById(id){ return allDecks()[id] || null; }
+async function saveDecks(){
+  if(!currentUser) return;
+  await update(ref(db,'users/'+currentUser.uid), { decks: myProfile.decks || {} });
+}
+function deckSize(d){ return Object.values((d&&d.cards)||{}).reduce((a,b)=>a+(b||0),0); }
+function deckDefs(d){
+  return Object.entries((d&&d.cards)||{})
+    .map(([id,n])=>({card:CARDS_DATA.find(c=>c.id===id), n}))
+    .filter(x=>x.card && x.n>0);
+}
+function deckCountWhere(d,pred){ return deckDefs(d).filter(x=>pred(x.card)).reduce((a,x)=>a+x.n,0); }
+function deckWish(d){
+  const defs=deckDefs(d);
+  if(defs.some(x=>x.card.finale))    return 'finale';
+  if(defs.some(x=>x.card.quickplay)) return 'quickplay';
+  return null;
+}
+function deckLimitFor(card){ return Math.min(maxCopies(card), ownedCount(card.id)); }
+// Returns null if the card may be added, otherwise the reason why not.
+function whyNotAdd(d, card){
+  const have=((d.cards||{})[card.id])||0;
+  if(ownedCount(card.id)<=0)        return "You don't own this card";
+  if(deckSize(d)>=DECK_SIZE)        return 'Deck is full (40)';
+  if(have>=maxCopies(card))         return 'Copy limit: '+maxCopies(card);
+  if(have>=ownedCount(card.id))     return 'You only own '+ownedCount(card.id);
+  if(card.quest && deckCountWhere(d,c=>c.quest)>=MAX_QUESTS)               return 'Max 2 quests per deck';
+  if(card.type==='blessing' && deckCountWhere(d,c=>c.type==='blessing')>=MAX_BLESSINGS) return 'Max 1 blessing per deck';
+  const wish=deckWish(d);
+  if(card.finale    && wish==='quickplay') return 'This deck already runs Quickplay';
+  if(card.quickplay && wish==='finale')    return 'This deck already runs Finale';
+  return null;
+}
+function deckValid(d){ return deckSize(d)===DECK_SIZE; }
+
+// Prune on OPEN: drop copies you no longer own. Returns what was removed.
+function pruneDeck(d){
+  const removed=[];
+  Object.keys(d.cards||{}).forEach(id=>{
+    const def=CARDS_DATA.find(c=>c.id===id);
+    const limit = def ? Math.min(maxCopies(def), ownedCount(id)) : 0;
+    const have=d.cards[id]||0;
+    if(have>limit){
+      removed.push({name:def?def.name:id, n:have-limit});
+      if(limit<=0) delete d.cards[id]; else d.cards[id]=limit;
+    }
+  });
+  return removed;
+}
+
+async function newDeck(){
+  if(Object.keys(allDecks()).length>=MAX_DECKS) return;
+  myProfile.decks=myProfile.decks||{};
+  const id='d'+Date.now().toString(36);
+  myProfile.decks[id]={name:'New deck', cards:{}, updatedAt:Date.now()};
+  await saveDecks();
+  colDeck=id;
+  renderCollection();
+}
+async function openDeck(id){
+  const d=deckById(id);
+  if(!d) return;
+  d.cards=d.cards||{};
+  const removed=pruneDeck(d);
+  colDeck=id;
+  if(removed.length){
+    await saveDecks();
+    const list=document.getElementById('dc-list');
+    list.innerHTML='';
+    removed.forEach(r=>{
+      const row=document.createElement('div');
+      row.className='dp-item dead';
+      row.innerHTML='<div class="dp-nm">'+esc(r.name)+'</div><div class="dp-ct bad">−'+r.n+'</div>';
+      list.appendChild(row);
+    });
+    document.getElementById('ov-deckchanges').classList.remove('hidden');
+  }
+  renderCollection();
+}
+async function deckAdd(card){
+  const d=deckById(colDeck);
+  if(!d || whyNotAdd(d,card)) return;
+  d.cards=d.cards||{};
+  d.cards[card.id]=((d.cards[card.id])||0)+1;
+  d.updatedAt=Date.now();
+  await saveDecks();
+  renderCollection();
+}
+async function deckRemove(cardId){
+  const d=deckById(colDeck);
+  if(!d || !d.cards || !d.cards[cardId]) return;
+  d.cards[cardId]--;
+  if(d.cards[cardId]<=0) delete d.cards[cardId];
+  d.updatedAt=Date.now();
+  await saveDecks();
+  renderCollection();
+}
+// Auto-fill: keep adding a random legal card from your collection until the deck is full
+// (or nothing legal is left to add — a thin collection simply stops early).
+async function deckAutoFill(){
+  const d=deckById(colDeck);
+  if(!d) return;
+  let guard=0;
+  while(deckSize(d)<DECK_SIZE && guard++<500){
+    const pool=collectibleCards().filter(c=>!whyNotAdd(d,c));
+    if(!pool.length) break;
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    d.cards=d.cards||{};
+    d.cards[pick.id]=((d.cards[pick.id])||0)+1;
+  }
+  d.updatedAt=Date.now();
+  await saveDecks();
+  renderCollection();
+}
+async function deckDuplicate(){
+  const d=deckById(colDeck);
+  if(!d || Object.keys(allDecks()).length>=MAX_DECKS) return;
+  const id='d'+Date.now().toString(36);
+  myProfile.decks[id]={name:(d.name||'Deck')+' (copy)', cards:{...(d.cards||{})}, updatedAt:Date.now()};
+  await saveDecks();
+  colDeck=id;
+  renderCollection();
+}
+async function deckDelete(){
+  const d=deckById(colDeck);
+  if(!d) return;
+  if(!confirm('Delete "'+(d.name||'deck')+'"? This cannot be undone.')) return;
+  delete myProfile.decks[colDeck];
+  colDeck=null;
+  await saveDecks();
+  renderCollection();
+}
+async function deckRename(name){
+  const d=deckById(colDeck);
+  if(!d) return;
+  d.name=(name||'').trim().slice(0,24) || 'Unnamed deck';
+  d.updatedAt=Date.now();
+  await saveDecks();
+  renderDeckSidebar();
+}
+
+// ── Deck sidebar ──
+function renderDeckSidebar(){
+  const listView=document.getElementById('deck-list-view');
+  const editView=document.getElementById('deck-edit-view');
+  if(!listView||!editView||!myProfile) return;
+  const ids=Object.keys(allDecks());
+
+  listView.classList.toggle('hidden', !!colDeck);
+  editView.classList.toggle('hidden', !colDeck);
+
+  if(!colDeck){
+    document.getElementById('deck-count-lbl').textContent=ids.length+'/'+MAX_DECKS;
+    document.getElementById('deck-new').disabled = ids.length>=MAX_DECKS;
+    const list=document.getElementById('deck-list');
+    list.innerHTML='';
+    if(!ids.length){
+      const e=document.createElement('div');
+      e.className='dk-empty';
+      e.innerHTML='No decks yet.<br>Build one to play a game.';
+      list.appendChild(e);
+    }
+    ids.sort((a,b)=>(allDecks()[b].updatedAt||0)-(allDecks()[a].updatedAt||0)).forEach(id=>{
+      const d=allDecks()[id];
+      const n=deckSize(d), ok=(n===DECK_SIZE);
+      const row=document.createElement('div');
+      row.className='dk-row';
+      row.innerHTML='<div class="dk-row-nm">'+esc(d.name||'Unnamed')+'</div>'+
+                    '<div class="dk-row-ct'+(ok?'':' bad')+'">'+(ok?'40':n+'/40 ⚠')+'</div>';
+      row.onclick=()=>openDeck(id);
+      list.appendChild(row);
+    });
+    return;
+  }
+
+  // Editor for the open deck
+  const d=deckById(colDeck);
+  if(!d){ colDeck=null; renderDeckSidebar(); return; }
+  const n=deckSize(d), ok=(n===DECK_SIZE);
+  const nameEl=document.getElementById('deck-name');
+  if(document.activeElement!==nameEl) nameEl.value=d.name||'';
+  const sizeEl=document.getElementById('deck-size');
+  sizeEl.textContent=n+' / '+DECK_SIZE;
+  sizeEl.classList.toggle('bad', !ok);
+  document.getElementById('deck-warn').textContent = ok ? '' : 'Not playable yet';
+  document.getElementById('deck-autofill').disabled = ok;
+  document.getElementById('deck-dup').disabled = Object.keys(allDecks()).length>=MAX_DECKS;
+
+  const box=document.getElementById('deck-cards');
+  box.innerHTML='';
+  const defs=deckDefs(d).sort((a,b)=>{
+    if(a.card.rarity!==b.card.rarity) return a.card.rarity==='legendary'?-1:1;   // legendaries on top
+    return (a.card.name||'').localeCompare(b.card.name||'');
+  });
+  if(!defs.length){
+    const e=document.createElement('div');
+    e.className='dk-empty';
+    e.innerHTML='Empty deck.<br>Click cards on the left to add them.';
+    box.appendChild(e);
+  }
+  defs.forEach(({card,n:cnt})=>{
+    const row=document.createElement('div');
+    row.className='dk-card'+(card.rarity==='legendary'?' legendary':'');
+    const nm=document.createElement('div'); nm.className='dk-card-nm'; nm.textContent=card.name;
+    const ct=document.createElement('div'); ct.className='dk-card-n'; ct.textContent='×'+cnt;
+    const x=document.createElement('button'); x.className='dk-card-x'; x.textContent='−'; x.title='Remove one';
+    x.onclick=(e)=>{ e.stopPropagation(); deckRemove(card.id); };
+    row.appendChild(nm); row.appendChild(ct); row.appendChild(x);
+    row.addEventListener('mouseenter',()=>showCardPreview(card,row,'side'));
+    row.addEventListener('mouseleave',hideCardPreview);
+    box.appendChild(row);
+  });
+}
 const CARDS_PER_PAGE = 8;
 let colPage = 0;
 let colTab = 'common';
@@ -2150,12 +2796,16 @@ function renderCollection(){
   document.getElementById('col-next').disabled = colPage>=pages-1;
 
   grid.innerHTML='';
+  const openD = colDeck ? deckById(colDeck) : null;
   cards.slice(colPage*CARDS_PER_PAGE, colPage*CARDS_PER_PAGE+CARDS_PER_PAGE).forEach(c=>{
     const have=ownedCount(c.id), max=maxCopies(c);
     const cell=document.createElement('div'); cell.className='col-cell';
 
+    const inDeck = openD ? (((openD.cards||{})[c.id])||0) : 0;
+    const why    = openD ? whyNotAdd(openD, c) : null;
+
     const wrap=document.createElement('div');
-    wrap.className='col-cardwrap'+(have?'':' locked');
+    wrap.className='col-cardwrap'+(have?'':' locked')+(openD ? (why?' blocked':' addable') : '');
     const cardEl=makeCardEl(c);
     // Same big hover preview as in a match — but centered on the card, so it looks like the
     // card itself grows to full size. Long texts stay comfortable to read.
@@ -2163,28 +2813,53 @@ function renderCollection(){
     cardEl.addEventListener('mouseleave',hideCardPreview);
     wrap.appendChild(cardEl);
     if(have){ const b=document.createElement('div'); b.className='col-badge'; b.textContent='×'+have; wrap.appendChild(b); }
+    if(inDeck){ const b=document.createElement('div'); b.className='col-indeck'; b.textContent='▣'+inDeck; wrap.appendChild(b); }
+    if(openD){
+      wrap.title = why || 'Add to deck';
+      wrap.onclick=()=>{ if(!why) deckAdd(c); };
+    }
     cell.appendChild(wrap);
 
     const acts=document.createElement('div'); acts.className='col-actions';
-    const craft=document.createElement('button');
-    craft.className='col-mini';
-    craft.textContent='✨ '+CRAFT_COST[c.rarity];
-    craft.disabled = have>=max || dust<CRAFT_COST[c.rarity];
-    craft.title = have>=max ? 'You already have the maximum ('+max+')' : 'Craft for '+CRAFT_COST[c.rarity]+' dust';
-    craft.onclick=()=>craftCard(c);
-    acts.appendChild(craft);
+    if(openD){
+      // Building a deck: the buttons become add/remove, not craft/disenchant.
+      const add=document.createElement('button');
+      add.className='col-mini';
+      add.textContent='＋ Add';
+      add.disabled=!!why;
+      add.title = why || 'Add to deck';
+      add.onclick=(e)=>{ e.stopPropagation(); deckAdd(c); };
+      acts.appendChild(add);
 
-    const sell=document.createElement('button');
-    sell.className='col-mini sell';
-    sell.textContent='↩ '+DISENCHANT[c.rarity];
-    sell.disabled = have<=0;
-    sell.title = have<=0 ? "You don't own this card" : 'Disenchant for '+DISENCHANT[c.rarity]+' dust';
-    sell.onclick=()=>disenchantCard(c);
-    acts.appendChild(sell);
+      const rem=document.createElement('button');
+      rem.className='col-mini sell';
+      rem.textContent='− Remove';
+      rem.disabled = inDeck<=0;
+      rem.title = inDeck<=0 ? 'Not in this deck' : 'Remove one copy';
+      rem.onclick=(e)=>{ e.stopPropagation(); deckRemove(c.id); };
+      acts.appendChild(rem);
+    } else {
+      const craft=document.createElement('button');
+      craft.className='col-mini';
+      craft.textContent='✨ '+CRAFT_COST[c.rarity];
+      craft.disabled = have>=max || dust<CRAFT_COST[c.rarity];
+      craft.title = have>=max ? 'You already have the maximum ('+max+')' : 'Craft for '+CRAFT_COST[c.rarity]+' dust';
+      craft.onclick=()=>craftCard(c);
+      acts.appendChild(craft);
+
+      const sell=document.createElement('button');
+      sell.className='col-mini sell';
+      sell.textContent='↩ '+DISENCHANT[c.rarity];
+      sell.disabled = have<=0;
+      sell.title = have<=0 ? "You don't own this card" : 'Disenchant for '+DISENCHANT[c.rarity]+' dust';
+      sell.onclick=()=>disenchantCard(c);
+      acts.appendChild(sell);
+    }
 
     cell.appendChild(acts);
     grid.appendChild(cell);
   });
+  renderDeckSidebar();
 }
 
 // ── Main menu navigation ──
@@ -2192,8 +2867,8 @@ function renderCollection(){
   const $=id=>document.getElementById(id);
   const show=(id)=>$(id).classList.remove('hidden');
   const hide=(id)=>$(id).classList.add('hidden');
-  // Singleplayer → (for now) start the solo game directly. Deck-picking comes in step 4.
-  $('menu-single').onclick=()=> startSolo();
+  // Singleplayer → pick a deck first, then play it against the CPU.
+  $('menu-single').onclick=()=> openDeckPicker('solo');
   // Multiplayer → reveal the create/join panel.
   $('menu-multi').onclick=()=>{
     hide('menu-box'); show('lobby-box');
@@ -2201,7 +2876,7 @@ function renderCollection(){
   };
   $('lobby-back').onclick=()=>{ hide('lobby-box'); show('menu-box'); };
   // Collection → open the collection screen (gallery filled in step 2).
-  $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); colTab='common'; colPage=0; renderCollection(); };
+  $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); colTab='common'; colPage=0; colDeck=null; renderCollection(); };
   $('col-prev').onclick=()=>{ colPage--; renderCollection(); };
   $('col-next').onclick=()=>{ colPage++; renderCollection(); };
   $('tab-common').onclick=()=>{ colTab='common'; colPage=0; renderCollection(); };
@@ -2324,8 +2999,13 @@ function renderQuests(id,p){
     pill.className='quest-pill'+(q.done?' done':'');
     pill.style.cursor='help';
     const pct=Math.min(100,(q.progress||0)/q.goal*100);
-    pill.innerHTML='<div class="quest-ico">'+(q.done?'★':'📜')+'</div>'+
-      '<div class="quest-txt"><div class="quest-nm">'+q.name+'</div>'+
+    // Zorya's quest doesn't end in a reward but in a countdown: once all 4 Sins are played,
+    // the pill switches to the survival warning — visible to BOTH players.
+    const zoryaArmed = (q.id==='zorya' && q.done);
+    const nm  = zoryaArmed ? 'Zorya — survive this round!' : q.name;
+    const ico = q.done ? (zoryaArmed ? '🌊' : '★') : '📜';
+    pill.innerHTML='<div class="quest-ico">'+ico+'</div>'+
+      '<div class="quest-txt"><div class="quest-nm">'+nm+'</div>'+
       '<div class="quest-bar-wrap"><div class="quest-bar" style="width:'+pct+'%"></div></div></div>'+
       '<div class="quest-prog">'+(q.progress||0)+'/'+q.goal+'</div>';
     // Hover → show the full quest card in the center
@@ -2424,10 +3104,26 @@ function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 // Kept in cqw so it stays responsive across card sizes. First shrink a
 // too-wide name to keep it on one line (nicer for the banner); then a height
 // guard shrinks genuinely long, wrapped names until they fit.
+// ── Text-fit cache ───────────────────────────────────────────────────────────
+// fitCardName/fitCardText measure-and-shrink in a loop, and every step forces a synchronous
+// reflow. That's fine ONCE per card, but re-running it on every hover is what made the
+// collection feel sticky. The results are in cqw (container units), so they hold at ANY card
+// size — which means they can simply be cached per card and reused forever.
+// Key = kind + card signature + big-preview or not (previews may grow, grid cards don't).
+const FIT_CACHE = new Map();
+function fitKey(el, kind){
+  const card=el.closest('.card');
+  const sig=(card && card.dataset.sig) || '?';
+  return kind+'|'+sig+'|'+(el.closest('#card-preview') ? 'pv' : 'sm');
+}
+
 function fitCardName(el, attempt){
   if(!el) return;
   const span=el.querySelector('span');
   if(!span) return;
+  const key=fitKey(el,'name');
+  const hit=FIT_CACHE.get(key);
+  if(hit!==undefined){ el.style.fontSize=hit; return; }   // measured before → no reflow at all
   // Not laid out yet → retry next frame, or the name would keep its default size and clip.
   if(el.clientWidth<2 || el.clientHeight<2){
     if((attempt||0) < 5) requestAnimationFrame(()=>fitCardName(el, (attempt||0)+1));
@@ -2455,6 +3151,7 @@ function fitCardName(el, attempt){
     size=Math.max(3, size*(maxH/span.offsetHeight)*0.94);
     el.style.fontSize=size+'cqw';
   }
+  FIT_CACHE.set(key, size+'cqw');   // never measure this card again
 }
 // Auto-fit a framed card's description: shrink the font (in cqw, responsive)
 // until the WHOLE text fits inside the text panel. Guarantees every player can
@@ -2469,6 +3166,13 @@ function fitCardText(el, attempt){
   if(!el) return;
   const span=el.querySelector('span');
   if(!span) return;
+  const key=fitKey(el,'text');
+  const hit=FIT_CACHE.get(key);
+  if(hit!==undefined){                       // measured before → no reflow at all
+    el.style.fontSize=hit.size;
+    el.classList.toggle('scrolls', !!hit.scrolls);
+    return;
+  }
   // Not laid out yet (zero height) → try again next frame; give up after a few tries.
   if(el.clientHeight<2){
     if((attempt||0) < 5) requestAnimationFrame(()=>fitCardText(el, (attempt||0)+1));
@@ -2483,7 +3187,11 @@ function fitCardText(el, attempt){
     el.style.fontSize = size+'cqw';
   }
   // Still doesn't fit at the smallest readable size → let the player scroll the text.
-  if(span.offsetHeight > maxH + 0.5){ el.classList.add('scrolls'); return; }
+  if(span.offsetHeight > maxH + 0.5){
+    el.classList.add('scrolls');
+    FIT_CACHE.set(key, {size:size+'cqw', scrolls:true});
+    return;
+  }
   // On the big hover preview: short texts leave a lot of parchment empty, so grow them
   // until they comfortably fill the panel. Cards in hand/on the field keep their normal
   // size — otherwise every small card would suddenly shout its text.
@@ -2496,11 +3204,13 @@ function fitCardText(el, attempt){
       size = next;
     }
   }
+  FIT_CACHE.set(key, {size:size+'cqw', scrolls:false});
 }
 // Once the web fonts are ready, re-fit any names already on screen
 // (early cards may have been measured with fallback-font metrics).
 if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(()=>{
+    FIT_CACHE.clear();   // the first measurements used fallback-font metrics — redo them once
     document.querySelectorAll('.cf-name').forEach(fitCardName);
     document.querySelectorAll('.cf-text').forEach(fitCardText);
   });
@@ -2509,14 +3219,15 @@ function makeCardEl(c){
   const rar = c.rarity==='legendary'?'legendary':'common';
   const el=document.createElement('div');
   el.className='card '+rar+(c.unplayable?' unplayable':'')+(c.cursedUntil?' cursed':'');
+  el.dataset.sig=(c.id||'?')+'|'+(c.name||'')+'|'+(c.text||'');   // key for the text-fit cache
   if(c.art){
     const z=FRAME_ZONES[rar];
     el.classList.add('framed');
     el.style.setProperty('--aspect', z.aspect);
     const box=(a)=>`left:${a[0]}%;top:${a[1]}%;width:${a[2]}%;height:${a[3]}%`;
     el.innerHTML =
-      `<img class="cf-illo" src="${c.art}" alt="" style="${box(z.win)};-webkit-mask:url('${z.illomask}') center/100% 100% no-repeat;mask:url('${z.illomask}') center/100% 100% no-repeat" onerror="this.style.display='none'">`+
-      `<img class="cf-frame" src="${z.src}" alt="" onerror="this.remove()">`+
+      `<img class="cf-illo" src="${c.art}" alt="" decoding="async" style="${box(z.win)};-webkit-mask:url('${z.illomask}') center/100% 100% no-repeat;mask:url('${z.illomask}') center/100% 100% no-repeat" onerror="this.style.display='none'">`+
+      `<img class="cf-frame" src="${z.src}" alt="" decoding="async" onerror="this.remove()">`+
       `<div class="cf-name" style="${box(z.name)}"><span>${esc(c.name)}</span></div>`+
       `<div class="cf-text" style="${box(z.text)}"><span>${esc(c.text||'')}</span></div>`;
     requestAnimationFrame(()=>{ fitCardName(el.querySelector('.cf-name')); fitCardText(el.querySelector('.cf-text')); });
@@ -3038,16 +3749,17 @@ function resolveRound(gs){
   state.p1.choicesReady=false; state.p2.choicesReady=false;
   state.p1.choices=null; state.p2.choices=null;
 
-  // Game over — either the death-gate marked a winner, or a final HP<=0 slipped through.
-  if(state._dead || state.p1.hp<=0 || state.p2.hp<=0){
+  // Game over — the death-gate marked a winner, a card DECLARED a winner (Zorya's win-gate),
+  // or a final HP<=0 slipped through.
+  if(state._dead || state._winner || state.p1.hp<=0 || state.p2.hp<=0){
     const winner = state._winner || (state.p2.hp<=0?'p1':'p2');
-    state._dead=null; state._winner=null;
+    state._dead=null; state._winner=null; state._instantWin=null;
     const iWon = winner===myRole;
     if(soloMode){ localGs=state; showGameOver(iWon); }
     else update(gRef,{p1:state.p1,p2:state.p2,phase:'gameover',winner});
     return;
   }
-  state._dead=null; state._winner=null;
+  state._dead=null; state._winner=null; state._instantWin=null;
 
   // Draw for each player — drawCount folds in Journey draw modifiers; Hindered forces 0.
   ['p1','p2'].forEach(r=>{
@@ -3056,26 +3768,8 @@ function resolveRound(gs){
     drawCards(state,r,n,n<=0);
     const drawn=(state[r].hand||[]).slice(before);   // the cards newly drawn this round
     state[r].drewThisRound=(drawn.length>0);
-    // "When drawn" trigger — fire onDraw for each newly drawn card (copies placed by an
-    // onDraw are NOT drawn, so they never re-trigger). A card whose onDraw returns true
-    // consumes itself: it goes straight to the graveyard instead of staying in hand.
-    drawn.forEach(dc=>{
-      const L=CARD_LOGIC[dc&&dc.id];
-      if(L&&L.onDraw){
-        const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
-        if(consumed===true){
-          const h=state[r].hand||[]; const i=h.indexOf(dc);
-          if(i>=0){ h.splice(i,1); state[r].graveyard=[dc,...(state[r].graveyard||[])]; }
-        }
-      }
-    });
-    // Second Day (cursed_draws): drawn cards must be played next round or they rot away.
-    if(hasJourney(state,r,'cursed_draws')) drawn.forEach(c=>{ if(!isImmune(c)) c.cursedUntil=(state.round||1)+1; });   // Immune cards are never cursed
-    // Fourth Day (opp_sees_draws): reveal the drawn cards to the opponent (info only).
-    if(drawn.length && hasJourney(state,r,'opp_sees_draws')){
-      const shown=drawn.filter(takeable);   // immune cards are not revealed
-      if(shown.length) log('  👁 '+state[opp(r)].name+' sees '+state[r].name+" draw: "+shown.map(c=>c.name).join(', '),'system');
-    }
+    // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
+    fireDrawTriggers(state, r, drawn);
   });
   state.p1.extraDraw=0; state.p2.extraDraw=0;
   state.p1.noDraw=false; state.p2.noDraw=false;
@@ -3104,6 +3798,31 @@ function resolveRound(gs){
   }
 }
 
+// Everything that happens AFTER cards physically enter a hand. Shared by the round's draw
+// step and by cards that draw mid-resolution (Deep Greed), so a card-draw is always a real
+// draw: "when drawn" triggers fire, Journey cursed-draws applies, and the Fourth Day reveal
+// still shows them to the opponent. A card whose onDraw returns true consumes itself.
+function fireDrawTriggers(state, r, drawn){
+  if(!drawn || !drawn.length) return;
+  drawn.forEach(dc=>{
+    const L=CARD_LOGIC[dc&&dc.id];
+    if(L&&L.onDraw){
+      const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
+      if(consumed===true){
+        const h=state[r].hand||[]; const i=h.indexOf(dc);
+        if(i>=0){ h.splice(i,1); state[r].graveyard=[dc,...(state[r].graveyard||[])]; }
+      }
+    }
+  });
+  // Second Day (cursed_draws): drawn cards must be played next round or they rot away.
+  if(hasJourney(state,r,'cursed_draws')) drawn.forEach(c=>{ if(!isImmune(c)) c.cursedUntil=(state.round||1)+1; });   // Immune cards are never cursed
+  // Fourth Day (opp_sees_draws): reveal the drawn cards to the opponent (info only).
+  if(hasJourney(state,r,'opp_sees_draws')){
+    const shown=drawn.filter(takeable);   // immune cards are not revealed
+    if(shown.length) log('  👁 '+state[opp(r)].name+' sees '+state[r].name+" draw: "+shown.map(c=>c.name).join(', '),'system');
+  }
+}
+
 function drawCards(state,r,n,skip){
   if(skip){log(state[r].name+' is hindered — no draw!','system');return;}
   const deck=state[r].deck||[], hand=state[r].hand||[];
@@ -3119,28 +3838,50 @@ function drawCards(state,r,n,skip){
 }
 
 // ── Result screen ──
+// Renders the round readout: HP with the damage/heal it cost each player, the cards both
+// sides committed (empty slots keep the row readable), and the log. Cards hover into the
+// full-size preview, so you can actually read what hit you.
 function showResult(newGs,oldGs){
   const my=newGs[myRole], th=newGs[opp(myRole)];
   const myOld=(oldGs||newGs)[myRole], thOld=(oldGs||newGs)[opp(myRole)];
   const round=(newGs.round||1)-1;
   document.getElementById('res-title').textContent='Round '+round+' complete';
-  const myDmg=(myOld.hp||150)-my.hp;
-  const thDmg=(thOld.hp||150)-th.hp;
-  document.getElementById('res-you-hp').textContent=my.hp+' HP'+(myDmg>0?' (−'+myDmg+')':'');
-  document.getElementById('res-opp-hp').textContent=th.hp+' HP'+(thDmg>0?' (−'+thDmg+')':'');
-  document.getElementById('res-you-bar').style.width=Math.max(0,my.hp/my.maxHp*100)+'%';
-  document.getElementById('res-opp-bar').style.width=Math.max(0,th.hp/th.maxHp*100)+'%';
+
+  const setSide=(who, now, old)=>{
+    const diff=(old.hp!==undefined?old.hp:now.hp) - now.hp;   // >0 = lost health, <0 = gained
+    document.getElementById('res-'+who+'-hp').textContent=now.hp;
+    const d=document.getElementById('res-'+who+'-delta');
+    d.className='rs-delta'+(diff>0?' dmg':(diff<0?' heal':''));
+    d.textContent = diff>0 ? '−'+diff : (diff<0 ? '+'+(-diff) : '');
+    document.getElementById('res-'+who+'-bar').style.width=Math.max(0, now.hp/(now.maxHp||150)*100)+'%';
+  };
+  setSide('you', my, myOld);
+  setSide('opp', th, thOld);
 
   // Use lastPlayed (stored before clearing selectedCards)
-  const myCards=newGs[myRole].lastPlayed||[];
-  const thCards=newGs[opp(myRole)].lastPlayed||[];
-  const youEl=document.getElementById('res-you-cards');
-  const oppEl=document.getElementById('res-opp-cards');
-  youEl.innerHTML=''; oppEl.innerHTML='';
-  if(!myCards.length) youEl.innerHTML='<span style="color:var(--text3);font-style:italic;font-size:0.8rem">No cards</span>';
-  myCards.forEach(c=>{if(c){const el=makeCardEl(c);el.style.cssText='width:70px;height:100px;cursor:default';youEl.appendChild(el);}});
-  if(!thCards.length) oppEl.innerHTML='<span style="color:var(--text3);font-style:italic;font-size:0.8rem">No cards</span>';
-  thCards.forEach(c=>{if(c){const el=makeCardEl(c);el.style.cssText='width:70px;height:100px;cursor:default';oppEl.appendChild(el);}});
+  const fill=(el, cards)=>{
+    el.innerHTML='';
+    const list=(cards||[]).filter(Boolean);
+    list.forEach(c=>{
+      const card=makeCardEl(c);
+      card.classList.add('rs-card');
+      card.addEventListener('mouseenter',()=>showCardPreview(c, card));
+      card.addEventListener('mouseleave',hideCardPreview);
+      el.appendChild(card);
+    });
+    for(let i=list.length; i<4; i++){          // empty slots — you can see at a glance who held back
+      const s=document.createElement('div');
+      s.className='rs-slot'; s.textContent='◆';
+      el.appendChild(s);
+    }
+    if(!list.length){
+      const n=document.createElement('div');
+      n.className='rs-none'; n.style.flexBasis='100%'; n.textContent='No cards played';
+      el.appendChild(n);
+    }
+  };
+  fill(document.getElementById('res-you-cards'), newGs[myRole].lastPlayed);
+  fill(document.getElementById('res-opp-cards'), newGs[opp(myRole)].lastPlayed);
 
   document.getElementById('res-log').innerHTML=logs.map(l=>`<div class="log-entry ${l.type}">${l.msg}</div>`).join('');
   hideCardPreview();
@@ -3227,10 +3968,11 @@ function posTip(e){
 function showCardPreview(c, el, mode){
   const pv=document.getElementById('card-preview');
   pv.innerHTML='';
-  // Collection hover on a card with alternate faces → showcase: base card dead centre of the
-  // screen (at full match size), variants lined up to its right.
+  // Collection hover on a card with alternate faces (variants) or cards it creates (tokens)
+  // → showcase: source card dead centre of the screen, the rest lined up to its right.
   const vars = (mode==='over' && c.id && CARD_VARIANTS[c.id]) ? CARD_VARIANTS[c.id] : null;
-  if(vars){
+  const toks = (mode==='over' && c.id && CARD_TOKENS[c.id]) ? CARD_TOKENS[c.id] : null;
+  if(vars || toks){
     pv.className=(c.rarity||'common')+' pv-over pv-multi';
     const col=(labelText, cardData, isBase)=>{
       const w=document.createElement('div');
@@ -3242,14 +3984,25 @@ function showCardPreview(c, el, mode){
     };
     const base=col('Base card', c, true);
     pv.appendChild(base);
-    vars.forEach(v=>pv.appendChild(col(v.label, {...c, text:v.text}, false)));
+    if(vars) vars.forEach(v=>pv.appendChild(col(v.label, {...c, text:v.text}, false)));
+    if(toks) toks.ids.forEach(id=>{
+      const def=CARDS_DATA.find(x=>x.id===id);
+      if(def) pv.appendChild(col(toks.label, def, false));
+    });
     pv.style.display='flex';
     pv.style.left='0px'; pv.style.top='0px';        // measure from a known origin
-    const bw=base.offsetWidth||248, total=pv.offsetWidth, h=pv.offsetHeight;
+    // A long row (Zorya + 4 Sins, Opening Ceremony + 5 Days) can outgrow the screen — shrink
+    // the side cards step by step until the whole row fits.
+    const room=window.innerWidth-32;
+    for(const h of [330,290,250,215,180]){
+      pv.style.setProperty('--pv-side', h+'px');
+      if(pv.offsetWidth<=room) break;
+    }
+    const bw=base.offsetWidth||248, total=pv.offsetWidth, ph=pv.offsetHeight;
     let left=window.innerWidth/2 - bw/2;            // the BASE card sits at screen centre
     if(left+total > window.innerWidth-16) left=window.innerWidth-16-total;   // pull back if the row runs off
     if(left<16) left=16;
-    let top=window.innerHeight/2 - h/2;
+    let top=window.innerHeight/2 - ph/2;
     if(top<12) top=12;
     pv.style.left=left+'px';
     pv.style.top=top+'px';
@@ -3271,6 +4024,12 @@ function showCardPreview(c, el, mode){
   const r=el.getBoundingClientRect();
   let left=r.left+r.width/2 - w/2;
   let top = (mode==='over') ? (r.top + r.height/2 - h/2) : (r.top-410);
+  if(mode==='side'){
+    // Beside the element (history rail): to its right, or flipped left if there's no room.
+    left = r.right + 14;
+    if(left + w > window.innerWidth - 8) left = r.left - w - 14;
+    top  = r.top + r.height/2 - h/2;
+  }
   if(left<8) left=8;
   if(left+w>window.innerWidth-8) left=window.innerWidth-w-8;
   if(top<8) top=8;
