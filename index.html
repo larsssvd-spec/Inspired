@@ -150,7 +150,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .col-cell { display:flex; flex-direction:column; align-items:center; gap:0.45rem; height:100%; justify-content:center; }
 .col-cell:hover { z-index:30; }
 .col-cardwrap { position:relative; cursor:pointer; transition:transform 0.2s ease-out; height:calc(100% - 32px); display:flex; }
-.col-cardwrap:hover { transform:translateY(-10px) scale(1.28); z-index:30; }
+.col-cardwrap:hover { transform:translateY(-5px); z-index:30; }
 .col-cardwrap .card { height:100%; width:auto; }
 .col-cardwrap .card.framed { height:100%; width:auto; aspect-ratio:var(--aspect,0.62); }
 .col-cardwrap .card:not(.framed) { width:auto; aspect-ratio:0.69; height:100%; }
@@ -282,7 +282,13 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .cf-name span { display:inline-block; max-width:100%; overflow-wrap:break-word; }
 .cf-text span { display:block; width:100%; overflow-wrap:break-word; }
 .cf-text  { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center; text-align:center;
-            font-family:'Lora',serif; color:#2c2114; line-height:1.12; font-size:5.4cqw; overflow:hidden; padding:0 2%; }
+            font-family:'Lora',serif; color:#2c2114; line-height:1.15; font-size:5.4cqw; overflow:visible; padding:0 2%; }
+/* Very long texts that can't shrink further become scrollable, anchored to the top so you
+   always start at the first line. Slim, subtle scrollbar that suits the parchment panel. */
+.cf-text.scrolls { align-items:flex-start; overflow-y:auto; overscroll-behavior:contain; cursor:default; }
+.cf-text.scrolls::-webkit-scrollbar { width:3px; }
+.cf-text.scrolls::-webkit-scrollbar-track { background:transparent; }
+.cf-text.scrolls::-webkit-scrollbar-thumb { background:rgba(44,33,20,0.35); border-radius:3px; }
 .card.framed.legendary .cf-name { color:#eaf4ff; }
 /* Big readable preview only for cards in hand */
 .hand .card:hover {
@@ -303,6 +309,25 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 #card-preview .pv-card:not(.framed) .card-name { font-size:1.45rem; }
 #card-preview .pv-card:not(.framed) .card-text { font-size:1.05rem; }
 #card-preview.legendary .pv-card:not(.framed) { border-color:var(--gold); }
+/* Collection hover: the preview is centered ON the card itself, so it reads as the card
+   growing to full match size instead of a tooltip popping up somewhere else. */
+#card-preview.pv-over { transform-origin:center center; animation:pvGrow 0.16s ease-out; }
+@keyframes pvGrow { from { transform:scale(0.74); opacity:0.35; } to { transform:scale(1); opacity:1; } }
+/* Variant showcase: cards that turn into another face in play (Scavenger, Death Stare) put
+   the base card at screen centre and line their variants up to the right of it. */
+#card-preview.pv-multi { height:auto; align-items:flex-start; gap:1.5rem; }
+#card-preview.pv-multi::before { content:''; position:fixed; inset:0; z-index:-1;
+  background:radial-gradient(ellipse at center, rgba(3,10,14,0.55) 0%, rgba(3,10,14,0.78) 100%);
+  backdrop-filter:blur(3px); animation:pvFade 0.18s ease-out; }
+@keyframes pvFade { from { opacity:0; } to { opacity:1; } }
+#card-preview .pv-col { display:flex; flex-direction:column; align-items:center; gap:0.55rem; }
+#card-preview .pv-col .pv-card { height:330px; }
+#card-preview .pv-col.pv-base .pv-card { height:400px; }
+#card-preview .pv-lbl { font-family:'Playfair Display',serif; font-size:0.68rem; letter-spacing:0.16em;
+  text-transform:uppercase; white-space:nowrap; color:var(--text2); background:rgba(6,16,22,0.85);
+  border:1px solid var(--border); border-radius:999px; padding:0.24rem 0.75rem; box-shadow:0 2px 12px rgba(0,0,0,0.7); }
+#card-preview .pv-col.pv-base .pv-lbl { color:var(--green2); border-color:rgba(126,200,50,0.4); }
+#card-preview .pv-col:not(.pv-base) .pv-lbl { color:var(--gold); border-color:rgba(240,200,96,0.38); }
 .card.selected { border-color:var(--green2)!important; box-shadow:0 0 0 2px var(--green),0 0 20px rgba(168,224,80,0.4)!important; transform:translateY(-10px)!important; z-index:20; }
 /* Skywalker forced-play: cards you're forced to play this round pulse gold. */
 .card.forced { outline:2px solid var(--gold,#f0cc60); outline-offset:1px; border-radius:6px; animation:forcedPulse 1.15s ease-in-out infinite; }
@@ -1183,6 +1208,15 @@ function buildCtx(state, r, extra){
 const DS_V1_TEXT='If you play this the same round your opponent plays their Death Stare: halve their current health.';
 const DS_V2_TEXT="At each round's end while this is in your hand: take 5 true damage. If you play this the same round your opponent plays their Death Stare: halve YOUR current health.";
 const SCAV_V2_TEXT='When drawn: reveal all cards in your hand.';
+// ── Variant registry ──────────────────────────────────────────────────────────
+// Some cards turn into a different card in play (see _variant in CARD_LOGIC). The
+// collection shows those alternate faces next to the base card on hover, so a player
+// can actually learn what they're getting. Add an entry here when a new card gets a
+// variant — the logic itself stays where it belongs, in CARD_LOGIC.
+const CARD_VARIANTS = {
+  scavenger:   [ {label:"Opponent's copy", text:SCAV_V2_TEXT} ],
+  death_stare: [ {label:'Variant 1 — yours', text:DS_V1_TEXT}, {label:"Variant 2 — opponent's", text:DS_V2_TEXT} ]
+};
 const CARD_LOGIC = {
   // Scavenger — variant 1 (onPlay): plant a variant-2 copy in the OPPONENT's deck and shuffle
   // it. Deliberately does NOT go through shuffleIntoDeck: Devour Hope only reacts to cards
@@ -2098,6 +2132,7 @@ let colTab = 'common';
 function renderCollection(){
   const grid=document.getElementById('col-grid');
   if(!grid||!myProfile) return;
+  hideCardPreview();   // crafting/paging rebuilds the grid — no mouseleave fires on the old cards
   const all=collectibleCards();
   const cards=all.filter(c=>c.rarity===colTab);
   const pages=Math.max(1, Math.ceil(cards.length/CARDS_PER_PAGE));
@@ -2121,7 +2156,12 @@ function renderCollection(){
 
     const wrap=document.createElement('div');
     wrap.className='col-cardwrap'+(have?'':' locked');
-    wrap.appendChild(makeCardEl(c));
+    const cardEl=makeCardEl(c);
+    // Same big hover preview as in a match — but centered on the card, so it looks like the
+    // card itself grows to full size. Long texts stay comfortable to read.
+    cardEl.addEventListener('mouseenter',()=>showCardPreview(c, cardEl, 'over'));
+    cardEl.addEventListener('mouseleave',hideCardPreview);
+    wrap.appendChild(cardEl);
     if(have){ const b=document.createElement('div'); b.className='col-badge'; b.textContent='×'+have; wrap.appendChild(b); }
     cell.appendChild(wrap);
 
@@ -2384,10 +2424,15 @@ function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 // Kept in cqw so it stays responsive across card sizes. First shrink a
 // too-wide name to keep it on one line (nicer for the banner); then a height
 // guard shrinks genuinely long, wrapped names until they fit.
-function fitCardName(el){
+function fitCardName(el, attempt){
   if(!el) return;
   const span=el.querySelector('span');
-  if(!span || el.clientWidth<2 || el.clientHeight<2) return;
+  if(!span) return;
+  // Not laid out yet → retry next frame, or the name would keep its default size and clip.
+  if(el.clientWidth<2 || el.clientHeight<2){
+    if((attempt||0) < 5) requestAnimationFrame(()=>fitCardName(el, (attempt||0)+1));
+    return;
+  }
   const maxW=el.clientWidth, maxH=el.clientHeight;
   let size=8;
   el.style.fontSize=size+'cqw';
@@ -2414,15 +2459,42 @@ function fitCardName(el){
 // Auto-fit a framed card's description: shrink the font (in cqw, responsive)
 // until the WHOLE text fits inside the text panel. Guarantees every player can
 // always read the full text, centered by the flexbox.
-function fitCardText(el){
+// Auto-fit a framed card's description. It shrinks until it fits (sized in cqw, so it scales
+// with the card). If a text is SO long that it would become unreadably small, we stop at a
+// readable floor and make the panel scrollable instead — anchored to the top, so you always
+// start reading at the first line. The big hover preview stays the comfortable way to read.
+const CARD_TEXT_MIN = 3.4;   // cqw — below this, scroll instead of shrinking further
+const CARD_TEXT_MAX = 8.6;   // cqw — ceiling when a short text is allowed to grow (preview only)
+function fitCardText(el, attempt){
   if(!el) return;
   const span=el.querySelector('span');
-  if(!span || el.clientHeight<2) return;
+  if(!span) return;
+  // Not laid out yet (zero height) → try again next frame; give up after a few tries.
+  if(el.clientHeight<2){
+    if((attempt||0) < 5) requestAnimationFrame(()=>fitCardText(el, (attempt||0)+1));
+    return;
+  }
+  const maxH=el.clientHeight;
   let size=5.4;
+  el.classList.remove('scrolls');
   el.style.fontSize=size+'cqw';
-  for(let i=0;i<9 && span.offsetHeight>el.clientHeight+0.5 && size>2; i++){
-    size=Math.max(2, size*(el.clientHeight/span.offsetHeight)*0.96);
-    el.style.fontSize=size+'cqw';
+  for(let i=0; i<14 && span.offsetHeight > maxH+0.5 && size > CARD_TEXT_MIN; i++){
+    size = Math.max(CARD_TEXT_MIN, size * (maxH/span.offsetHeight) * 0.96);
+    el.style.fontSize = size+'cqw';
+  }
+  // Still doesn't fit at the smallest readable size → let the player scroll the text.
+  if(span.offsetHeight > maxH + 0.5){ el.classList.add('scrolls'); return; }
+  // On the big hover preview: short texts leave a lot of parchment empty, so grow them
+  // until they comfortably fill the panel. Cards in hand/on the field keep their normal
+  // size — otherwise every small card would suddenly shout its text.
+  if(el.closest('#card-preview')){
+    const room = maxH*0.94;   // breathing room, never flush against the panel edge
+    for(let i=0; i<24 && size < CARD_TEXT_MAX; i++){
+      const next = Math.min(CARD_TEXT_MAX, size*1.05);
+      el.style.fontSize = next+'cqw';
+      if(span.offsetHeight > room){ el.style.fontSize = size+'cqw'; break; }
+      size = next;
+    }
   }
 }
 // Once the web fonts are ready, re-fit any names already on screen
@@ -3149,26 +3221,60 @@ function posTip(e){
 }
 
 // ── Card preview (floating enlarged card on hover) ──
-function showCardPreview(c, el, center){
+// mode: true/'center' → dead center of the screen (pills)
+//       'over'        → centered on the hovered card itself (collection: the card "grows")
+//       falsy         → floating above the card (hand / arena)
+function showCardPreview(c, el, mode){
   const pv=document.getElementById('card-preview');
   pv.innerHTML='';
+  // Collection hover on a card with alternate faces → showcase: base card dead centre of the
+  // screen (at full match size), variants lined up to its right.
+  const vars = (mode==='over' && c.id && CARD_VARIANTS[c.id]) ? CARD_VARIANTS[c.id] : null;
+  if(vars){
+    pv.className=(c.rarity||'common')+' pv-over pv-multi';
+    const col=(labelText, cardData, isBase)=>{
+      const w=document.createElement('div');
+      w.className='pv-col'+(isBase?' pv-base':'');
+      const l=document.createElement('div'); l.className='pv-lbl'; l.textContent=labelText;
+      const card=makeCardEl(cardData); card.classList.add('pv-card');
+      w.appendChild(l); w.appendChild(card);
+      return w;
+    };
+    const base=col('Base card', c, true);
+    pv.appendChild(base);
+    vars.forEach(v=>pv.appendChild(col(v.label, {...c, text:v.text}, false)));
+    pv.style.display='flex';
+    pv.style.left='0px'; pv.style.top='0px';        // measure from a known origin
+    const bw=base.offsetWidth||248, total=pv.offsetWidth, h=pv.offsetHeight;
+    let left=window.innerWidth/2 - bw/2;            // the BASE card sits at screen centre
+    if(left+total > window.innerWidth-16) left=window.innerWidth-16-total;   // pull back if the row runs off
+    if(left<16) left=16;
+    let top=window.innerHeight/2 - h/2;
+    if(top<12) top=12;
+    pv.style.left=left+'px';
+    pv.style.top=top+'px';
+    return;
+  }
   const card=makeCardEl(c);
   card.classList.add('pv-card');
   pv.appendChild(card);
   pv.className=(c.rarity||'common');
+  if(mode==='over') pv.classList.add('pv-over');
   pv.style.display='block';
   const w=card.offsetWidth||200;   // actual rendered width (framed cards follow their aspect)
-  if(center){
+  const h=pv.offsetHeight||400;
+  if(mode===true||mode==='center'){
     pv.style.left=(window.innerWidth/2 - w/2)+'px';
     pv.style.top=(window.innerHeight/2 - 200)+'px';
     return;
   }
   const r=el.getBoundingClientRect();
   let left=r.left+r.width/2 - w/2;
-  let top=r.top-410;
+  let top = (mode==='over') ? (r.top + r.height/2 - h/2) : (r.top-410);
   if(left<8) left=8;
   if(left+w>window.innerWidth-8) left=window.innerWidth-w-8;
   if(top<8) top=8;
+  if(top+h>window.innerHeight-8) top=window.innerHeight-h-8;
   pv.style.left=left+'px';
   pv.style.top=top+'px';
 }
