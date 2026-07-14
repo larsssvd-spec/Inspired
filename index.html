@@ -1456,6 +1456,8 @@ const CARDS_DATA = [
   {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
   {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
 
+  {id:'skull_slasher', collectible:true, name:'Skull Slasher', text:"Deal 10 damage. Deal 30 damage if your opponent has 0 cards in their hand. Enchanted: Exactly 2 cards.", rarity:'common', emoji:'💀', dealsDamage:true, enchanted:true, type:'normal', art:'art/skull_slasher.png'},
+
   {id:'different_set_of_rules', collectible:true, name:'Different Set of Rules', text:"Set both player's health to 75. You are Hindered next round.", rarity:'common', emoji:'⚖️', type:'normal', art:'art/different_set_of_rules.png'},
 
   {id:'critical_bite', collectible:true, name:'Critical Bite', text:'Deal 30 damage. This card can only be played if you have less than 20 health.', rarity:'common', emoji:'🩸', dealsDamage:true, playIfHpBelow:20, type:'normal', art:'art/critical_bite.png'},
@@ -1808,6 +1810,23 @@ const CARD_LOGIC = {
       return true;   // consumed: straight to the graveyard, never sits in hand
     },
     onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Fireball — it already burned out when drawn. Nothing happens.','system'); }
+  },
+  // Skull Slasher — reads your opponent's hand at the moment it FLIPS, so the cards they
+  // played this round are already gone from it: someone who dumps their last two cards is
+  // holding zero when the blade lands. That's the whole card.
+  // Enchanted (Orb) MOVES the target instead of adding to it: the trigger becomes exactly 2
+  // cards, and an empty hand then does nothing. So the Orb is a read on your opponent, not
+  // a straight upgrade. Everything in hand counts — Immune, Cursed, all of it.
+  skull_slasher: {
+    onPlay:(c)=>{
+      const need = c.useOrb ? 2 : 0;
+      const held = (c.state[c.opp].hand||[]).length;
+      const dmg  = (held === need) ? 30 : 10;
+      c.dealDmgTo(c.opp, dmg);
+      c.log(c.state[c.self].name+' plays Skull Slasher — '+c.state[c.opp].name+' holds '+held+
+            ' card'+(held===1?'':'s')+(c.useOrb?' (Enchanted: needs exactly 2)':' (needs 0)')+
+            ' → '+dmg+' damage.','damage');
+    }
   },
   // Different Set of Rules — wipes the board state clean: BOTH players are hard-set to 75.
   // setHealth is not a heal and not damage: it ignores can't-heal, isn't stealable (Nightlife),
@@ -2929,11 +2948,11 @@ document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
 // You stay signed in between sessions; the menu only appears once signed in.
 let currentUser=null, myProfile=null;
 
-// STARTER DUST: every account gets 20.000 Fairy Dust once. New accounts start with it;
-// existing accounts get it topped up the next time they sign in (the grant flag makes sure
-// it happens exactly once, no matter how often they log in).
-const STARTER_DUST = 20000;
-const STARTER_FLAG = 'grant20k';
+// STARTER DUST: every account gets this once. New accounts start with it; existing accounts
+// get it topped up the next time they sign in. The flag makes sure it happens exactly once
+// per grant, no matter how often they log in — bump the flag name to hand out a new round.
+const STARTER_DUST = 5000000;
+const STARTER_FLAG = 'grant5m';
 
 async function loadProfile(user){
   const snap=await get(ref(db,'users/'+user.uid));
