@@ -610,104 +610,66 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 }
 .grave-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:0.4rem; max-height:55vh; overflow-y:auto; margin:1rem 0; }
 
-/* ── DECK REVEAL (Larry) ──────────────────────────────────────────────────────
-   Two layers, like a real table: a carved STONE frame with gold beading on the
-   outside, aged PARCHMENT inside it. Everything is gradients and shadows — no
-   image assets — so it stays crisp at any size and belongs to Inspired. */
-.peek-frame { position:relative; width:100%; max-width:1240px; padding:26px; border-radius:18px;
-  /* Rough dark stone: a base gradient with speckled grain layered over it. */
-  background:
-    repeating-linear-gradient(112deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 7px),
-    repeating-linear-gradient(28deg,  rgba(0,0,0,0.16) 0 3px, transparent 3px 9px),
-    linear-gradient(160deg, #4a3f30 0%, #33291f 45%, #221a13 100%);
-  border:2px solid #16100a;
-  box-shadow:
-    inset 0 0 0 3px var(--gold),          /* gold beading against the parchment */
-    inset 0 0 0 5px #2a2013,
-    inset 0 2px 10px rgba(255,225,160,0.18),
-    inset 0 -14px 34px rgba(0,0,0,0.6),
-    0 0 0 2px var(--gold2),
-    0 36px 100px rgba(0,0,0,0.95); }
+/* ── ORNATE PANEL ─────────────────────────────────────────────────────────────
+   The frame is Lars's painted asset (art/achtergrond_UI.png). It is drawn at a FIXED
+   aspect ratio (1657:949) and scaled as a whole, so the gold, the gem and the corners
+   are never stretched — the one thing CSS could never fake. The content sits inside the
+   parchment: measured at 15% / 14.5% / 13.1% / 12.6% from the edges.
+   To put another sub-menu in this frame: give the .overlay the class `ornate` and wrap
+   the contents in .orn-frame. */
+.overlay.ornate { background:rgba(4,6,10,0.82); }
+.orn-frame {
+  position:relative; width:min(1280px, 95vw);
+  aspect-ratio:1657 / 949;
+  max-height:94vh;
+  padding:13.6% 15.2% 13.4% 15.7%;
+  display:flex; flex-direction:column; text-align:center;
+  background:url('art/achtergrond_UI.png') center center / 100% 100% no-repeat;
+  filter:drop-shadow(0 30px 70px rgba(0,0,0,0.85));
+}
+.orn-title { font-family:'Playfair Display',serif; font-weight:700; color:#3a2a10;
+  font-size:clamp(1.1rem, 1.9vw, 1.9rem); line-height:1.15;
+  text-shadow:0 1px 0 rgba(255,255,255,0.45); }
+.orn-sub { font-family:'Lora',serif; color:#6b5227; margin:0.35rem 0 0.9rem;
+  font-size:clamp(0.72rem, 0.95vw, 0.98rem); text-shadow:0 1px 0 rgba(255,255,255,0.35); }
 
-/* Gold bosses sunk into the four corners of the stone. */
-.peek-boss { position:absolute; width:30px; height:30px; z-index:3; transform:rotate(45deg);
-  background:linear-gradient(135deg, #f6dd8e 0%, var(--gold) 45%, #8a6a1e 100%);
-  border:2px solid #4a3a14; border-radius:5px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.55); }
-.peek-boss::after { content:''; position:absolute; inset:6px; border-radius:2px;
-  background:radial-gradient(circle at 35% 30%, #fff2c4, #b28c2c 70%, #6d5216); }
-.peek-boss.tl { top:8px;  left:8px; }
-.peek-boss.tr { top:8px;  right:8px; }
-.peek-boss.bl { bottom:8px; left:8px; }
-.peek-boss.br { bottom:8px; right:8px; }
+/* Buttons: parchment and blue, matching the frame's own palette. */
+.orn-actions { display:flex; gap:1rem; justify-content:center; margin-top:auto; padding-top:0.8rem; }
+.orn-btn { flex:0 1 300px; padding:0.62rem 1.2rem; cursor:pointer;
+  font-family:'Playfair Display',serif; font-weight:700; font-size:clamp(0.72rem, 0.95vw, 1rem);
+  letter-spacing:0.1em; text-transform:uppercase; color:#3a2a10;
+  background:linear-gradient(180deg, #efe0bd 0%, #d6bf92 55%, #b99f6b 100%);
+  border:2px solid #8a6a24; border-radius:5px;
+  box-shadow:0 4px 0 #6b5227, 0 8px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.55);
+  transition:transform 0.1s, filter 0.15s; }
+.orn-btn:hover  { transform:translateY(-2px); filter:brightness(1.07); }
+.orn-btn:active { transform:translateY(2px); box-shadow:0 1px 0 #6b5227, 0 3px 8px rgba(0,0,0,0.35); }
+.orn-btn.primary { color:#eaf4ff; text-shadow:0 1px 4px rgba(0,0,0,0.6);
+  background:linear-gradient(180deg, #5c9de0 0%, #2f6cbe 52%, #1b4a8c 100%);
+  border-color:#c9a24a;
+  box-shadow:0 4px 0 #14355f, 0 8px 20px rgba(50,110,190,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
+.orn-btn.primary:active { box-shadow:0 1px 0 #14355f, 0 3px 8px rgba(50,110,190,0.35); }
 
-/* Aged parchment: warm base, blotches, and a vignette that darkens toward the frame. */
-.peek-box { position:relative; border-radius:6px; padding:2.6rem 2.2rem 1.8rem; text-align:center;
-  background:
-    radial-gradient(ellipse 60% 42% at 22% 18%, rgba(160,120,60,0.10), transparent 70%),
-    radial-gradient(ellipse 46% 34% at 82% 74%, rgba(150,110,55,0.12), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 62% 26%, rgba(120,86,36,0.07), transparent 70%),
-    radial-gradient(ellipse 120% 100% at 50% 50%, transparent 42%, rgba(112,80,34,0.30) 100%),
-    linear-gradient(176deg, #efe0bd 0%, #e2cfa4 46%, #d0b884 100%);
-  box-shadow:inset 0 0 42px rgba(120,86,36,0.30), inset 0 2px 0 rgba(255,255,255,0.35); }
-
-/* Title banner: a ribbon laid across the top edge of the parchment, tails and all. */
-.peek-banner { position:relative; display:inline-block; margin:-3.5rem auto 1rem; padding:0.6rem 3rem;
-  background:linear-gradient(180deg, #f7ecd0 0%, #e3ceA0 48%, #c8ac74 100%);
-  border:2px solid var(--gold);
-  box-shadow:0 10px 26px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -3px 8px rgba(120,86,36,0.25); }
-.peek-banner::before, .peek-banner::after { content:''; position:absolute; top:0; bottom:0; width:26px;
-  background:linear-gradient(180deg, #d9c191, #b0955f);
-  border-top:2px solid var(--gold); border-bottom:2px solid var(--gold); }
-.peek-banner::before { left:-26px; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 34% 50%);
-  border-left:2px solid var(--gold); }
-.peek-banner::after  { right:-26px; clip-path:polygon(0 0, 100% 0, 66% 50%, 100% 100%, 0 100%);
-  border-right:2px solid var(--gold); }
-.peek-title { font-family:'Playfair Display',serif; font-size:1.75rem; font-weight:700; color:#3a2a10;
-  letter-spacing:0.01em; text-shadow:0 1px 0 rgba(255,255,255,0.55); white-space:nowrap; }
-.peek-sub { font-family:'Lora',serif; font-size:0.95rem; color:#6b5227; margin-bottom:1.4rem;
-  text-shadow:0 1px 0 rgba(255,255,255,0.4); }
-
-/* The cards, laid out on the parchment */
-.peek-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:1rem 0.85rem;
-  max-height:52vh; overflow-y:auto; padding:0.5rem 0.2rem; }
-.peek-grid .card { height:180px; width:auto; cursor:help; transition:transform 0.16s;
-  filter:drop-shadow(0 8px 14px rgba(60,40,15,0.45)); }
-.peek-grid .card:not(.framed) { width:126px; height:180px; }
-.peek-grid .card:hover { transform:translateY(-7px); }
+/* The revealed cards, laid out on the parchment */
+.peek-grid { flex:1; min-height:0; display:flex; flex-wrap:wrap; align-content:center;
+  justify-content:center; gap:0.9rem 0.7rem; overflow-y:auto; padding:0.3rem 0.2rem; }
+.peek-grid .card { height:clamp(96px, 15.5vh, 168px); width:auto; cursor:help; transition:transform 0.16s;
+  filter:drop-shadow(0 8px 13px rgba(50,32,10,0.5)); }
+.peek-grid .card:not(.framed) { width:auto; aspect-ratio:0.7; }
+.peek-grid .card:hover { transform:translateY(-6px); }
 .peek-grid .card.selected { position:relative;
-  box-shadow:0 0 0 3px var(--green2), 0 0 30px rgba(168,224,80,0.8); border-radius:8px; }
-.peek-grid .card.selected::after { content:'TAKEN'; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
-  background:var(--green3); color:#eaffd0; font-family:'Playfair Display',serif; font-size:0.52rem;
-  letter-spacing:0.14em; padding:2px 8px; border-radius:999px; border:1px solid var(--green2);
+  box-shadow:0 0 0 3px var(--green2), 0 0 26px rgba(168,224,80,0.8); border-radius:8px; }
+.peek-grid .card.selected::after { content:'TAKEN'; position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+  background:var(--green3); color:#eaffd0; font-family:'Playfair Display',serif; font-size:0.5rem;
+  letter-spacing:0.14em; padding:2px 7px; border-radius:999px; border:1px solid var(--green2);
   box-shadow:0 2px 8px rgba(0,0,0,0.7); white-space:nowrap; }
-.peek-grid::-webkit-scrollbar { width:8px; }
-.peek-grid::-webkit-scrollbar-track { background:rgba(112,80,34,0.16); border-radius:4px; }
+.peek-grid::-webkit-scrollbar { width:7px; }
 .peek-grid::-webkit-scrollbar-thumb { background:rgba(112,80,34,0.45); border-radius:4px; }
-
-/* Carved buttons, sunk into the parchment */
-.peek-actions { display:flex; gap:1.1rem; justify-content:center; margin-top:1.7rem; }
-.peek-btn { flex:0 1 340px; padding:0.8rem 1.4rem; cursor:pointer;
-  font-family:'Playfair Display',serif; font-size:1.05rem; color:#3a2a10;
-  background:linear-gradient(180deg, #f4e7c6 0%, #dcc79a 55%, #c0a674 100%);
-  border:2px solid var(--gold); border-radius:6px;
-  box-shadow:0 4px 0 #6f5828, 0 10px 22px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.6);
-  transition:transform 0.1s, box-shadow 0.1s; }
-.peek-btn:hover { transform:translateY(-2px); box-shadow:0 6px 0 #6f5828, 0 14px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.65); }
-.peek-btn:active { transform:translateY(2px); box-shadow:0 2px 0 #6f5828, 0 5px 12px rgba(0,0,0,0.4); }
-.peek-btn.primary { color:#f6ffe4;
-  background:linear-gradient(180deg, #94db41 0%, #71b32b 55%, #4e8a17 100%);
-  border-color:var(--gold2);
-  box-shadow:0 4px 0 #2c5410, 0 10px 24px rgba(90,160,25,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
-  text-shadow:0 1px 3px rgba(0,0,0,0.5); }
-.peek-btn.primary:hover { box-shadow:0 6px 0 #2c5410, 0 14px 32px rgba(120,200,40,0.55), inset 0 1px 0 rgba(255,255,255,0.4); }
-.peek-btn.primary:active { box-shadow:0 2px 0 #2c5410, 0 5px 12px rgba(90,160,25,0.4); }
 @media (max-width:820px){
-  .peek-frame { padding:16px; }
-  .peek-box { padding:2.2rem 1rem 1.4rem; }
-  .peek-grid .card { height:132px; }
-  .peek-grid .card:not(.framed) { width:92px; height:132px; }
-  .peek-actions { flex-direction:column; }
+  .orn-frame { padding:12% 12% 12% 12%; }
+  .orn-actions { flex-direction:column; gap:0.5rem; }
+}
+}
 }
 }
 .floater { position:fixed; pointer-events:none; z-index:200; font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; animation:floatUp 1.4s ease-out forwards; }
@@ -1309,20 +1271,14 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 </div>
 
-<div class="overlay hidden" id="ov-peek">
-  <div class="peek-frame">
-    <div class="peek-boss tl"></div><div class="peek-boss tr"></div>
-    <div class="peek-boss bl"></div><div class="peek-boss br"></div>
-    <div class="peek-box">
-      <div class="peek-banner">
-        <div class="peek-title" id="peek-title">Look at your deck</div>
-      </div>
-      <div class="peek-sub" id="peek-sub"></div>
-      <div class="peek-grid" id="peek-grid"></div>
-      <div class="peek-actions">
-        <button class="peek-btn" id="btn-peek-keep">Keep this order</button>
-        <button class="peek-btn primary" id="btn-peek-shuffle">Shuffle my deck</button>
-      </div>
+<div class="overlay ornate hidden" id="ov-peek">
+  <div class="orn-frame">
+    <div class="orn-title" id="peek-title">Look at your deck</div>
+    <div class="orn-sub" id="peek-sub"></div>
+    <div class="peek-grid" id="peek-grid"></div>
+    <div class="orn-actions">
+      <button class="orn-btn" id="btn-peek-keep">Keep this order</button>
+      <button class="orn-btn primary" id="btn-peek-shuffle">Shuffle my deck</button>
     </div>
   </div>
 </div>
