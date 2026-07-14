@@ -21,23 +21,84 @@
 body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-height:100vh; overflow:hidden; display:flex; flex-direction:column; }
 
 /* LOBBY */
+/* ── TITLE SCREEN ─────────────────────────────────────────────────────────────
+   A video loop over the key art, a slow camera drift on the still (so it lives even
+   without the video file), floating dust, a vignette, and a PRESS START gate: the
+   menu only appears once you click in. */
 #screen-lobby {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1rem;
-  position:relative; overflow:hidden;
-  /* Two layers: .jpg on top, .jpeg underneath. Whichever file actually exists shows up —
-     so it doesn't matter which extension Windows gave the export. */
-  background-color:var(--deep);
-  background-image:url('art/menu_bg.jpg'), url('art/menu_bg.jpeg');
-  background-position:center center, center center;
-  background-size:cover, cover;
-  background-repeat:no-repeat, no-repeat;
+  position:relative; overflow:hidden; background-color:var(--deep);
 }
-/* Readability veil over the key art — dark at the bottom where the menu/auth panels sit,
-   light at the top so the logo and sky stay visible. */
-#screen-lobby::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
-  background:linear-gradient(180deg, rgba(3,8,14,0.18) 0%, rgba(3,8,14,0.35) 45%, rgba(3,8,14,0.72) 100%); }
-/* The painted scene replaces the animated night-ocean scene (kept in the file — flip this
-   to `display:block` and remove the background above to bring it back). */
+/* The scene itself: every layer is a group in one SVG, animated with transform/opacity
+   only (no filters in the animation path), and shifted on mouse-move for parallax. */
+.lobby-scene { position:absolute; inset:0; z-index:0; width:100%; height:100%; display:block; }
+.pl { transition:transform 0.5s cubic-bezier(0.2,0.6,0.2,1); will-change:transform; }
+.ls-star { fill:#dff6ff; animation:lsTwinkle var(--d,4s) ease-in-out var(--dl,0s) infinite; }
+@keyframes lsTwinkle { 0%,100% { opacity:var(--o1,0.25); } 50% { opacity:var(--o2,0.95); } }
+.ls-moon { animation:lsMoonGlow 9s ease-in-out infinite; }
+@keyframes lsMoonGlow { 0%,100% { opacity:0.92; } 50% { opacity:1; } }
+/* Aurora ribbons: they breathe and slide, never quite repeating (different periods). */
+.au1 { animation:lsAurora1 34s ease-in-out infinite alternate; transform-origin:center; }
+.au2 { animation:lsAurora2 27s ease-in-out infinite alternate; transform-origin:center; }
+@keyframes lsAurora1 { from { transform:translate(-40px,6px) scaleY(0.92); opacity:0.5; }
+                       to   { transform:translate(50px,-10px) scaleY(1.12); opacity:0.9; } }
+@keyframes lsAurora2 { from { transform:translate(60px,-4px) scaleY(1.1); opacity:0.35; }
+                       to   { transform:translate(-50px,10px) scaleY(0.9); opacity:0.7; } }
+/* Floating islands drift on their own rhythms. */
+.isl { transform-box:fill-box; transform-origin:center; }
+.i1 { animation:lsBob1 11s ease-in-out infinite alternate; }
+.i2 { animation:lsBob2 14s ease-in-out infinite alternate; }
+@keyframes lsBob1 { from { transform:translate(0,0); } to { transform:translate(-8px,-12px); } }
+@keyframes lsBob2 { from { transform:translate(0,-6px); } to { transform:translate(10px,8px); } }
+/* Moonlight on the water, and mist crawling across it. */
+.ls-shimmer { transform-box:fill-box; transform-origin:center; animation:lsShimmer 7s ease-in-out infinite; }
+@keyframes lsShimmer { 0%,100% { transform:scaleX(1); opacity:0.85; } 50% { transform:scaleX(1.12); opacity:1; } }
+.ls-mist .m1 { animation:lsMist 46s linear infinite; }
+.ls-mist .m2 { animation:lsMist 62s linear infinite reverse; }
+.ls-mist .m3 { animation:lsMist 78s linear infinite; }
+@keyframes lsMist { from { transform:translateX(-160px); } to { transform:translateX(160px); } }
+/* The lone figure's staff pulses — the only warm light in the valley. */
+.ls-staff { animation:lsStaff 3.4s ease-in-out infinite; }
+@keyframes lsStaff { 0%,100% { opacity:0.55; r:4; } 50% { opacity:1; r:6; } }
+
+/* Floating dust motes — cheap, transform-only, always the same 22 elements. */
+.lobby-dust { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.dust { position:absolute; border-radius:50%; background:rgba(190,235,255,0.75);
+  box-shadow:0 0 6px 2px rgba(130,210,255,0.35);
+  animation:dustRise var(--d,26s) linear var(--dl,0s) infinite; opacity:0; }
+@keyframes dustRise {
+  0%   { transform:translate3d(0, 20px, 0); opacity:0; }
+  12%  { opacity:var(--o,0.6); }
+  85%  { opacity:var(--o,0.6); }
+  100% { transform:translate3d(var(--dx,10px), -110px, 0); opacity:0; }
+}
+
+/* Vignette + grade: pulls the eye to the centre and keeps panels readable. */
+.lobby-vignette { position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:
+    radial-gradient(ellipse 78% 62% at 50% 45%, transparent 0%, rgba(2,7,12,0.35) 68%, rgba(2,7,12,0.8) 100%),
+    linear-gradient(180deg, rgba(3,8,14,0.42) 0%, rgba(3,8,14,0.05) 38%, rgba(3,8,14,0.78) 100%); }
+#screen-lobby::before { content:none; }
+
+/* PRESS START */
+.press-start { position:absolute; left:0; right:0; bottom:12%; z-index:4; text-align:center;
+  pointer-events:none; transition:opacity 0.7s ease, transform 0.7s ease; }
+.press-start.gone { opacity:0; transform:translateY(10px); }
+.ps-text { font-family:'Playfair Display',serif; font-size:1.15rem; letter-spacing:0.5em; text-transform:uppercase;
+  color:#dff2ff; text-shadow:0 0 24px rgba(140,220,255,0.6), 0 2px 10px rgba(0,0,0,0.9);
+  animation:psPulse 2.6s ease-in-out infinite; padding-left:0.5em; }
+@keyframes psPulse { 0%,100% { opacity:0.45; } 50% { opacity:1; } }
+.ps-hint { margin-top:0.7rem; font-size:0.62rem; letter-spacing:0.28em; text-transform:uppercase;
+  color:rgba(200,225,240,0.35); }
+
+/* While gated, every panel stays out of the way — the art speaks first. */
+#screen-lobby.gated > .lobby-box,
+#screen-lobby.gated > .menu-box,
+#screen-lobby.gated > #lb-waiting { opacity:0; transform:translateY(14px); pointer-events:none; }
+#screen-lobby > .lobby-box,
+#screen-lobby > .menu-box,
+#screen-lobby > #lb-waiting { transition:opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+
 .bg-scene { display:none; }
 /* Night ocean scene */
 .bg-scene { position:absolute; inset:0; z-index:0; overflow:hidden; background:#04080f; }
@@ -82,11 +143,9 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 @keyframes bob1 { 0%,100%{transform:translateY(0) rotate(-1.1deg)} 50%{transform:translateY(-6px) rotate(1.2deg)} }
 @keyframes bob2 { 0%,100%{transform:translateY(-3px) rotate(0.9deg)} 50%{transform:translateY(2px) rotate(-1deg)} }
 .ns-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 78% 66% at 50% 42%, transparent 40%, rgba(2,5,10,0.75) 100%); }
-#screen-lobby > .lobby-title,
-#screen-lobby > .lobby-tagline,
 #screen-lobby > .menu-box,
 #screen-lobby > .lobby-box,
-#screen-lobby > #lb-waiting { position:relative; z-index:2; }
+#screen-lobby > #lb-waiting { position:relative; z-index:3; }
 .lobby-title { font-family:'Playfair Display',serif; font-size:clamp(2.8rem,8vw,5rem); font-weight:700; color:#ecfbff; text-shadow:0 0 40px rgba(130,230,255,0.55), 0 0 90px rgba(70,190,230,0.35), 0 2px 12px rgba(0,0,0,0.85); letter-spacing:0.04em; margin-bottom:0.2rem; text-align:center; }
 .lobby-tagline { font-style:italic; color:#c2e2e8; font-size:1rem; margin-bottom:2.5rem; text-align:center; letter-spacing:0.08em; text-shadow:0 2px 8px rgba(0,0,0,0.7); }
 .lobby-box { background:rgba(8,22,30,0.8); backdrop-filter:blur(8px); border:1px solid var(--border2); border-radius:var(--r); padding:2rem 2.2rem; width:100%; max-width:420px; box-shadow:0 12px 48px rgba(0,0,0,0.7); }
@@ -228,7 +287,15 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .dk-tools { display:flex; gap:0.3rem; margin-bottom:0.7rem; }
 .dk-tools .col-mini { flex:1; padding:0.3rem 0.2rem; text-align:center; }
 .dk-cards { display:flex; flex-direction:column; gap:0.2rem; overflow-y:auto; }
-.dk-card { display:flex; align-items:center; gap:0.4rem; padding:0.28rem 0.35rem; border-radius:7px;
+/* The blessing linked to New Year Resolutions — stored on the deck, not IN it. */
+.dk-link { background:rgba(24,16,40,0.6); border:1px solid rgba(152,120,216,0.4); border-radius:10px;
+  padding:0.5rem 0.6rem; margin-bottom:0.7rem; }
+.dk-link label { display:block; font-size:0.6rem; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--purple2); margin-bottom:0.35rem; }
+.dk-link select { width:100%; background:rgba(6,16,22,0.85); border:1px solid rgba(152,120,216,0.45);
+  border-radius:7px; color:var(--text); font-family:'Lora',serif; font-size:0.76rem; padding:0.35rem 0.4rem; }
+.dk-link select:focus { outline:none; border-color:var(--purple2); }
+.dk-link-hint { font-size:0.6rem; color:var(--text3); font-style:italic; margin-top:0.35rem; line-height:1.5; }.dk-card { display:flex; align-items:center; gap:0.4rem; padding:0.28rem 0.35rem; border-radius:7px;
   background:rgba(6,16,22,0.55); border:1px solid transparent; cursor:help; transition:all 0.12s; }
 .dk-card:hover { border-color:var(--border2); background:rgba(14,34,44,0.8); }
 .dk-card.legendary { box-shadow:inset 2px 0 0 var(--gold); }
@@ -307,6 +374,12 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .blessing-pill { display:flex; align-items:center; gap:0.4rem; background:rgba(24,16,40,0.85); border:1px solid rgba(152,120,216,0.5); border-radius:16px; padding:0.25rem 0.7rem 0.25rem 0.4rem; max-width:240px; }
 .blessing-ico { width:22px; height:22px; border-radius:50%; background:rgba(152,120,216,0.25); display:flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0; }
 .blessing-nm { font-family:'Playfair Display',serif; font-size:0.65rem; color:#c8b0f0; line-height:1.15; text-shadow:0 1px 3px rgba(0,0,0,0.9); }
+/* A Reward is a blessing that graduated: same permanent effect, but gold, and it no longer
+   occupies the blessing slot — a second blessing runs underneath it. */
+.blessing-pill.reward { background:rgba(40,32,10,0.85); border-color:rgba(240,200,96,0.55); }
+.blessing-pill.reward .blessing-ico { background:rgba(240,200,96,0.22); }
+.blessing-pill.reward .blessing-nm { color:var(--gold); }
+.bl-prog { font-family:'Lora',serif; font-size:0.58rem; color:var(--text3); margin-left:0.25rem; }
 .tag { font-size:0.6rem; padding:0.1rem 0.45rem; border-radius:20px; font-family:'Playfair Display',serif; letter-spacing:0.05em; text-transform:uppercase; }
 .tag.blessing { background:rgba(112,80,184,0.2); border:1px solid rgba(152,120,216,0.5); color:var(--purple2); }
 .tag.hindered { background:rgba(200,64,64,0.15); border:1px solid rgba(232,96,96,0.4); color:var(--red2); }
@@ -402,8 +475,14 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 /* Unplayable cards: can't be played normally — held for their while-holding effect. */
 .card.unplayable { border-style:dashed; border-color:rgba(152,120,216,0.6); }
 .card.unplayable::after { content:'✋'; position:absolute; top:3px; left:4px; font-size:0.6rem; opacity:0.75; }
-/* Cursed cards: one playable round left, then they rot away. */
-.card.cursed { border-color:rgba(200,64,64,0.7); box-shadow:0 0 10px rgba(200,64,64,0.35) inset; }
+/* A card whose play condition isn't met right now (Critical Bite above 20 HP). You can still
+   select it — the situation may change before it resolves — but it warns you. */
+.card.will-fizzle { position:relative; opacity:0.6; }
+.card.will-fizzle::after { content:'⚠'; position:absolute; top:3px; right:5px; z-index:4;
+  font-size:0.72rem; color:#e06a6a; text-shadow:0 1px 4px rgba(0,0,0,0.95); pointer-events:none; }
+.card.will-fizzle:hover { opacity:0.85; }
+
+/* Cursed cards: one playable round left, then they rot away. */.card.cursed { border-color:rgba(200,64,64,0.7); box-shadow:0 0 10px rgba(200,64,64,0.35) inset; }
 .card.cursed::after { content:'☠'; position:absolute; top:2px; right:4px; font-size:0.65rem; color:var(--red2); opacity:0.85; }
 @keyframes shakeNo { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
 .card.shake-no { animation:shakeNo 0.4s ease; }
@@ -543,7 +622,146 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 <body>
 
 <!-- LOBBY -->
-<div id="screen-lobby">
+<div id="screen-lobby" class="gated">
+  <svg class="lobby-scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#03060e"/>
+        <stop offset="30%"  stop-color="#071527"/>
+        <stop offset="58%"  stop-color="#0c2c3c"/>
+        <stop offset="78%"  stop-color="#155050"/>
+        <stop offset="92%"  stop-color="#2c6b4a" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="horizonG" cx="50%" cy="100%" r="60%">
+        <stop offset="0%"   stop-color="#7ec832" stop-opacity="0.38"/>
+        <stop offset="35%"  stop-color="#2f7d5e" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#0a1a24" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="moonG" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"   stop-color="#fff8e2"/>
+        <stop offset="60%"  stop-color="#f0d68a"/>
+        <stop offset="100%" stop-color="#c9a24a" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"   stop-color="#f0d68a" stop-opacity="0.5"/>
+        <stop offset="40%"  stop-color="#d8b45a" stop-opacity="0.16"/>
+        <stop offset="100%" stop-color="#d8b45a" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="auroraG" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#7ec832" stop-opacity="0"/>
+        <stop offset="35%"  stop-color="#a8e050" stop-opacity="0.55"/>
+        <stop offset="65%"  stop-color="#3ac0d0" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#3ac0d0" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="farG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#123246" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#0a1c2a"/>
+      </linearGradient>
+      <linearGradient id="midG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#0b2230"/>
+        <stop offset="100%" stop-color="#061119"/>
+      </linearGradient>
+      <linearGradient id="waterG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#0f3a44"/>
+        <stop offset="45%"  stop-color="#08222c"/>
+        <stop offset="100%" stop-color="#040d13"/>
+      </linearGradient>
+      <linearGradient id="mistG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#cfeef2" stop-opacity="0"/>
+        <stop offset="50%"  stop-color="#cfeef2" stop-opacity="0.16"/>
+        <stop offset="100%" stop-color="#cfeef2" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="soften" x="-25%" y="-60%" width="150%" height="220%">
+        <feGaussianBlur stdDeviation="16"/>
+      </filter>
+    </defs>
+
+    <!-- sky -->
+    <rect width="1600" height="900" fill="#050a12"/>
+    <rect width="1600" height="900" fill="url(#skyG)"/>
+    <g class="pl" data-depth="2" id="ls-stars"></g>
+    <ellipse cx="800" cy="620" rx="900" ry="300" fill="url(#horizonG)"/>
+
+    <!-- moon -->
+    <g class="pl ls-moon" data-depth="4">
+      <circle cx="1120" cy="230" r="200" fill="url(#moonHalo)"/>
+      <circle cx="1120" cy="230" r="54" fill="#f6e7b8"/>
+      <circle cx="1102" cy="216" r="10" fill="#e0cb95" opacity="0.5"/>
+      <circle cx="1136" cy="248" r="7"  fill="#e0cb95" opacity="0.4"/>
+    </g>
+
+    <!-- aurora ribbons -->
+    <g class="ls-aurora pl" data-depth="6" filter="url(#soften)">
+      <path class="au1" d="M-100 330 Q 300 250 700 320 T 1700 290 L1700 400 Q 1200 460 700 400 T -100 430 Z" fill="url(#auroraG)"/>
+      <path class="au2" d="M-100 250 Q 400 190 900 250 T 1700 220 L1700 300 Q 1100 350 500 300 T -100 330 Z" fill="url(#auroraG)" opacity="0.6"/>
+    </g>
+
+    <!-- far ridge -->
+    <g class="pl" data-depth="9">
+      <path d="M0 560 L120 500 L210 545 L330 470 L440 540 L560 480 L700 555 L820 495 L960 560 L1090 505 L1220 565 L1350 500 L1470 555 L1600 510 L1600 900 L0 900 Z"
+            fill="#0b2130" opacity="0.85"/>
+    </g>
+
+    <!-- floating islands -->
+    <g class="ls-islands pl" data-depth="13">
+      <g class="isl i1">
+        <path d="M980 380 q60 -22 120 0 l-22 26 q-38 30 -78 0 Z" fill="#0a1e2a"/>
+        <path d="M1000 406 q40 34 60 62 q22 -30 42 -62 Z" fill="#08161f"/>
+        <path d="M1020 376 q20 -16 42 -2 q-20 8 -42 2 Z" fill="#16412c" opacity="0.8"/>
+      </g>
+      <g class="isl i2">
+        <path d="M320 330 q44 -16 88 0 l-16 20 q-28 22 -56 0 Z" fill="#0a1e2a" opacity="0.85"/>
+        <path d="M336 350 q28 26 44 46 q16 -22 30 -46 Z" fill="#08161f" opacity="0.85"/>
+      </g>
+    </g>
+
+    <!-- mid ridge -->
+    <g class="pl" data-depth="17">
+      <path d="M0 640 L140 585 L280 640 L420 570 L560 645 L700 600 L860 655 L1000 595 L1160 650 L1300 590 L1450 645 L1600 600 L1600 900 L0 900 Z"
+            fill="url(#midG)"/>
+    </g>
+
+    <!-- lake -->
+    <g class="pl" data-depth="20">
+      <rect x="0" y="690" width="1600" height="210" fill="url(#waterG)"/>
+      <g class="ls-shimmer">
+        <ellipse cx="1120" cy="740" rx="70"  ry="4" fill="#f0d68a" opacity="0.22"/>
+        <ellipse cx="1120" cy="768" rx="110" ry="3" fill="#f0d68a" opacity="0.16"/>
+        <ellipse cx="1120" cy="800" rx="150" ry="3" fill="#f0d68a" opacity="0.11"/>
+        <ellipse cx="1120" cy="840" rx="190" ry="2" fill="#f0d68a" opacity="0.08"/>
+      </g>
+    </g>
+
+    <!-- mist over the water -->
+    <g class="ls-mist pl" data-depth="22" filter="url(#soften)">
+      <ellipse class="m1" cx="500"  cy="700" rx="620" ry="34" fill="url(#mistG)"/>
+      <ellipse class="m2" cx="1150" cy="730" rx="520" ry="26" fill="url(#mistG)"/>
+      <ellipse class="m3" cx="800"  cy="762" rx="700" ry="22" fill="url(#mistG)"/>
+    </g>
+
+    <!-- foreground: cliff, lone figure, great tree -->
+    <g class="pl" data-depth="30">
+      <path d="M0 780 L90 742 L200 772 L300 735 L420 800 L520 860 L0 900 Z" fill="#03080c"/>
+      <g class="ls-tree">
+        <path d="M120 780 q-8 -90 6 -150 q6 -26 18 -6 q14 -60 30 6 q10 42 6 150 Z" fill="#03080c"/>
+        <path d="M96 640 q40 -34 84 -6 q-44 -46 -104 -22 Z" fill="#03080c"/>
+        <path d="M188 618 q-44 -40 -96 -18 q56 -44 118 -2 Z" fill="#03080c"/>
+        <path d="M150 604 q10 -60 62 -78 q-38 44 -40 96 Z" fill="#03080c"/>
+      </g>
+      <g class="ls-figure">
+        <path d="M1372 792 q-4 -30 6 -44 q-10 -14 2 -22 q12 -8 18 4 q10 12 2 22 q12 14 8 44 Z" fill="#02070a"/>
+        <rect x="1400" y="702" width="3" height="104" fill="#02070a"/>
+        <circle class="ls-staff" cx="1401" cy="698" r="5" fill="#a8e050" opacity="0.9"/>
+      </g>
+      <path d="M1290 830 L1380 796 L1470 822 L1600 790 L1600 900 L1240 900 Z" fill="#02070a"/>
+    </g>
+  </svg>
+  <div class="lobby-dust" id="lobby-dust"></div>
+  <div class="lobby-vignette"></div>
+  <div class="press-start" id="press-start">
+    <div class="ps-text">Press start</div>
+    <div class="ps-hint">click anywhere</div>
+  </div>
   <div class="bg-scene">
     <div class="ns-sky"></div>
     <div class="ns-starfield" id="ns-starfield"></div>
@@ -721,8 +939,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
     f.appendChild(frag);
   })();
   </script>
-  <div class="lobby-title">Inspired</div>
-  <div class="lobby-tagline">Every card. Every valley. Every choice.</div>
+  <!-- The title and tagline used to sit here; the key art carries the logo now. -->
 
   <!-- AUTH (login / register) — shown before anything else -->
   <div class="lobby-box hidden" id="auth-box">
@@ -849,6 +1066,11 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
           <button class="col-mini" id="deck-autofill" title="Fill up with random cards from your collection">✨ Auto-fill</button>
           <button class="col-mini" id="deck-dup" title="Duplicate this deck">⧉ Copy</button>
           <button class="col-mini sell" id="deck-del" title="Delete this deck">🗑 Delete</button>
+        </div>
+        <div class="dk-link hidden" id="deck-link">
+          <label for="deck-link-sel">Linked blessing</label>
+          <select id="deck-link-sel"></select>
+          <div class="dk-link-hint">Activates when New Year Resolutions becomes a Reward. Doesn't count toward your 40.</div>
         </div>
         <div class="dk-cards" id="deck-cards"></div>
       </div>
@@ -1215,6 +1437,28 @@ const CARDS_DATA = [
   {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'Celebration. Deal 10 damage. Each future Prinny\'s Vanilla Cake deals 5 additional damage.', rarity:'common', emoji:'🍰', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/prinnys_vanilla_cake.png'},
   {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'Celebration. If you hold another Celebration card: gain a Shield for the next 2 rounds.', rarity:'common', emoji:'💝', tags:['celebration'], type:'normal', art:'art/larrys_lover.png'},
 
+  // ── The Krush family ──
+  // Baby Krush is the only one you can put in a deck. He shuffles the other three in, and
+  // they unlock in order: Krush needs Baby played, King needs Krush, The Krush needs King.
+  // requiresPlayed is a plain card id — the hand, the CPU and the engine all read that one
+  // field, so they can never disagree about what's playable.
+  {id:'baby_krush', collectible:true, name:'Baby Krush', text:'Deal 5 true damage. Shuffle the entire Krush family into your deck.', rarity:'legendary', emoji:'🦖', dealsDamage:true, type:'normal', art:'art/baby_krush.png'},
+  {id:'krush',      name:'Krush',      text:'Deal 15 true damage. Reveal the next 4 cards of your deck. If you find King Krush: draw it. This card can only be played if you have played Baby Krush this game.', rarity:'legendary', emoji:'🦕', dealsDamage:true, noDeck:true, requiresPlayed:'baby_krush', type:'normal', art:'art/krush.png'},
+  {id:'king_krush', name:'King Krush', text:'Deal 25 true damage. Reveal the next 6 cards of your deck. If you find The Krush: draw it. This card can only be played if you have played Krush this game.', rarity:'legendary', emoji:'👑', dealsDamage:true, noDeck:true, requiresPlayed:'krush', type:'normal', art:'art/king_krush.png'},
+  {id:'the_krush',  name:'The Krush',  text:'Deal 45 true damage. This card can only be played if you have played King Krush this game.', rarity:'legendary', emoji:'💀', dealsDamage:true, noDeck:true, requiresPlayed:'king_krush', type:'normal', art:'art/the_krush.png'},
+
+  // ── Vol'Dor Mook + Fireball ──
+  // Fireball is a token: it can ONLY enter a deck through Vol'Dor Mook, never through the
+  // collection or a pack. It resolves the moment it is DRAWN and burns itself out.
+  {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
+  {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
+
+  {id:'critical_bite', collectible:true, name:'Critical Bite', text:'Deal 30 damage. This card can only be played if you have less than 20 health.', rarity:'common', emoji:'🩸', dealsDamage:true, playIfHpBelow:20, type:'normal', art:'art/critical_bite.png'},
+
+  {id:'blaargh', collectible:true, name:'Blaargh', text:'Deal 10 damage. When Discarded: Deal 20 damage.', rarity:'common', emoji:'👹', dealsDamage:true, type:'normal', art:'art/blaargh.png'},
+
+  {id:'new_year_resolutions', collectible:true, name:'New Year Resolutions', text:'Blessing: every time your total damage this round reaches exactly 10, deal 15 instead. After 5 activations this becomes a Reward instead of a Blessing.', rarity:'legendary', emoji:'🎆', type:'blessing', linksBlessing:true, art:'art/new_year_resolutions.png'},
+
   // ── The Deep: Zorya + the Four Sins ──
   // Zorya is an AUTO-ACTIVE QUEST (like Opening Ceremony): she is pulled from your deck at
   // game start and shuffles the 4 Sins into it. Quest: play all 4 Sins. Once they're all
@@ -1271,6 +1515,10 @@ function logicSources(state, r){
   (state[r].effects||[]).forEach(eff=>{ const L=CARD_LOGIC[eff.id]; if(L) out.push({logic:L, effState:eff, kind:'effect'}); });
   const bl = state[r].blessing;
   if(bl){ const L=CARD_LOGIC[bl.id]; if(L) out.push({logic:L, effState:bl, kind:'blessing'}); }
+  // Rewards: cards that graduated OUT of the blessing slot but keep running for the rest of
+  // the game (New Year Resolutions). They behave exactly like a blessing — they just don't
+  // occupy the slot anymore, so a second blessing can move in underneath them.
+  (state[r].rewards||[]).forEach(rw=>{ const L=CARD_LOGIC[rw.id]; if(L) out.push({logic:L, effState:rw, kind:'reward'}); });
   (state[r].hand||[]).forEach(card=>{ const L=CARD_LOGIC[card&&card.id]; if(L&&L.hold) out.push({logic:L.hold, effState:card, kind:'hold', card}); });
   (state[r].journeyEffects||[]).forEach(opt=>{ const L=JOURNEY_LOGIC[opt]; if(L) out.push({logic:L, effState:{journeyOpt:opt}, kind:'journey'}); });
   return out;
@@ -1309,6 +1557,56 @@ function checkDeath(state, r){
   state._dead = r;
   state._winner = opp(r);
   throw HALT;                               // death is immediate — unwind everything
+}
+
+// New Year Resolutions graduating from Blessing to Reward. The card keeps running (rewards
+// are logic sources too), but it hands over the blessing slot — and the blessing the deck
+// linked to it wakes up in that slot. From here on you run two blessings at once.
+function nyrBecomeReward(state, r, e){
+  e.rewarded=true;
+  state[r].rewards=[...(state[r].rewards||[]), e];
+  if(state[r].blessing===e) state[r].blessing=null;
+  log('  ★ '+state[r].name+"'s New Year Resolutions is kept — it becomes a Reward.",'effect');
+  const linkDef = e.linked ? CARDS_DATA.find(c=>c.id===e.linked && c.type==='blessing') : null;
+  if(linkDef){
+    state[r].blessing={ id:linkDef.id, name:linkDef.name, hits:0, rewarded:false, linked:null };
+    log('  ✨ '+linkDef.name+' awakens in the freed blessing slot!','effect');
+  }
+}
+
+// The Krush search: reveal the top N cards of your own deck, and if the named Krush is
+// among them, DRAW it. The reveal is private — only the owner's client prints the actual
+// card names; the opponent just sees that a search happened. The cards you don't take keep
+// their exact order on top of the deck, so a search never rearranges anything.
+// The draw is a REAL draw: fireDrawTriggers runs, so "when drawn" effects, cursed-draws and
+// the Journey reveal all apply to it. A full hand means the Krush simply stays in the deck.
+function krushSearch(c, n, findId, label){
+  const st=c.state, r=c.self;
+  const deck=st[r].deck||[];
+  const top=deck.slice(0, n);
+  if(r===myRole) c.log('  🔎 Reveals: '+(top.map(x=>x&&x.name).filter(Boolean).join(', ')||'nothing')+'.','system');
+  else           c.log('  🔎 '+st[r].name+' searches the top '+n+' cards of their deck.','system');
+  const idx=top.findIndex(x=>x && x.id===findId);
+  if(idx<0){ c.log('  → No '+label+' among them.','system'); return; }
+  if((st[r].hand||[]).length >= maxHandSize(st, r)){
+    c.log('  → '+label+' is there, but the hand is full — it stays in the deck.','system');
+    return;
+  }
+  const card=deck.splice(idx,1)[0];          // pulled out; everything else keeps its order
+  st[r].deck=deck;
+  st[r].hand=[...(st[r].hand||[]), card];
+  c.log('  → '+label+' is drawn!','effect');
+  fireDrawTriggers(st, r, [card]);
+}
+
+// Can this card be played at all right now? requiresPlayed names a card that must already
+// have been played THIS GAME (the Krush chain). Returns null when it's fine, otherwise the
+// reason — used by the hand (shake + message), the CPU, and as a final guard in runCard.
+function playBlockedReason(state, r, card){
+  if(!card || !card.requiresPlayed) return null;
+  if((state[r].playedIds||[]).includes(card.requiresPlayed)) return null;
+  const def=CARDS_DATA.find(x=>x.id===card.requiresPlayed);
+  return 'You must play '+(def?def.name:card.requiresPlayed)+' first.';
 }
 
 // The win-gate. The mirror image of the death-gate: a card can simply DECLARE a winner
@@ -1427,9 +1725,138 @@ const CARD_VARIANTS = {
 // the variants: source card centre-screen, tokens lined up to the right.
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
+  baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
+  vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
 };
 const CARD_LOGIC = {
+  // ── The Krush family ──
+  // Baby Krush is the whole engine: 5 true damage and the other three go into your deck
+  // (through shuffleIntoDeck, so Devour Hope can still eat them). From there each Krush
+  // digs for the next one, so the chain accelerates the deeper you get: 4 cards, then 6.
+  baby_krush: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      c.dealDmgTo(c.opp, 5, true);
+      const family=['krush','king_krush','the_krush']
+        .map(id=>{ const def=CARDS_DATA.find(x=>x.id===id); return def?mkCard(def):null; })
+        .filter(Boolean);
+      const added=shuffleIntoDeck(st, r, family);
+      c.log(st[r].name+' plays Baby Krush — 5 true damage, and '+added+' Krushes are shuffled into their deck!','effect');
+    }
+  },
+  krush: {
+    onPlay:(c)=>{
+      c.dealDmgTo(c.opp, 15, true);
+      c.log(c.state[c.self].name+' plays Krush — 15 true damage.','damage');
+      krushSearch(c, 4, 'king_krush', 'King Krush');
+    }
+  },
+  king_krush: {
+    onPlay:(c)=>{
+      c.dealDmgTo(c.opp, 25, true);
+      c.log(c.state[c.self].name+' plays King Krush — 25 true damage.','damage');
+      krushSearch(c, 6, 'the_krush', 'The Krush');
+    }
+  },
+  the_krush: {
+    onPlay:(c)=>{
+      c.dealDmgTo(c.opp, 45, true);
+      c.log(c.state[c.self].name+' plays The Krush — 45 true damage!','damage');
+    }
+  },
+  // ── Vol'Dor Mook — counts the Cursed cards in BOTH hands at the moment he resolves (yours and
+  // your opponent's; he is already out of your hand himself) and shuffles that many Fireballs
+  // into your deck. Through shuffleIntoDeck, so Devour Hope can still devour them — that
+  // counterplay stays intact. No Cursed cards anywhere → nothing happens.
+  vol_dor_mook: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self, o=c.opp;
+      const isCursed=(x)=>!!x && x.cursedUntil!==undefined;
+      const mine  =(st[r].hand||[]).filter(isCursed).length;
+      const theirs=(st[o].hand||[]).filter(isCursed).length;
+      const n=mine+theirs;
+      if(n<=0){
+        c.log(st[r].name+" plays Vol'Dor Mook — no Cursed cards anywhere. Nothing burns.",'system');
+        return;
+      }
+      const def=CARDS_DATA.find(x=>x.id==='fireball');
+      const balls=Array.from({length:n},()=>mkCard(def));
+      const added=shuffleIntoDeck(st, r, balls);
+      c.log(st[r].name+" plays Vol'Dor Mook — "+added+' Fireball'+(added===1?'':'s')+' shuffled into their deck ('+mine+' Cursed in their hand, '+theirs+" in the opponent's).",'effect');
+    }
+  },
+  // Fireball (token) — goes off the instant you DRAW it: 20 normal damage, then it Curses up
+  // to 2 random cards in your opponent's hand (Immune and already-Cursed cards are skipped —
+  // fewer than 2 available simply means fewer get Cursed). Returning true consumes the card:
+  // it never reaches your hand, it burns out straight into the graveyard.
+  // Any draw counts — the round's draw step, or a card that makes you draw (Deep Greed).
+  fireball: {
+    onDraw:(c)=>{
+      const st=c.state, r=c.self, o=c.opp;
+      c.dealDmgTo(o, 20);
+      const pool=(st[o].hand||[]).filter(x=>x && !isImmune(x) && x.cursedUntil===undefined);
+      for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+      const hit=pool.slice(0,2);
+      hit.forEach(x=>curseCard(st, x));
+      c.log('  ☄️ '+st[r].name+' draws Fireball — 20 damage'+(hit.length?' and Curses '+hit.length+' of '+st[o].name+"'s cards":' (nothing left to Curse)')+'!','damage');
+      return true;   // consumed: straight to the graveyard, never sits in hand
+    },
+    onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Fireball — it already burned out when drawn. Nothing happens.','system'); }
+  },
+  // Critical Bite — checked the moment it is FLIPPED, not when you select it. You may always
+  // pick it (your opponent might knock you under 20 before your cards resolve), but if you're
+  // still at 20+ health when it turns over, it fizzles. Healing before it in your own row is
+  // simply a mistake: cards resolve left to right, so play it first.
+  // playIfHpBelow is a plain number on the card, so the hand can warn you with the exact same
+  // rule the engine uses — no chance of the UI and the engine disagreeing.
+  critical_bite: {
+    onPlay:(c)=>{
+      const hp=c.state[c.self].hp;
+      if(hp >= 20){
+        c.log(c.state[c.self].name+' plays Critical Bite — but at '+hp+' health the hunger never comes. It fizzles.','system');
+        return;
+      }
+      c.dealDmgTo(c.opp, 30);
+      c.log(c.state[c.self].name+' plays Critical Bite — 30 damage!','damage');
+    }
+  },
+  // Blaargh — 10 damage when played, but 20 when you throw him away. Both are normal damage,
+  // so a Block or Shield stops them. onDiscard is fired from fireDiscard (the discard
+  // choke-point), so ONLY real discards count: the forced discard when your hand is too full,
+  // Deep Lust, "discard X cards" effects. Rotting away from a Curse does not.
+  // The 20 always hits your OPPONENT, even when it was their effect that made you discard.
+  blaargh: {
+    onPlay:(c)=>{
+      c.dealDmgTo(c.opp, 10);
+      c.log(c.state[c.self].name+' plays Blaargh — 10 damage.','damage');
+    },
+    onDiscard:(c)=>{
+      c.dealDmgTo(c.opp, 20);
+      c.log("  👹 Blaargh is discarded — and screams back for 20 damage!",'damage');
+    }
+  },
+  // ── New Year Resolutions (BLESSING → REWARD) ──
+  // Watches your RUNNING damage total for the round. The instant a blow would bring that
+  // total to exactly 10, the blow itself lands as 15 (not 10 + a separate 5) — so it can't
+  // be blocked separately, and true damage stays true damage. It can only fire once a round:
+  // your total passes 10 exactly once. Blocked blows never reach this hook (dealDmg bails
+  // out before folding), so they don't count.
+  // After 5 activations it GRADUATES: it moves out of the blessing slot into your rewards,
+  // where it keeps working for the rest of the game — and the blessing you linked to it in
+  // the deckbuilder drops into the freed slot. Two blessings running at once is the payoff.
+  new_year_resolutions: {
+    modifyDamage:(c)=>{
+      const e=c.effState;
+      if(!e) return c.amount;
+      const done=c.state[c.self].dmgDealtThisRound||0;
+      if(done + c.amount !== 10) return c.amount;      // only the blow that lands you on exactly 10
+      e.hits=(e.hits||0)+1;
+      c.log('  🎆 New Year Resolutions — 10 becomes 15! ('+Math.min(e.hits,5)+'/5)','effect');
+      if(e.hits>=5 && !e.rewarded) nyrBecomeReward(c.state, c.self, e);
+      return c.amount+5;
+    }
+  },
   // Scavenger — variant 1 (onPlay): plant a variant-2 copy in the OPPONENT's deck and shuffle
   // it. Deliberately does NOT go through shuffleIntoDeck: Devour Hope only reacts to cards
   // YOU shuffle into YOUR OWN deck, not to cards an opponent plants in theirs.
@@ -1893,6 +2320,12 @@ function forcedRequired(state, r){
 // themselves (e.g. Deepception via consume(true)). See DESIGN_NOTES.
 function fireDiscard(state, r, card){
   state[r].discardedThisRound = (state[r].discardedThisRound||0) + 1;
+  // The card's OWN "when discarded" trigger (Blaargh). It has already left your hand by the
+  // time this runs, so it is no longer a logic source and emit() would never reach it — it
+  // has to be fired explicitly, here at the choke-point. Only REAL discards get here: cards
+  // that rot away from a Curse, or get milled off the bottom of the deck, never call this.
+  const L = CARD_LOGIC[card && card.id];
+  if(L && L.onDiscard) L.onDiscard(buildCtx(state, r, {card}));
   emit(state, 'onDiscard', r, { discardedCard: card });
 }
 
@@ -2007,8 +2440,12 @@ function buildDeck(){
   for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
   return d.slice(0,40);
 }
-function extractQuests(deck){
-  const quests=[], remaining=[]; let hasOpening=false, hasZorya=false;
+// Pulls the cards that are never PLAYED out of a freshly built deck: quests and the blessing.
+// Both are active from turn 1 and must never be drawn into a hand. `linked` is the blessing
+// the deck attached to New Year Resolutions in the deckbuilder — it sits dormant on the
+// blessing state until NYR turns into a Reward.
+function extractQuests(deck, linked){
+  const quests=[], remaining=[]; let hasOpening=false, hasZorya=false, blessing=null;
   const seen=new Set();   // each quest id max once per player; max 2 quests per player
   deck.forEach(c=>{
     if(c.quest){
@@ -2024,6 +2461,14 @@ function extractQuests(deck){
       }
       return;   // drop excess/duplicate quest cards
     }
+    if(c.type==='blessing'){
+      // The blessing is active from the start and never enters your hand. Max 1 (the
+      // deckbuilder enforces that); any extra copy is simply dropped.
+      if(!blessing){
+        blessing={ id:c.id, name:c.name, hits:0, rewarded:false, linked:(linked||null) };
+      }
+      return;
+    }
     remaining.push(c);
   });
   // Opening Ceremony shuffles all 5 Journey Days into the deck (full reshuffle).
@@ -2037,7 +2482,7 @@ function extractQuests(deck){
   if(hasOpening || hasZorya){
     for(let i=remaining.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[remaining[i],remaining[j]]=[remaining[j],remaining[i]];}
   }
-  return {deck:remaining, quests};
+  return {deck:remaining, quests, blessing};
 }
 
 function log(msg,type='log'){logs.push({msg,type});}
@@ -2234,6 +2679,14 @@ document.getElementById('deck-dup').onclick=()=>deckDuplicate();
 document.getElementById('deck-del').onclick=()=>deckDelete();
 document.getElementById('deck-name').onchange=(e)=>deckRename(e.target.value);
 document.getElementById('deck-name').onkeydown=(e)=>{ if(e.key==='Enter') e.target.blur(); };
+document.getElementById('deck-link-sel').onchange=async(e)=>{
+  const d=deckById(colDeck);
+  if(!d) return;
+  d.linkedBlessing=e.target.value||null;
+  d.updatedAt=Date.now();
+  await saveDecks();
+  renderDeckSidebar();
+};
 
 // ── Deck picker ──
 // Every game starts by choosing a deck. Only decks of exactly 40 cards can be picked;
@@ -2295,9 +2748,9 @@ async function createGame(chosen){
   gRef=ref(db,'games/'+code);
   // Turn order depends on BOTH decks (Finale/Quickplay points), so it can't be decided yet —
   // p2 decides it at join time and deals both opening hands then. We only store the deck here.
-  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck); deck=qq.deck;
+  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
   await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer:null,
-    p1:{name:myName,hp:150,maxHp:150,deck,hand:[],graveyard:[],void:[],blessing:null,quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
+    p1:{name:myName,hp:150,maxHp:150,deck,hand:[],graveyard:[],void:[],blessing:qq.blessing||null,rewards:[],quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
   document.getElementById('lobby-box').classList.add('hidden');
   document.getElementById('lb-waiting').classList.remove('hidden');
@@ -2321,7 +2774,7 @@ async function joinGame(chosen){
   if(!snap.exists()){setStatus('Game not found!','err');return;}
   const gs=snap.val();
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
-  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck); deck=qq.deck;
+  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
   // Both decks are known now, so decide who reveals first (Finale/Quickplay points) and deal
   // both opening hands: whoever goes FIRST opens with 4 cards, whoever goes SECOND with 6.
   const p1deck=[...(gs.p1.deck||[])];
@@ -2332,7 +2785,7 @@ async function joinGame(chosen){
     'firstPlayer':firstPlayer,
     'p1/deck':p1deck,'p1/hand':p1hand,
     'p2/name':myName,'p2/hp':150,'p2/maxHp':150,'p2/deck':deck,'p2/hand':hand,
-    'p2/graveyard':[],'p2/void':[],'p2/blessing':null,'p2/quests':qq.quests,'p2/blocked':false,
+    'p2/graveyard':[],'p2/void':[],'p2/blessing':qq.blessing||null,'p2/rewards':[],'p2/quests':qq.quests,'p2/blocked':false,
     'p2/journeyEffects':[],'p2/journeyHistory':[],
     'p2/hindered':false,'p2/extraDraw':0,'p2/noDraw':false,
     'p2/forcedType':null,'p2/forcedTypeNext':null,'p2/pendingHeals':[],'p2/shieldRounds':0,'p2/cakesPlayed':0,'p2/dmgDealtLastRound':0,
@@ -2348,7 +2801,7 @@ function startSolo(chosen){
   myName=(myProfile&&myProfile.name)||'Player 1'; myRole='p1'; soloMode=true;
   // You play YOUR deck. The CPU still gets a random test deck (a real CPU deck comes later).
   let deck1=buildDeckFrom(chosen);
-  const q1=extractQuests(deck1); deck1=q1.deck;   // pulls your quests (and their tokens) out
+  const q1=extractQuests(deck1, chosen.linkedBlessing); deck1=q1.deck;   // pulls your quests, tokens and blessing out
   // ── Solo test hand ── Put card ids here to force them into your opening hand while
   // testing (they must be in the deck you picked). Leave empty for a normal draw.
   const TEST_HAND = [];
@@ -2363,15 +2816,93 @@ function startSolo(chosen){
   const hand2=deck2.splice(0, soloFirst==='p2' ? 4 : 6);
   localGs={
     status:'active',round:1,phase:'select',firstPlayer:soloFirst,
-    p1:{name:myName,hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:null,quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
-    p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:null,quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
+    p1:{name:myName,hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:q1.blessing||null,rewards:[],quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
+    p2:{name:'CPU',    hp:150,maxHp:150,deck:deck2,hand:hand2,graveyard:[],void:[],blessing:q2.blessing||null,rewards:[],quests:q2.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]}
   };
   showGameScreen();
   onSelectPhase();
 }
 document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
 
+// ── Title screen ─────────────────────────────────────────────────────────────
+// A fully coded valley at dusk: aurora over a moonlit lake, floating islands, mist, and a
+// lone figure on the cliff. Every layer sits at its own depth and slides with the mouse —
+// that parallax is what makes a flat SVG read as a place. Behind a PRESS START gate: the
+// panels only fade in once you click through, and only once per session (coming back from
+// a game lands you straight in the menu).
+(function(){
+  const lobby=document.getElementById('screen-lobby');
+  const ps=document.getElementById('press-start');
+  if(!lobby) return;
+
+  // Stars: 90 of them, thicker near the top of the sky, each twinkling on its own clock.
+  const starG=document.getElementById('ls-stars');
+  if(starG){
+    const NS='http://www.w3.org/2000/svg';
+    for(let i=0;i<90;i++){
+      const s=document.createElementNS(NS,'circle');
+      const y=Math.pow(Math.random(),1.6)*520;          // crowd them up high, thin out lower
+      s.setAttribute('cx',(Math.random()*1600).toFixed(0));
+      s.setAttribute('cy',y.toFixed(0));
+      s.setAttribute('r',(0.6+Math.random()*1.6).toFixed(1));
+      s.setAttribute('class','ls-star');
+      s.style.cssText='--d:'+(2.5+Math.random()*5).toFixed(1)+'s;--dl:'+(Math.random()*6).toFixed(1)+'s;'+
+                      '--o1:'+(0.1+Math.random()*0.25).toFixed(2)+';--o2:'+(0.6+Math.random()*0.4).toFixed(2)+';';
+      starG.appendChild(s);
+    }
+  }
+
+  // Embers drifting up from the valley floor.
+  const dust=document.getElementById('lobby-dust');
+  if(dust){
+    const frag=document.createDocumentFragment();
+    for(let i=0;i<22;i++){
+      const d=document.createElement('div');
+      d.className='dust';
+      const size=(1+Math.random()*2.4).toFixed(1);
+      d.style.cssText='width:'+size+'px;height:'+size+'px;'+
+        'left:'+(Math.random()*100).toFixed(1)+'%;'+
+        'top:'+(58+Math.random()*42).toFixed(1)+'%;'+
+        '--d:'+(18+Math.random()*22).toFixed(1)+'s;'+
+        '--dl:'+(Math.random()*20).toFixed(1)+'s;'+
+        '--dx:'+(-30+Math.random()*60).toFixed(0)+'px;'+
+        '--o:'+(0.25+Math.random()*0.5).toFixed(2)+';';
+      frag.appendChild(d);
+    }
+    dust.appendChild(frag);
+  }
+
+  // Parallax: each layer carries a depth; far layers barely move, the foreground swings.
+  // Pointer only (a touch device gets the animation, no swing) and one rAF per move at most.
+  const layers=[...document.querySelectorAll('.lobby-scene .pl')];
+  let raf=null, mx=0, my=0;
+  function apply(){
+    raf=null;
+    layers.forEach(l=>{
+      const dep=parseFloat(l.dataset.depth||'0');
+      l.style.transform='translate('+(-mx*dep).toFixed(1)+'px,'+(-my*dep*0.45).toFixed(1)+'px)';
+    });
+  }
+  window.addEventListener('mousemove',(e)=>{
+    if(lobby.classList.contains('hidden')) return;
+    mx=(e.clientX/window.innerWidth  - 0.5)*2;   // −1 … 1
+    my=(e.clientY/window.innerHeight - 0.5)*2;
+    if(!raf) raf=requestAnimationFrame(apply);
+  });
+
+  let gated=true;
+  function dismissGate(){
+    if(!gated) return;
+    gated=false;
+    lobby.classList.remove('gated');
+    if(ps){ ps.classList.add('gone'); setTimeout(()=>ps.remove(), 800); }
+  }
+  lobby.addEventListener('click', dismissGate);
+  window.addEventListener('keydown', ()=>{ if(!lobby.classList.contains('hidden')) dismissGate(); });
+})();
+
 // ── Accounts (Firebase Auth) ─────────────────────────────────────────────────
+
 // Real accounts: register/sign in with email + password. Each user gets a profile at
 // users/<uid> holding their display name and (from the next step) their card collection.
 // You stay signed in between sessions; the menu only appears once signed in.
@@ -2605,6 +3136,15 @@ function pruneDeck(d){
       if(limit<=0) delete d.cards[id]; else d.cards[id]=limit;
     }
   });
+  // The linked blessing lives on the deck, not in it — but you still have to own it.
+  if(d.linkedBlessing){
+    const def=CARDS_DATA.find(c=>c.id===d.linkedBlessing);
+    const carrier=deckDefs(d).some(x=>x.card.linksBlessing);
+    if(!def || ownedCount(d.linkedBlessing)<=0 || !carrier){
+      if(def && ownedCount(d.linkedBlessing)<=0) removed.push({name:def.name+' (linked blessing)', n:1});
+      d.linkedBlessing=null;
+    }
+  }
   return removed;
 }
 
@@ -2748,6 +3288,22 @@ function renderDeckSidebar(){
 
   const box=document.getElementById('deck-cards');
   box.innerHTML='';
+  // Linked blessing: only shown when a card in the deck can carry one (New Year Resolutions).
+  // It is stored ON the deck, not IN it — so it never counts toward the 40, but you must own it.
+  const carrier=deckDefs(d).find(x=>x.card.linksBlessing);
+  const linkBox=document.getElementById('deck-link');
+  linkBox.classList.toggle('hidden', !carrier);
+  if(carrier){
+    const sel=document.getElementById('deck-link-sel');
+    const owned=CARDS_DATA.filter(c=>c.type==='blessing' && c.collectible && !c.linksBlessing && ownedCount(c.id)>0);
+    sel.innerHTML='<option value="">— none —</option>'+
+      owned.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+    sel.value=d.linkedBlessing||'';
+    if(!owned.length){
+      sel.innerHTML='<option value="">— no other blessings owned —</option>';
+      sel.disabled=true;
+    } else sel.disabled=false;
+  }
   const defs=deckDefs(d).sort((a,b)=>{
     if(a.card.rarity!==b.card.rarity) return a.card.rarity==='legendary'?-1:1;   // legendaries on top
     return (a.card.name||'').localeCompare(b.card.name||'');
@@ -3021,20 +3577,25 @@ function renderQuests(id,p){
 function renderBlessing(id,p){
   const el=document.getElementById(id);
   if(!el) return;
-  const b=p.blessing;
-  if(!b){ el.innerHTML=''; return; }
-  const pill=document.createElement('div');
-  pill.className='blessing-pill';
-  pill.style.cursor='help';
-  pill.innerHTML='<div class="blessing-ico">✨</div><div><div class="blessing-nm">'+b.name+'</div></div>';
-  // Hover → show the blessing card in center
-  const cardData=CARDS_DATA.find(c=>c.id===b.id);
-  if(cardData){
-    pill.addEventListener('mouseenter',()=>showCardPreview(cardData,pill,true));
-    pill.addEventListener('mouseleave',hideCardPreview);
-  }
   el.innerHTML='';
-  el.appendChild(pill);
+  const make=(state, isReward)=>{
+    const pill=document.createElement('div');
+    pill.className='blessing-pill'+(isReward?' reward':'');
+    pill.style.cursor='help';
+    // A blessing that tracks progress (New Year Resolutions) shows it right on the pill,
+    // for BOTH players — an opponent should be able to see the clock ticking.
+    const prog=(!isReward && state.hits>0) ? ' <span class="bl-prog">'+Math.min(state.hits,5)+'/5</span>' : '';
+    pill.innerHTML='<div class="blessing-ico">'+(isReward?'★':'✨')+'</div>'+
+                   '<div><div class="blessing-nm">'+state.name+prog+'</div></div>';
+    const cardData=CARDS_DATA.find(c=>c.id===state.id);
+    if(cardData){
+      pill.addEventListener('mouseenter',()=>showCardPreview(cardData,pill,true));
+      pill.addEventListener('mouseleave',hideCardPreview);
+    }
+    el.appendChild(pill);
+  };
+  (p.rewards||[]).forEach(rw=>make(rw, true));   // rewards first: they graduated
+  if(p.blessing) make(p.blessing, false);
 }
 
 function renderHand(hand){
@@ -3046,6 +3607,13 @@ function renderHand(hand){
     const el=makeCardEl(c);
     const ft=me().forcedType;
     if(ft && matchesForced(c, ft)) el.classList.add('forced');   // Skywalker: highlight forced cards
+    // Conditional cards (Critical Bite): you may always select them — your opponent could
+    // still knock you under the threshold before your row resolves — but the hand warns you
+    // that RIGHT NOW it would fizzle. Same rule the engine uses, read off the same field.
+    if(c.playIfHpBelow && me().hp >= c.playIfHpBelow){
+      el.classList.add('will-fizzle');
+      el.title='Fizzles right now — needs less than '+c.playIfHpBelow+' health (you have '+me().hp+')';
+    }
     el.addEventListener('click',()=>toggleCard(c.uid,el));
     el.addEventListener('mouseenter',ev=>showCardPreview(c,el));
     el.addEventListener('mouseleave',hideCardPreview);
@@ -3351,6 +3919,13 @@ function toggleCard(uid,el){
       document.getElementById('action-info').innerHTML='<strong>'+card.name+'</strong> is unplayable — it works while held in your hand.';
       return;
     }
+    // Play requirement not met yet (the Krush chain) — same "no" as any other illegal pick.
+    const req = playBlockedReason(localGs, myRole, card);
+    if(req){
+      el.classList.remove('shake-no'); void el.offsetWidth; el.classList.add('shake-no');
+      document.getElementById('action-info').innerHTML='<strong>'+card.name+'</strong> — '+req;
+      return;
+    }
     const lim=selectLimit(localGs,myRole);
     // Max 1 Journey Day per round.
     const hand=me().hand||[];
@@ -3412,7 +3987,8 @@ document.getElementById('btn-confirm').onclick=async()=>{
     localGs[myRole].selectedCards=played;
     localGs[myRole].hand=newHand;
     localGs[myRole].confirmed=true;
-    const p2hand=[...(localGs.p2.hand||[])];
+    const p2full=[...(localGs.p2.hand||[])];                                            // the real hand
+    const p2hand=p2full.filter(c=>!playBlockedReason(localGs,'p2',c));                  // what it may actually play
     const p2lim=selectLimit(localGs,'p2');
     const p2ft=localGs.p2.forcedType;
     let p2played=[];
@@ -3435,7 +4011,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     p2played.forEach(c=>{ if(hasEnchanted(c) && cpuOrbs>0 && Math.random()<0.5){ c._useOrb=true; cpuOrbs--; } });
     p2played.forEach(c=>{ if(c.peek) c._peek = Math.random()<0.5 ? 'keep' : 'shuffle'; });
     localGs.p2.selectedCards=p2played;
-    localGs.p2.hand=p2hand.filter(c=>!p2played.includes(c));
+    localGs.p2.hand=p2full.filter(c=>!p2played.includes(c));   // blocked cards stay in hand — they're just not played
     localGs.p2.confirmed=true;
     renderHand(newHand);
 
@@ -3671,6 +4247,16 @@ function resolveRound(gs){
       else c._useOrb=false;
     }
     const L=CARD_LOGIC[c.id];
+    // Play requirement (the Krush chain): the hand already blocks these, but a card can also
+    // arrive here from the CPU or a desynced client. Refuse it here too — the requirement is
+    // checked in one place that everything else reads from.
+    const blocked=playBlockedReason(state, r, c);
+    if(blocked){
+      log(state[r].name+' cannot play '+c.name+' — '+blocked,'system');
+      return;
+    }
+    // Register what has been played this game (Krush needs Baby Krush, King needs Krush, …).
+    if(!(state[r].playedIds||[]).includes(c.id)) state[r].playedIds=[...(state[r].playedIds||[]), c.id];
     if(L&&L.onPlay) L.onPlay(buildCtx(state,r,{card:c}));
     advanceQuestsFor(state,r,c);
     if(c.endless){
