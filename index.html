@@ -1,4 +1,87 @@
 <!DOCTYPE html>
+<!--
+  ═══════════════════════════════════════════════════════════════════════════════
+  INSPIRED — read this before changing anything in this file.
+
+  Every rule below is here because ignoring it already broke something. The reason
+  is written next to it, because a rule without a reason gets ignored again.
+
+  ── EDITING THIS FILE ────────────────────────────────────────────────────────
+
+  1. VALIDATE AS A MODULE, NOT AS A SCRIPT.
+     Extract the module script block to a .mjs file and run `node --check` on THAT.
+     Checked as .js it parses as CommonJS and silently accepts things a real module
+     rejects. That false OK let a completely broken build through for several rounds
+     of edits — every new card's logic had landed inside the CARDS_DATA array, so no
+     card did anything at all, and "the check passed" every time.
+
+  2. VALIDATE THE DOCUMENT, NOT JUST THE CODE.
+     Duplicate ids, unbalanced <div>s, a missing element the JS reaches for — a JS
+     check sees none of it. One refactor duplicated 311 lines of HTML: every id
+     existed twice, the JS bound to one copy while the browser rendered the other,
+     and the collection screen came apart on screen while every test stayed green.
+
+  3. NEVER EDIT BY CHARACTER INDEX.
+     Slicing with computed positions (src[:a] + src[b:]) fails SILENTLY when the
+     positions come out in the wrong order: it duplicates the region instead of
+     removing it. That is exactly where those 311 lines came from.
+
+  4. ANCHOR ON TEXT THAT IS UNIQUE — AND PROVE IT.
+     Count the matches (grep -c) before replacing. The card-logic disaster started by
+     anchoring on a comment that appeared in TWO places; the insert landed in the card
+     DATA instead of the card LOGIC, and everything after it stacked up on top.
+
+  5. COUNT, DON'T EYEBALL.
+     `sed`/`awk` range patterns can print the same block twice. Twice today that made
+     a duplicate look real that wasn't, and a bug was reported that did not exist.
+     If you claim something appears twice: grep -c it first.
+
+  6. RUN THE TESTS. ALL OF THEM. EVEN FOR CSS.
+     /dev/check.sh does all of the above in one command. The harness loads the real
+     engine out of this file (DOM and Firebase stubbed) and exercises every card. It
+     caught a fatal crash within a second: renderBuildStamp() ran before staleClient
+     was declared, which would have handed every player a white screen.
+
+  ── TOUCHING PLAYER DATA ─────────────────────────────────────────────────────
+
+  7. NEVER DELETE WHAT THIS BUILD DOESN'T UNDERSTAND.
+     pruneDeck saw card ids it had never heard of, concluded "you don't own these"
+     and deleted them from the player's saved deck in Firebase — permanently. The
+     build was simply older than the deck. Unknown ≠ invalid. Leave it alone, flag
+     the deck as unplayable HERE, and say so.
+
+  8. A COUNTER MUST COUNT WHAT ACTUALLY GETS BUILT.
+     deckSize summed the raw entries while buildDeckFrom skipped ids it couldn't
+     resolve — so the picker cheerfully said 40/40 and dealt a 24-card deck. If two
+     functions answer the same question, they must answer it the same way.
+
+  ── ANSWERING QUESTIONS ──────────────────────────────────────────────────────
+
+  9. READ THE CODE BEFORE EXPLAINING WHAT IT DOES.
+     "The forced discard when your hand is full" — there is no such thing. Drawing
+     into a full hand throws the card away; only going OVER the limit prompts a
+     discard. The explanation was invented from a plausible memory instead of read
+     from the source.
+
+ 10. READ THE ENGINE BEFORE ASKING ABOUT A NEW CARD.
+     Asking about mana costs and minions in a game that has neither wastes the
+     player's time and signals you never looked. Ask about the mechanics that exist:
+     Immune, Cursed, Shield, Block, Hindered, Enchanted Orbs, true damage, quests,
+     blessings, Alter Ego, the Marber Vault.
+
+ 11. A LATER CORRECTION BEATS AN EARLIER CLICK.
+     When the player picks an option and then says something that contradicts it,
+     the words win. A choice was implemented from a button while the very next
+     sentence said the opposite.
+
+  ── NEW CARDS ────────────────────────────────────────────────────────────────
+
+ 12. ASK FIRST, BUILD SECOND — AND WAIT FOR EVERY ANSWER.
+     Never invent a mechanic, a name, a rarity or a timing rule. Ask the edge cases
+     before writing a line: empty hand, full hand, empty deck, immune cards, blocked
+     damage, who takes the damage, what happens if it fizzles, does it stack.
+  ═══════════════════════════════════════════════════════════════════════════════
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1211,322 +1294,6 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
           <button class="col-mini" id="deck-autofill" title="Fill up with random cards from your collection">✨ Auto-fill</button>
           <button class="col-mini" id="deck-dup" title="Duplicate this deck">⧉ Copy</button>
           <button class="col-mini sell" id="deck-del" title="Delete this deck">🗑 Delete</button>
-        </div>
-  <div class="lobby-vignette"></div>
-  <div class="press-start" id="press-start">
-    <div class="ps-text">Press start</div>
-    <div class="ps-hint">click anywhere</div>
-  </div>
-  <div class="bg-scene">
-    <div class="ns-sky"></div>
-    <div class="ns-starfield" id="ns-starfield"></div>
-
-    <svg class="ns-clouds" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <radialGradient id="gGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="rgba(58,192,208,0.42)"/>
-          <stop offset="55%" stop-color="rgba(32,124,152,0.14)"/>
-          <stop offset="100%" stop-color="rgba(32,124,152,0)"/>
-        </radialGradient>
-        <linearGradient id="gTrunk" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#2c8a66"/>
-          <stop offset="100%" stop-color="#123f4e"/>
-        </linearGradient>
-      </defs>
-
-      <ellipse class="ns-cloudglow" cx="600" cy="420" rx="560" ry="330" fill="url(#gGlow)"/>
-
-      <g class="ns-drift1">
-        <circle cx="600" cy="320" r="150" fill="#0b2638" opacity="0.95"/>
-        <circle cx="250" cy="330" r="120" fill="#0d2c40"/>
-        <circle cx="320" cy="260" r="95" fill="#0d2c40"/>
-        <circle cx="200" cy="420" r="100" fill="#0d2c40"/>
-        <circle cx="350" cy="400" r="85" fill="#0d2c40"/>
-        <circle cx="150" cy="300" r="80" fill="#0d2c40"/>
-        <circle cx="250" cy="300" r="70" fill="#16465e" opacity="0.9"/>
-        <circle cx="320" cy="235" r="55" fill="#16465e" opacity="0.9"/>
-        <circle cx="600" cy="170" r="110" fill="#0e3246"/>
-        <circle cx="500" cy="210" r="85" fill="#0e3246"/>
-        <circle cx="700" cy="205" r="90" fill="#0e3246"/>
-        <circle cx="600" cy="140" r="60" fill="#1b5570" opacity="0.9"/>
-      </g>
-
-      <g class="ns-drift2">
-        <circle cx="950" cy="320" r="115" fill="#0d2c40"/>
-        <circle cx="880" cy="250" r="90" fill="#0d2c40"/>
-        <circle cx="1010" cy="410" r="95" fill="#0d2c40"/>
-        <circle cx="840" cy="390" r="80" fill="#0d2c40"/>
-        <circle cx="950" cy="290" r="65" fill="#16465e" opacity="0.9"/>
-        <circle cx="880" cy="225" r="50" fill="#16465e" opacity="0.9"/>
-      </g>
-
-      <path d="M545,700 Q525,560 560,440 Q575,360 600,300 Q625,360 645,450 Q670,570 655,700 Z" fill="url(#gTrunk)" opacity="0.92"/>
-      <path d="M572,660 Q560,540 585,430" fill="none" stroke="#46e0a8" stroke-width="3" opacity="0.35" stroke-linecap="round"/>
-      <path d="M632,650 Q640,540 618,440" fill="none" stroke="#46e0a8" stroke-width="2.5" opacity="0.3" stroke-linecap="round"/>
-
-      <g class="ns-drift2">
-        <path d="M180,430 Q260,360 380,380 Q470,395 520,340" fill="none" stroke="#5fe4ea" stroke-width="4" opacity="0.5" stroke-linecap="round"/>
-        <path d="M1020,420 Q940,340 820,360 Q740,375 690,330" fill="none" stroke="#5fe4ea" stroke-width="4" opacity="0.5" stroke-linecap="round"/>
-        <path d="M300,250 Q400,190 520,215" fill="none" stroke="#5fe4ea" stroke-width="3" opacity="0.45" stroke-linecap="round"/>
-        <path d="M900,240 Q800,180 690,205" fill="none" stroke="#5fe4ea" stroke-width="3" opacity="0.45" stroke-linecap="round"/>
-        <path d="M240,520 Q360,470 480,500 Q560,520 610,470" fill="none" stroke="#4fd0dc" stroke-width="3.5" opacity="0.4" stroke-linecap="round"/>
-        <path d="M960,520 Q850,480 740,505" fill="none" stroke="#4fd0dc" stroke-width="3.5" opacity="0.4" stroke-linecap="round"/>
-        <path d="M600,150 Q560,110 590,80" fill="none" stroke="#8ab8ff" stroke-width="2.5" opacity="0.3" stroke-linecap="round"/>
-      </g>
-
-      <g fill="#d8fbff">
-        <circle class="ns-svgtw" cx="520" cy="180" r="2.2" style="animation-delay:0.3s"/>
-        <circle class="ns-svgtw" cx="700" cy="160" r="1.8" style="animation-delay:1.4s"/>
-        <circle class="ns-svgtw" cx="600" cy="240" r="2.5" style="animation-delay:2.2s"/>
-        <circle class="ns-svgtw" cx="420" cy="300" r="1.6" style="animation-delay:0.9s"/>
-        <circle class="ns-svgtw" cx="800" cy="300" r="2" style="animation-delay:3.1s"/>
-        <circle class="ns-svgtw" cx="560" cy="120" r="1.7" style="animation-delay:1.9s"/>
-        <circle class="ns-svgtw" cx="660" cy="340" r="1.8" style="animation-delay:2.7s"/>
-        <circle class="ns-svgtw" cx="360" cy="240" r="1.5" style="animation-delay:0.5s"/>
-        <circle class="ns-svgtw" cx="880" cy="200" r="1.9" style="animation-delay:3.6s"/>
-      </g>
-      <path class="ns-svgtw" d="M600,96 l3,10 l10,3 l-10,3 l-3,10 l-3,-10 l-10,-3 l10,-3 Z" fill="#eaffff" style="animation-delay:1.1s"/>
-      <path class="ns-svgtw" d="M452,238 l2.4,8 l8,2.4 l-8,2.4 l-2.4,8 l-2.4,-8 l-8,-2.4 l8,-2.4 Z" fill="#eaffff" style="animation-delay:2.9s"/>
-      <path class="ns-svgtw" d="M780,208 l2.4,8 l8,2.4 l-8,2.4 l-2.4,8 l-2.4,-8 l-8,-2.4 l8,-2.4 Z" fill="#eaffff" style="animation-delay:4.0s"/>
-
-      <ellipse class="ns-cloudglow" cx="600" cy="690" rx="430" ry="72" fill="url(#gGlow)" opacity="0.85"/>
-    </svg>
-
-    <div class="ns-waterwrap">
-      <div class="ns-glowline"></div>
-      <svg class="ns-waves w2" viewBox="0 0 2880 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M0,62 Q45,46 90,62 T180,62 T270,62 T360,62 T450,62 T540,62 T630,62 T720,62 T810,62 T900,62 T990,62 T1080,62 T1170,62 T1260,62 T1350,62 T1440,62 T1530,62 T1620,62 T1710,62 T1800,62 T1890,62 T1980,62 T2070,62 T2160,62 T2250,62 T2340,62 T2430,62 T2520,62 T2610,62 T2700,62 T2790,62 T2880,62 L2880,120 L0,120 Z" fill="#0e3a4c"/>
-      </svg>
-      <svg class="ns-waves w1" viewBox="0 0 2880 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M0,58 Q45,40 90,58 T180,58 T270,58 T360,58 T450,58 T540,58 T630,58 T720,58 T810,58 T900,58 T990,58 T1080,58 T1170,58 T1260,58 T1350,58 T1440,58 T1530,58 T1620,58 T1710,58 T1800,58 T1890,58 T1980,58 T2070,58 T2160,58 T2250,58 T2340,58 T2430,58 T2520,58 T2610,58 T2700,58 T2790,58 T2880,58 L2880,120 L0,120 Z" fill="#0b2f3f"/>
-        <path d="M0,58 Q45,40 90,58 T180,58 T270,58 T360,58 T450,58 T540,58 T630,58 T720,58 T810,58 T900,58 T990,58 T1080,58 T1170,58 T1260,58 T1350,58 T1440,58 T1530,58 T1620,58 T1710,58 T1800,58 T1890,58 T1980,58 T2070,58 T2160,58 T2250,58 T2340,58 T2430,58 T2520,58 T2610,58 T2700,58 T2790,58 T2880,58" fill="none" stroke="#57e0e8" stroke-width="1.5" opacity="0.3"/>
-      </svg>
-      <div class="ns-waterbody" style="top:18px;"></div>
-    </div>
-
-    <div class="ns-ship ns-ship2"><svg viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="transform:scaleX(-1)">
-      <ellipse cx="110" cy="162" rx="80" ry="6" fill="#020a10" opacity="0.55"/>
-      <ellipse cx="172" cy="158" rx="5" ry="1.6" fill="#ffb85e" opacity="0.35"/>
-      <ellipse cx="182" cy="160" rx="4" ry="1.4" fill="#ffb85e" opacity="0.28"/>
-      <line x1="72" y1="28" x2="30" y2="116" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="120" y1="14" x2="48" y2="118" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="120" y1="14" x2="196" y2="112" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="28" y1="118" x2="2" y2="100" stroke="#0b1318" stroke-width="3"/>
-      <path d="M6,102 L44,116 L30,84 Z" fill="#142230"/>
-      <rect x="70" y="26" width="3.5" height="96" fill="#0b1318"/>
-      <rect x="118" y="12" width="4" height="110" fill="#0b1318"/>
-      <rect x="158" y="40" width="3" height="62" fill="#0b1318"/>
-      <path d="M118,12 L104,16 L118,20 Z" fill="#c94b52"/>
-      <path d="M70,26 L58,29 L70,33 Z" fill="#c94b52"/>
-      <path d="M54,40 Q71,34 90,40 L87,64 Q71,70 57,64 Z" fill="#142230"/>
-      <path d="M48,74 Q71,66 96,74 L92,104 Q71,112 52,104 Z" fill="#142230"/>
-      <path d="M108,18 Q120,14 133,18 L131,34 Q120,38 110,34 Z" fill="#142230"/>
-      <path d="M102,42 Q120,36 140,42 L136,68 Q120,74 106,68 Z" fill="#142230"/>
-      <path d="M96,78 Q120,70 146,78 L142,110 Q120,118 100,110 Z" fill="#142230"/>
-      <path d="M158,44 L194,72 L160,88 Z" fill="#142230"/>
-      <path d="M54,40 Q71,34 90,40" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.32"/>
-      <path d="M96,78 Q120,70 146,78" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.32"/>
-      <path d="M102,42 Q120,36 140,42" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.28"/>
-      <path d="M154,124 L154,98 Q176,92 198,98 L198,120 Z" fill="#0b1318"/>
-      <circle cx="166" cy="108" r="4.5" fill="#ff9f3d" opacity="0.4"/>
-      <circle cx="178" cy="108" r="4.5" fill="#ff9f3d" opacity="0.4"/>
-      <circle cx="190" cy="108" r="4.5" fill="#ff9f3d" opacity="0.35"/>
-      <rect x="163" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <rect x="175" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <rect x="187" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <path d="M20,122 Q18,138 40,146 L172,146 Q198,140 202,118 L186,126 Z" fill="#0b1318"/>
-      <line x1="24" y1="122" x2="200" y2="121" stroke="#1d3340" stroke-width="1" opacity="0.6"/>
-    </svg></div>
-    <div class="ns-ship ns-ship1"><svg viewBox="0 0 220 170" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <ellipse cx="110" cy="162" rx="80" ry="6" fill="#020a10" opacity="0.55"/>
-      <ellipse cx="172" cy="158" rx="5" ry="1.6" fill="#ffb85e" opacity="0.35"/>
-      <ellipse cx="182" cy="160" rx="4" ry="1.4" fill="#ffb85e" opacity="0.28"/>
-      <line x1="72" y1="28" x2="30" y2="116" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="120" y1="14" x2="48" y2="118" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="120" y1="14" x2="196" y2="112" stroke="#223642" stroke-width="0.7" opacity="0.5"/>
-      <line x1="28" y1="118" x2="2" y2="100" stroke="#0b1318" stroke-width="3"/>
-      <path d="M6,102 L44,116 L30,84 Z" fill="#142230"/>
-      <rect x="70" y="26" width="3.5" height="96" fill="#0b1318"/>
-      <rect x="118" y="12" width="4" height="110" fill="#0b1318"/>
-      <rect x="158" y="40" width="3" height="62" fill="#0b1318"/>
-      <path d="M118,12 L104,16 L118,20 Z" fill="#c94b52"/>
-      <path d="M70,26 L58,29 L70,33 Z" fill="#c94b52"/>
-      <path d="M54,40 Q71,34 90,40 L87,64 Q71,70 57,64 Z" fill="#142230"/>
-      <path d="M48,74 Q71,66 96,74 L92,104 Q71,112 52,104 Z" fill="#142230"/>
-      <path d="M108,18 Q120,14 133,18 L131,34 Q120,38 110,34 Z" fill="#142230"/>
-      <path d="M102,42 Q120,36 140,42 L136,68 Q120,74 106,68 Z" fill="#142230"/>
-      <path d="M96,78 Q120,70 146,78 L142,110 Q120,118 100,110 Z" fill="#142230"/>
-      <path d="M158,44 L194,72 L160,88 Z" fill="#142230"/>
-      <path d="M54,40 Q71,34 90,40" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.32"/>
-      <path d="M96,78 Q120,70 146,78" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.32"/>
-      <path d="M102,42 Q120,36 140,42" fill="none" stroke="#58d6de" stroke-width="1" opacity="0.28"/>
-      <path d="M154,124 L154,98 Q176,92 198,98 L198,120 Z" fill="#0b1318"/>
-      <circle cx="166" cy="108" r="4.5" fill="#ff9f3d" opacity="0.4"/>
-      <circle cx="178" cy="108" r="4.5" fill="#ff9f3d" opacity="0.4"/>
-      <circle cx="190" cy="108" r="4.5" fill="#ff9f3d" opacity="0.35"/>
-      <rect x="163" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <rect x="175" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <rect x="187" y="104" width="6" height="8" rx="1.5" fill="#ffcf7c"/>
-      <path d="M20,122 Q18,138 40,146 L172,146 Q198,140 202,118 L186,126 Z" fill="#0b1318"/>
-      <line x1="24" y1="122" x2="200" y2="121" stroke="#1d3340" stroke-width="1" opacity="0.6"/>
-    </svg></div>
-
-    <div class="ns-vignette"></div>
-  </div>
-  <script>
-  (function(){
-    var f=document.getElementById('ns-starfield');
-    if(!f) return;
-    var frag=document.createDocumentFragment();
-    for(var i=0;i<130;i++){
-      var s=document.createElement('span');
-      s.className='ns-star';
-      var sz=(Math.random()*1.8+0.8).toFixed(1);
-      s.style.cssText='left:'+(Math.random()*100).toFixed(2)+'%;top:'+(Math.random()*55).toFixed(2)+'%;width:'+sz+'px;height:'+sz+'px;--d:'+(2.5+Math.random()*4).toFixed(1)+'s;--dl:'+(Math.random()*6).toFixed(1)+'s;--o1:'+(0.12+Math.random()*0.3).toFixed(2)+';--o2:'+(0.65+Math.random()*0.35).toFixed(2);
-      frag.appendChild(s);
-    }
-    for(var j=0;j<9;j++){
-      var fl=document.createElement('span');
-      fl.className='ns-flash';
-      fl.style.cssText='left:'+(4+Math.random()*92).toFixed(2)+'%;top:'+(3+Math.random()*46).toFixed(2)+'%;--d:'+(7+Math.random()*9).toFixed(1)+'s;--dl:'+(Math.random()*11).toFixed(1)+'s';
-      frag.appendChild(fl);
-    }
-    f.appendChild(frag);
-  })();
-  </script>
-  <!-- The title and tagline used to sit here; the key art carries the logo now. -->
-
-  <!-- AUTH (login / register) — shown before anything else -->
-  <div class="lobby-box hidden" id="auth-box">
-    <h2 id="auth-title">Sign in</h2>
-    <div class="field hidden" id="auth-namefield">
-      <label>Display name</label>
-      <input id="auth-name" type="text" placeholder="Your hero name..." maxlength="20" />
-    </div>
-    <div class="field">
-      <label>Email</label>
-      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
-    </div>
-    <button class="btn btn-green" id="auth-submit">Sign in</button>
-    <div class="divider" id="auth-divider">or</div>
-    <button class="btn btn-outline" id="auth-toggle">Create an account</button>
-    <div class="status" id="auth-status"></div>
-  </div>
-
-  <!-- MAIN MENU (shown after sign-in) -->
-  <div class="build-stamp" id="build-stamp" title="Build version"></div>
-  <div class="menu-box hidden" id="menu-box">
-    <button class="menu-btn" id="menu-single"><span class="menu-ico">⚔️</span><span>Singleplayer</span></button>
-    <button class="menu-btn" id="menu-multi"><span class="menu-ico">🌐</span><span>Multiplayer</span></button>
-    <button class="menu-btn" id="menu-collection"><span class="menu-ico">🃏</span><span>Collection</span></button>
-    <button class="menu-btn" id="menu-profile"><span class="menu-ico">👤</span><span>Profile</span></button>
-  </div>
-
-  <!-- PROFILE -->
-  <div class="lobby-box hidden" id="profile-box">
-    <button class="btn-back-link" id="profile-back">← Menu</button>
-    <h2>Profile</h2>
-    <div class="field">
-      <label>Display name</label>
-      <input id="prof-name" type="text" maxlength="20" />
-    </div>
-    <div class="field">
-      <label>Email</label>
-      <input id="prof-email" type="text" disabled style="opacity:0.6" />
-    </div>
-    <div style="display:flex;gap:0.6rem;margin:1rem 0 0.4rem;text-align:center">
-      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
-        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-cards">0</div>
-        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Cards</div>
-      </div>
-      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
-        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-packs">0</div>
-        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Packs</div>
-      </div>
-      <div style="flex:1;background:var(--dark);border:1px solid var(--border);border-radius:var(--rs);padding:0.7rem">
-        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;color:var(--gold)" id="prof-dust">0</div>
-        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">Dust</div>
-      </div>
-    </div>
-    <button class="btn btn-green" id="prof-save" style="margin-top:1rem">Save name</button>
-    <div class="divider">or</div>
-    <button class="btn btn-outline" id="prof-signout">Sign out</button>
-    <div class="status" id="prof-status"></div>
-  </div>
-
-  <div class="lobby-box hidden" id="lobby-box">
-    <button class="btn-back-link" id="lobby-back">← Menu</button>
-    <h2>Multiplayer</h2>
-    <div class="status" id="lb-asname" style="margin-top:0;margin-bottom:1.2rem"></div>
-    <button class="btn btn-green" id="btn-create">Create new game</button>
-    <div class="divider">or join existing</div>
-    <div class="field">
-      <label>Game code</label>
-      <input id="inp-code" type="text" placeholder="X X X X" maxlength="4"
-        style="text-transform:uppercase;letter-spacing:0.4em;text-align:center;font-size:1.6rem;font-family:'Playfair Display',serif"
-        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
-    </div>
-    <button class="btn btn-outline" id="btn-join">Join game</button>
-    <button class="btn btn-gold hidden" id="btn-solo">⚡ Solo test mode</button>
-    <div class="status" id="lb-status"></div>
-  </div>
-  <div class="lobby-box hidden" id="lb-waiting" style="text-align:center;margin-top:1rem">
-    <h2>Game created!</h2>
-    <div class="code-display">
-      <div class="code-big" id="lb-code">----</div>
-      <div class="code-hint">Send this code to your opponent</div>
-    </div>
-    <div class="status">Waiting for opponent <span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
-  </div>
-</div>
-
-<!-- COLLECTION (placeholder for step 2) -->
-<div id="screen-collection" class="hidden">
-  <div class="col-header">
-    <button class="btn-back-link" id="col-back">← Menu</button>
-    <div class="col-title">Collection</div>
-    <div class="col-sub" id="col-count"></div>
-    <div class="col-dust">✨ <span id="col-dust">0</span></div>
-  </div>
-  <div class="col-tabs">
-    <button class="col-tab active" id="tab-common">🃏 Commons</button>
-    <button class="col-tab" id="tab-legendary">👑 Legendaries</button>
-  </div>
-  <div class="col-main">
-    <div class="col-body">
-      <div class="col-grid" id="col-grid"></div>
-      <div class="col-pager">
-        <button class="col-page-btn" id="col-prev">◀</button>
-        <div class="col-page-label" id="col-pagelabel">Page 1</div>
-        <button class="col-page-btn" id="col-next">▶</button>
-      </div>
-    </div>
-    <div class="col-decks">
-      <div id="deck-list-view">
-        <h3>My Decks <span class="dk-count" id="deck-count-lbl">0/10</span></h3>
-        <div id="deck-list"></div>
-        <button class="btn btn-outline dk-new" id="deck-new">+ New deck</button>
-      </div>
-      <div id="deck-edit-view" class="hidden">
-        <button class="btn-back-link" id="deck-back">← All decks</button>
-        <input class="dk-name" id="deck-name" maxlength="24" placeholder="Deck name" />
-        <div class="dk-meta">
-          <span class="dk-size" id="deck-size">0 / 40</span>
-          <span class="dk-warn" id="deck-warn"></span>
-        </div>
-        <div class="dk-tools">
-          <button class="col-mini" id="deck-autofill" title="Fill up with random cards from your collection">✨ Auto-fill</button>
-          <button class="col-mini" id="deck-dup" title="Duplicate this deck">⧉ Copy</button>
-          <button class="col-mini sell" id="deck-del" title="Delete this deck">🗑 Delete</button>
-        </div>
-        <div class="dk-link hidden" id="deck-link">
-          <label for="deck-link-sel">Linked blessing</label>
-          <select id="deck-link-sel"></select>
-          <div class="dk-link-hint">Activates when New Year Resolutions becomes a Reward. Doesn't count toward your 40.</div>
         </div>
         <div class="dk-cards" id="deck-cards"></div>
       </div>
@@ -3890,20 +3657,28 @@ async function craftCard(card){
 // get built from it, and any card ids that no longer exist. Run it in the console.
 window.deckReport = ()=>{
   const ds = allDecks();
+  console.log('%cCOLLECTION', 'font-weight:bold');
+  console.table(Object.entries((myProfile&&myProfile.collection)||{})
+    .map(([id,n])=>({card:id, owned:n})));
   Object.entries(ds).forEach(([id,d])=>{
-    const ghosts = deckGhosts(d);
-    const real   = deckSize(d);
-    const built  = buildDeckFrom(d).length;
-    console.log('%c'+(d.name||id), 'font-weight:bold', {
-      'slots claimed': Object.values(d.cards||{}).reduce((a,b)=>a+(b||0),0),
-      'real cards':    real,
-      'cards built':   built,
-      'linked blessing': d.linkedBlessing || '—',
-      'DEAD IDS':      ghosts.length ? ghosts : 'none'
+    const rows = Object.entries(d.cards||{}).map(([cid,n])=>{
+      const def = CARDS_DATA.find(c=>c.id===cid);
+      const owned = ownedCount(cid);
+      const cap = def ? maxCopies(def) : 0;
+      return {
+        card: cid,
+        'in deck': n,
+        owned,
+        'max copies': cap,
+        problem: !def ? 'UNKNOWN CARD' : (n > owned ? 'MORE IN DECK THAN OWNED' : (n > cap ? 'OVER COPY LIMIT' : ''))
+      };
     });
-    if(ghosts.length) console.warn('  ⚠ '+(d.name||id)+' holds card ids that no longer exist:', ghosts);
+    console.log('%c'+(d.name||id)+'  —  '+deckSize(d)+'/'+DECK_SIZE, 'font-weight:bold');
+    console.table(rows);
+    const bad = rows.filter(r=>r.problem);
+    if(bad.length) console.warn('  ⚠ these are what pruneDeck strips:', bad);
   });
-  return Object.keys(ds).length + ' deck(s) checked';
+  return 'done — send me a screenshot of this';
 };
 // Call from the browser console while signed in, e.g.  giveDust(20000)
 // Remove this block when the game goes "live" — it writes straight to your own profile.
