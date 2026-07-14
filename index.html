@@ -21,7 +21,13 @@
   --text:#dff0b8; --text2:#7aaa40; --text3:#3a5820;
   --r:10px; --rs:6px;
 }
-body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+/* HEIGHT, not min-height. With min-height the body is allowed to grow past the window, and
+   then every flex:1 child grows with it — which is exactly how opening a deck blew the
+   collection cards up to double size. A hard height pins the whole app to the viewport, and
+   anything too tall has to scroll inside its own box instead of pushing the page open.
+   100dvh keeps it honest on mobile, where the browser chrome slides in and out. */
+body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
+  height:100vh; height:100dvh; overflow:hidden; display:flex; flex-direction:column; }
 
 /* LOBBY */
 /* ── TITLE SCREEN ─────────────────────────────────────────────────────────────
