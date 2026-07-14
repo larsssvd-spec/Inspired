@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Inspired — deck list preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lora&display=swap" rel="stylesheet">
+<style>
+:root { --gold:#d4a832; --gold2:#f0cc60; --green2:#a8e050; }
+* { box-sizing:border-box; }
+body { margin:0; background:#0d1810; font-family:'Lora',serif; display:flex; gap:2rem;
+  align-items:flex-start; padding:2rem; }
+.side { width:290px; background:rgba(8,20,28,0.9); border:1px solid rgba(126,200,50,0.22);
+  border-radius:12px; padding:0.9rem; }
+h3 { font-family:'Playfair Display',serif; color:var(--green2); font-size:0.72rem;
+  letter-spacing:0.18em; text-transform:uppercase; margin:0 0 0.35rem; }
+.meta { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.7rem; }
+.size { font-family:'Playfair Display',serif; color:var(--green2); font-size:1rem; }
+
+/* ── The deck rows ── */
+.dk-list { display:flex; flex-direction:column; gap:3px; }
+.dk-row { position:relative; height:34px; display:flex; align-items:center; cursor:pointer;
+  border:1px solid #14100a; border-radius:3px; overflow:hidden;
+  background-color:#1a1208;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 3px rgba(0,0,0,0.6);
+  transition:transform 0.1s, filter 0.12s; }
+.dk-row::before { content:''; position:absolute; inset:0; z-index:0;
+  background-image:var(--art); background-size:cover; background-position:center 26%;
+  opacity:0.85; }
+/* A gradient over the art: dark on the left where the text sits, clear on the right. */
+.dk-row::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(90deg, rgba(12,8,4,0.97) 0%, rgba(12,8,4,0.92) 42%,
+    rgba(12,8,4,0.55) 62%, rgba(12,8,4,0.15) 82%, rgba(12,8,4,0.5) 100%); }
+.dk-row:hover { transform:translateX(2px); filter:brightness(1.25); }
+.dk-row.legendary { border-color:#6b5119; box-shadow:inset 0 0 0 1px rgba(240,204,96,0.35), 0 1px 4px rgba(0,0,0,0.7); }
+
+.dk-gem { position:relative; z-index:2; width:9px; height:9px; margin:0 8px 0 7px; flex-shrink:0;
+  transform:rotate(45deg); border-radius:1px;
+  background:linear-gradient(135deg,#e8f2ff,#8fa8c8 55%,#4a5f7a);
+  box-shadow:0 0 4px rgba(160,200,255,0.5); }
+.dk-row.legendary .dk-gem { background:linear-gradient(135deg,#fff3c4,var(--gold) 55%,#8a6a1e);
+  box-shadow:0 0 7px rgba(240,204,96,0.85); }
+
+.dk-nm { position:relative; z-index:2; flex:1; min-width:0; font-family:'Playfair Display',serif;
+  font-size:0.78rem; color:#f4ead2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 3px #000, 0 0 8px rgba(0,0,0,0.9); }
+
+.dk-ct { position:relative; z-index:2; flex-shrink:0; width:26px; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:0.82rem; color:#ffeeb8;
+  background:linear-gradient(180deg,#2c2412,#191207);
+  border-left:1px solid rgba(240,204,96,0.35);
+  text-shadow:0 1px 2px #000; }
+.dk-row.legendary .dk-ct { color:var(--gold2); font-size:0.72rem; }
+
+.note { color:#7aaa40; font-size:0.8rem; max-width:340px; line-height:1.7; }
+</style></head><body>
+
+<div class="side">
+  <div class="meta">
+    <h3>Aggro Deep</h3>
+    <div class="size">40 / 40</div>
+  </div>
+  <div class="dk-list">
+    <div class="dk-row common" style="--art:url('art/blaargh.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Blaargh</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/critical_bite.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Critical Bite</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/skull_slasher.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Skull Slasher</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/kong_fee.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Kong Fee</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/garden_tales.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Garden Tales</div>
+      <div class="dk-ct">1</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/forgotten_mage.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">The Forgotten Mage</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/different_set_of_rules.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Different Set of Rules</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/time_and_space.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Time and Space</div>
+      <div class="dk-ct">1</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/murloc_things.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Murloc Things</div>
+      <div class="dk-ct">2</div>
+    </div>
+    <div class="dk-row common" style="--art:url('art/hearth_of_our_galaxy.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Hearth of our Galaxy</div>
+      <div class="dk-ct">1</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/zorya.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Zorya, Goddess of the Deep</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/baby_krush.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Baby Krush</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/vol_dor_mook.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Vol'Dor Mook</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/world_splitter.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">World Splitter</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/marber_vault.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Marber Vault</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/new_year_resolutions.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">New Year Resolutions</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/deepception.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Deepception</div>
+      <div class="dk-ct">★</div>
+    </div>
+    <div class="dk-row legendary" style="--art:url('art/bolvar.png')">
+      <div class="dk-gem"></div>
+      <div class="dk-nm">Bolvar</div>
+      <div class="dk-ct">★</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <p><strong>Open dit bestand in je Inspired-map</strong>, naast je <code>art</code>-map — dan laadt hij je echte kaart-art in als achtergrond van elke regel.</p>
+  <p>Legendaries krijgen een gouden edelsteen, een gouden rand en een ★ in plaats van een aantal. Commons een blauwe steen en hun aantal.</p>
+</div>
+
+</body></html>
