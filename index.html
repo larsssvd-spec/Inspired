@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Inspired</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +84,9 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 #screen-lobby::before { content:none; }
 
 /* PRESS START */
+.build-stamp { position:absolute; bottom:10px; right:14px; z-index:6; pointer-events:none;
+  font-family:'Lora',serif; font-size:0.6rem; letter-spacing:0.08em; color:rgba(200,225,240,0.3); }
+.build-stamp.stale { color:#e06a6a; font-weight:700; letter-spacing:0.04em; pointer-events:auto; }
 .press-start { position:absolute; left:0; right:0; bottom:12%; z-index:4; text-align:center;
   pointer-events:none; transition:opacity 0.7s ease, transform 0.7s ease; }
 .press-start.gone { opacity:0; transform:translateY(10px); }
@@ -256,7 +262,11 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   text-transform:uppercase; min-width:130px; text-align:center; }
 
 /* Decks sidebar */
-.col-decks { width:240px; flex-shrink:0; display:flex; flex-direction:column; padding:1.3rem 1rem;
+/* min-height:0 + overflow:hidden is what stops a long deck list from stretching this column,
+   which stretched the whole row, which stretched the card grid — and blew the cards up to
+   twice their size the moment you opened a deck. In a flex column, every ancestor of a
+   scrolling child needs min-height:0, or the child just grows instead of scrolling. */
+.col-decks { width:240px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:1.3rem 1rem;
   background:rgba(8,20,28,0.78); border:1px solid rgba(126,200,50,0.16);
   border-radius:var(--r); box-shadow:0 12px 48px rgba(0,0,0,0.55); overflow-y:auto; }
 .col-decks h3 { font-family:'Playfair Display',serif; color:var(--green2); font-size:0.82rem; letter-spacing:0.16em;
@@ -286,7 +296,11 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 .dk-warn { font-size:0.62rem; color:var(--gold); font-style:italic; text-align:right; }
 .dk-tools { display:flex; gap:0.3rem; margin-bottom:0.7rem; }
 .dk-tools .col-mini { flex:1; padding:0.3rem 0.2rem; text-align:center; }
-.dk-cards { display:flex; flex-direction:column; gap:0.2rem; overflow-y:auto; }
+#deck-list-view, #deck-edit-view { display:flex; flex-direction:column; min-height:0; flex:1; }
+#deck-list { flex:1; min-height:0; overflow-y:auto; }
+.dk-cards { flex:1; min-height:0; display:flex; flex-direction:column; gap:0.2rem; overflow-y:auto; }
+#deck-list::-webkit-scrollbar, .dk-cards::-webkit-scrollbar { width:5px; }
+#deck-list::-webkit-scrollbar-thumb, .dk-cards::-webkit-scrollbar-thumb { background:rgba(126,200,50,0.3); border-radius:3px; }
 /* The blessing linked to New Year Resolutions — stored on the deck, not IN it. */
 .dk-link { background:rgba(24,16,40,0.6); border:1px solid rgba(152,120,216,0.4); border-radius:10px;
   padding:0.5rem 0.6rem; margin-bottom:0.7rem; }
@@ -1029,6 +1043,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 
   <!-- MAIN MENU (shown after sign-in) -->
+  <div class="build-stamp" id="build-stamp" title="Build version"></div>
   <div class="menu-box hidden" id="menu-box">
     <button class="menu-btn" id="menu-single"><span class="menu-ico">⚔️</span><span>Singleplayer</span></button>
     <button class="menu-btn" id="menu-multi"><span class="menu-ico">🌐</span><span>Multiplayer</span></button>
@@ -1292,6 +1307,17 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 </div>
 
+<div class="overlay hidden" id="ov-stale">
+  <div class="ov-box" style="max-width:420px">
+    <div class="ov-title" style="color:#e06a6a">Old version</div>
+    <div class="ov-sub">Press <strong style="color:var(--text)">Ctrl + Shift + R</strong> to update.</div>
+    <div style="display:flex;gap:0.6rem;margin-top:1.2rem">
+      <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('ov-stale').classList.add('hidden')">Close</button>
+      <button class="btn btn-green" style="flex:1" onclick="location.reload(true)">Reload</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="ov-vault">
   <div class="ov-box" style="max-width:520px">
     <div class="ov-title">Marber Vault</div>
@@ -1340,6 +1366,14 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+// ── BUILD VERSION ────────────────────────────────────────────────────────────
+// Bump this on every change. It is shown in the menu, and it is written to your profile the
+// moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
+// own, it knows it is out of date and refuses to touch your decks — that is what stopped an
+// old tab from eating a deck full of cards it had never heard of.
+const APP_VERSION = '2026-07-14T15:16';
+let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
   apiKey:"AIzaSyDkdiTTJlJN85knDfDVzn7-RgjqHB2Nnv0",
@@ -1539,6 +1573,8 @@ const CARDS_DATA = [
   // collection or a pack. It resolves the moment it is DRAWN and burns itself out.
   {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
   {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
+
+  {id:'hearth_of_our_galaxy', collectible:true, name:'Hearth of our Galaxy', text:'Blessing: Deal 5 damage for each card that you or your opponent steals.', rarity:'common', emoji:'🌌', type:'blessing', art:'art/hearth_of_our_galaxy.png'},
 
   // ── Alter Ego ──
   // ONE card at deckbuilding, TWO physical cards in your deck: same name, same text, different
@@ -1920,6 +1956,16 @@ const CARD_LOGIC = {
       return true;   // consumed: straight to the graveyard, never sits in hand
     },
     onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Fireball — it already burned out when drawn. Nothing happens.','system'); }
+  },
+  // Hearth of our Galaxy (BLESSING) — every stolen card costs your opponent 5, no matter who
+  // did the stealing. You steal one: they bleed. They steal one from YOU: they bleed anyway.
+  // Fires once per card, so a card that takes 3 deals 15. Normal damage, so a Block stops it.
+  // If both players run it, each one punishes their own opponent — the theft cuts both ways.
+  hearth_of_our_galaxy: {
+    onSteal:(c)=>{
+      c.dealDmgTo(c.opp, 5);
+      c.log('  🌌 Hearth of our Galaxy — a card was stolen: 5 damage to '+c.state[c.opp].name+'.','damage');
+    }
   },
   // ── World Splitter (Alter Ego) ──
   // Two halves, one card. Each half checks the row you played this round: if the OTHER half is
@@ -2858,6 +2904,7 @@ function stealCard(gs,r,n){
   const o=opp(r);
   const ohand=gs[o].hand||[];
   const myhand=gs[r].hand||[];
+  const taken=[];
   let stolen=0;
   for(let i=0;i<n;i++){
     if(myhand.length>=8) break;
@@ -2868,9 +2915,16 @@ function stealCard(gs,r,n){
     ohand.splice(pick.idx,1);
     pick.c.stolen=true;
     myhand.push(pick.c);
+    taken.push(pick.c);
     stolen++;
   }
   gs[o].hand=ohand; gs[r].hand=myhand;
+  // A steal is now a real EVENT. It fires for BOTH players' sources, because a card can care
+  // about theft no matter who committed it (Hearth of our Galaxy). Once per stolen card.
+  taken.forEach(card=>{
+    emit(gs, 'onSteal', 'p1', {thief:r, victim:o, card});
+    emit(gs, 'onSteal', 'p2', {thief:r, victim:o, card});
+  });
   return stolen;
 }
 
@@ -2993,6 +3047,10 @@ document.getElementById('deck-link-sel').onchange=async(e)=>{
 // an unfinished deck is shown greyed out with its count, so you know what to go fix.
 let pendingStart=null;   // 'create' | 'join' | 'solo'
 function openDeckPicker(action){
+  if(staleClient){
+    alert('This page is an old version of the game (probably cached).\n\nPress Ctrl+Shift+R to reload.\n\nYou cannot start a game on an outdated build — the two players would be running different card rules.');
+    return;
+  }
   pendingStart=action;
   const list=document.getElementById('dp-list');
   list.innerHTML='';
@@ -3005,11 +3063,11 @@ function openDeckPicker(action){
   }
   ids.sort((a,b)=>(allDecks()[b].updatedAt||0)-(allDecks()[a].updatedAt||0)).forEach(id=>{
     const d=allDecks()[id];
-    const n=deckSize(d), ok=(n===DECK_SIZE);
+    const ok=deckValid(d), why=deckProblem(d);
     const row=document.createElement('div');
     row.className='dp-item'+(ok?'':' dead');
     row.innerHTML='<div class="dp-nm">'+esc(d.name||'Unnamed')+'</div>'+
-                  '<div class="dp-ct'+(ok?'':' bad')+'">'+(ok?'40 cards':n+'/40 — not playable')+'</div>';
+                  '<div class="dp-ct'+(ok?'':' bad')+'">'+(ok?'40 cards':esc(why))+'</div>';
     if(ok) row.onclick=()=>{ document.getElementById('ov-deckpick').classList.add('hidden'); startWithDeck(d); };
     list.appendChild(row);
   });
@@ -3050,7 +3108,7 @@ function buildDeckFrom(d, owner){
 }
 
 // ── Lobby buttons ──
-document.getElementById('btn-create').onclick=()=>openDeckPicker('create');
+document.getElementById('btn-create').onclick=()=>{ if(blockedByVersion()) return; openDeckPicker('create'); };
 
 async function createGame(chosen){
   myName=(myProfile&&myProfile.name)||'Hero';   // always your account's display name
@@ -3072,6 +3130,7 @@ async function createGame(chosen){
 document.getElementById('btn-join').onclick=()=>{
   const code=document.getElementById('inp-code').value.trim().toUpperCase();
   if(code.length!==4){setStatus('Enter a 4-letter code.','err');return;}
+  if(blockedByVersion()) return;
   openDeckPicker('join');
 };
 
@@ -3212,6 +3271,36 @@ document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
   window.addEventListener('keydown', ()=>{ if(!lobby.classList.contains('hidden')) dismissGate(); });
 })();
 
+// Multiplayer is the one place a stale build genuinely breaks: your opponent plays a card this
+// version has never heard of, and the two screens quietly drift apart. So multiplayer is shut
+// on an old build — solo stays open, because nothing there can break or be corrupted, and being
+// locked out of your own game by a cached page is worse than the problem it prevents.
+// This is only ever checked when you TRY to start a multiplayer game. Nothing runs in the
+// background, so it can never cut in on you mid-match.
+function blockedByVersion(){
+  if(!staleClient) return false;
+  const b=document.getElementById('ov-stale');
+  if(b) b.classList.remove('hidden');
+  return true;
+}
+
+// The build stamp in the corner of the menu. If this tab turns out to be older than the build
+// your account last used, it turns red and says so — no more guessing whether a cached page is
+// serving you last week's game.
+function renderBuildStamp(){
+  const el=document.getElementById('build-stamp');
+  if(!el) return;
+  if(staleClient){
+    el.className='build-stamp stale';
+    el.textContent='⚠ OLD VERSION ('+APP_VERSION+') — press Ctrl+Shift+R';
+    el.title='This page is cached. Your account has already used a newer build. Decks are read-only until you refresh.';
+  } else {
+    el.className='build-stamp';
+    el.textContent=APP_VERSION;
+  }
+}
+renderBuildStamp();
+
 // ── Accounts (Firebase Auth) ─────────────────────────────────────────────────
 
 // Real accounts: register/sign in with email + password. Each user gets a profile at
@@ -3229,7 +3318,19 @@ async function loadProfile(user){
   const snap=await get(ref(db,'users/'+user.uid));
   if(snap.exists()){
     const p=snap.val();
-    if(!p[STARTER_FLAG]){
+    // Version handshake. Your profile remembers the newest build that ever signed in. If that
+    // is newer than THIS build, this tab is stale — most likely a cached page — and it must not
+    // write anything: a build that doesn't know a card would otherwise "clean" it out of your
+    // deck. We only ever stamp the version FORWARD, never backwards.
+    const seen = p.lastVersion || '';
+    staleClient = (seen && seen > APP_VERSION);
+    if(staleClient){
+      console.warn('Stale client: this build is '+APP_VERSION+', your account last used '+seen+'. Decks are read-only until you refresh.');
+    } else if(seen !== APP_VERSION){
+      p.lastVersion = APP_VERSION;
+      await update(ref(db,'users/'+user.uid), { lastVersion: APP_VERSION });
+    }
+    if(!p[STARTER_FLAG] && !staleClient){
       p.fairyDust=(p.fairyDust||0)+STARTER_DUST;
       p[STARTER_FLAG]=true;
       await update(ref(db,'users/'+user.uid), { fairyDust:p.fairyDust, [STARTER_FLAG]:true });
@@ -3237,7 +3338,7 @@ async function loadProfile(user){
     return p;
   }
   const fresh={ name:user.displayName||'Player', email:user.email, collection:{}, packs:0,
-                fairyDust:STARTER_DUST, [STARTER_FLAG]:true, createdAt:Date.now() };
+                fairyDust:STARTER_DUST, [STARTER_FLAG]:true, lastVersion:APP_VERSION, createdAt:Date.now() };
   await set(ref(db,'users/'+user.uid), fresh);
   return fresh;
 }
@@ -3295,6 +3396,7 @@ async function loadProfile(user){
     if(user){
       currentUser=user;
       try{ myProfile=await loadProfile(user); }catch(e){ myProfile={name:user.displayName||'Player',collection:{},packs:0}; }
+      renderBuildStamp();   // staleClient is only known once the profile has been read
       myName=myProfile.name||user.displayName||'Player';
       hide('auth-box'); show('menu-box');
     } else {
@@ -3344,6 +3446,10 @@ function ownedCount(id){ return (myProfile && myProfile.collection && myProfile.
 function maxCopies(card){ return MAX_COPIES[card.rarity] || 1; }
 
 async function saveCollection(){
+  if(staleClient){   // an out-of-date tab must never overwrite your collection either
+    console.warn('Refused to save the collection: this build ('+APP_VERSION+') is older than the one your account last used.');
+    return;
+  }
   if(!currentUser) return;
   await update(ref(db,'users/'+currentUser.uid), {
     collection: myProfile.collection || {},
@@ -3363,6 +3469,25 @@ async function craftCard(card){
 }
 
 // ── DEV HOOKS (temporary) ──
+// deckReport() — prints, per saved deck: how many slots it claims, how many cards actually
+// get built from it, and any card ids that no longer exist. Run it in the console.
+window.deckReport = ()=>{
+  const ds = allDecks();
+  Object.entries(ds).forEach(([id,d])=>{
+    const ghosts = deckGhosts(d);
+    const real   = deckSize(d);
+    const built  = buildDeckFrom(d).length;
+    console.log('%c'+(d.name||id), 'font-weight:bold', {
+      'slots claimed': Object.values(d.cards||{}).reduce((a,b)=>a+(b||0),0),
+      'real cards':    real,
+      'cards built':   built,
+      'linked blessing': d.linkedBlessing || '—',
+      'DEAD IDS':      ghosts.length ? ghosts : 'none'
+    });
+    if(ghosts.length) console.warn('  ⚠ '+(d.name||id)+' holds card ids that no longer exist:', ghosts);
+  });
+  return Object.keys(ds).length + ' deck(s) checked';
+};
 // Call from the browser console while signed in, e.g.  giveDust(20000)
 // Remove this block when the game goes "live" — it writes straight to your own profile.
 window.giveDust = async (n)=>{
@@ -3403,9 +3528,22 @@ function allDecks(){ return (myProfile && myProfile.decks) || {}; }
 function deckById(id){ return allDecks()[id] || null; }
 async function saveDecks(){
   if(!currentUser) return;
+  if(staleClient){   // an out-of-date tab must never overwrite your decks
+    console.warn('Refused to save: this build ('+APP_VERSION+') is older than the one your account last used. Hard-refresh the page.');
+    alert('This page is an old version of the game (probably cached).\n\nPress Ctrl+Shift+R to reload, otherwise your decks cannot be saved.');
+    return;
+  }
   await update(ref(db,'users/'+currentUser.uid), { decks: myProfile.decks || {} });
 }
-function deckSize(d){ return Object.values((d&&d.cards)||{}).reduce((a,b)=>a+(b||0),0); }
+// Count only cards that REALLY exist. deckSize used to sum the raw entries, while
+// buildDeckFrom silently skipped ids with no definition — so a deck holding a stale id
+// reported 40/40 and then dealt you a short deck. Both now count the same thing.
+function deckSize(d){ return deckDefs(d).reduce((a,x)=>a+x.n, 0); }
+function deckGhosts(d){
+  return Object.entries((d&&d.cards)||{})
+    .filter(([id,n])=>n>0 && !CARDS_DATA.some(c=>c.id===id))
+    .map(([id,n])=>({id, n}));
+}
 function deckDefs(d){
   return Object.entries((d&&d.cards)||{})
     .map(([id,n])=>({card:CARDS_DATA.find(c=>c.id===id), n}))
@@ -3433,27 +3571,45 @@ function whyNotAdd(d, card){
   if(card.quickplay && wish==='finale')    return 'This deck already runs Finale';
   return null;
 }
-function deckValid(d){ return deckSize(d)===DECK_SIZE; }
+// A deck is playable only if it is the right size AND this build knows every card in it.
+// A deck holding cards from a newer version isn't broken — this client is just behind.
+function deckValid(d){ return deckSize(d)===DECK_SIZE && deckGhosts(d).length===0; }
+function deckProblem(d){
+  const ghosts=deckGhosts(d);
+  if(ghosts.length) return 'Needs a newer version of the game ('+ghosts.length+' unknown card'+(ghosts.length===1?'':'s')+')';
+  const n=deckSize(d);
+  if(n!==DECK_SIZE) return n+'/'+DECK_SIZE+' — not playable';
+  return null;
+}
 
-// Prune on OPEN: drop copies you no longer own. Returns what was removed.
+// Prune on OPEN: drop copies you no longer own. Cards this build does NOT KNOW are left
+// completely alone — an out-of-date client must never delete cards from your saved deck just
+// because it hasn't heard of them yet. Those decks are simply flagged unplayable here until
+// the client is updated. Returns what was actually removed (disenchanted copies only).
 function pruneDeck(d){
   const removed=[];
+  // A stale build has no business judging your deck at all: its idea of which cards exist
+  // and what you own is out of date. Touch nothing, report nothing.
+  if(staleClient) return removed;
   Object.keys(d.cards||{}).forEach(id=>{
     const def=CARDS_DATA.find(c=>c.id===id);
-    const limit = def ? Math.min(maxCopies(def), ownedCount(id)) : 0;
+    if(!def) return;                      // unknown to THIS build → hands off
+    const limit=Math.min(maxCopies(def), ownedCount(id));
     const have=d.cards[id]||0;
     if(have>limit){
-      removed.push({name:def?def.name:id, n:have-limit});
+      removed.push({name:def.name, n:have-limit});
       if(limit<=0) delete d.cards[id]; else d.cards[id]=limit;
     }
   });
   // The linked blessing lives on the deck, not in it — but you still have to own it.
   if(d.linkedBlessing){
     const def=CARDS_DATA.find(c=>c.id===d.linkedBlessing);
-    const carrier=deckDefs(d).some(x=>x.card.linksBlessing);
-    if(!def || ownedCount(d.linkedBlessing)<=0 || !carrier){
-      if(def && ownedCount(d.linkedBlessing)<=0) removed.push({name:def.name+' (linked blessing)', n:1});
-      d.linkedBlessing=null;
+    if(def){
+      const carrier=deckDefs(d).some(x=>x.card.linksBlessing);
+      if(ownedCount(d.linkedBlessing)<=0 || !carrier){
+        if(ownedCount(d.linkedBlessing)<=0) removed.push({name:def.name+' (linked blessing)', n:1});
+        d.linkedBlessing=null;
+      }
     }
   }
   return removed;
@@ -3573,11 +3729,12 @@ function renderDeckSidebar(){
     }
     ids.sort((a,b)=>(allDecks()[b].updatedAt||0)-(allDecks()[a].updatedAt||0)).forEach(id=>{
       const d=allDecks()[id];
-      const n=deckSize(d), ok=(n===DECK_SIZE);
+      const ok=deckValid(d), ghosts=deckGhosts(d).length;
       const row=document.createElement('div');
       row.className='dk-row';
+      row.title=deckProblem(d)||'Ready to play';
       row.innerHTML='<div class="dk-row-nm">'+esc(d.name||'Unnamed')+'</div>'+
-                    '<div class="dk-row-ct'+(ok?'':' bad')+'">'+(ok?'40':n+'/40 ⚠')+'</div>';
+                    '<div class="dk-row-ct'+(ok?'':' bad')+'">'+(ok?'40':(ghosts?'⚠ old build':deckSize(d)+'/40 ⚠'))+'</div>';
       row.onclick=()=>openDeck(id);
       list.appendChild(row);
     });
@@ -3738,6 +3895,7 @@ function renderCollection(){
   $('menu-single').onclick=()=> openDeckPicker('solo');
   // Multiplayer → reveal the create/join panel.
   $('menu-multi').onclick=()=>{
+    if(blockedByVersion()) return;
     hide('menu-box'); show('lobby-box');
     $('lb-asname').innerHTML='Playing as <strong style="color:var(--green2)">'+((myProfile&&myProfile.name)||'Hero')+'</strong>';
   };
