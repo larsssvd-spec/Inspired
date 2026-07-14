@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-14T17:07';
+const APP_VERSION = '2026-07-14T17:15';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -3825,7 +3825,29 @@ async function openDeck(id){
   const d=deckById(id);
   if(!d) return;
   d.cards=d.cards||{};
-  const removed=pruneDeck(d);
+
+  // Pull the collection FRESH before deciding what you own. This is the whole reason cards
+  // vanished from a healthy deck: the profile is fetched once at sign-in and then only kept
+  // up to date locally. Craft a card on the other laptop and this tab never hears about it —
+  // so prune looked at a stale snapshot, concluded "you only own one of these", and threw the
+  // second copy away. Destroying data on the strength of a cached number is never acceptable:
+  // if the fetch fails, prune is skipped entirely rather than guessing.
+  let fresh=true;
+  if(currentUser){
+    try{
+      const snap=await get(ref(db,'users/'+currentUser.uid));
+      if(snap.exists()){
+        const p=snap.val();
+        myProfile.collection = p.collection || {};
+        myProfile.fairyDust  = p.fairyDust ?? myProfile.fairyDust;
+      }
+    }catch(e){
+      fresh=false;
+      console.warn('Could not refresh the collection — skipping the deck cleanup to be safe.', e);
+    }
+  }
+
+  const removed = fresh ? pruneDeck(d) : [];
   colDeck=id;
   if(removed.length){
     await saveDecks();
