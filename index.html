@@ -42,6 +42,11 @@
      caught a fatal crash within a second: renderBuildStamp() ran before staleClient
      was declared, which would have handed every player a white screen.
 
+  6b. BUMP APP_VERSION ON EVERY SINGLE EXPORT.
+     It is the only way anyone can tell which build they are running. It sat unchanged
+     across a broken build and its repair, so the stamp in the menu read the same for
+     both — and pointed at the wrong conclusion for an hour.
+
   ── TOUCHING PLAYER DATA ─────────────────────────────────────────────────────
 
   7. NEVER DELETE WHAT THIS BUILD DOESN'T UNDERSTAND.
@@ -1523,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-14T15:16';
+const APP_VERSION = '2026-07-14T17:07';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
