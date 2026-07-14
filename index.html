@@ -478,12 +478,12 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 /* Unplayable cards: can't be played normally — held for their while-holding effect. */
 .card.unplayable { border-style:dashed; border-color:rgba(152,120,216,0.6); }
 .card.unplayable::after { content:'✋'; position:absolute; top:3px; left:4px; font-size:0.6rem; opacity:0.75; }
-/* A card whose play condition isn't met right now (Critical Bite above 20 HP). You can still
-   select it — the situation may change before it resolves — but it warns you. */
-.card.will-fizzle { position:relative; opacity:0.6; }
-.card.will-fizzle::after { content:'⚠'; position:absolute; top:3px; right:5px; z-index:4;
-  font-size:0.72rem; color:#e06a6a; text-shadow:0 1px 4px rgba(0,0,0,0.95); pointer-events:none; }
-.card.will-fizzle:hover { opacity:0.85; }
+/* A card whose play requirement isn't met (Critical Bite above 20 HP, a Krush before its
+   predecessor). It cannot be selected — clicking it shakes "no" and prints the reason. */
+.card.locked-req { position:relative; opacity:0.6; }
+.card.locked-req::after { content:'🔒'; position:absolute; top:3px; right:5px; z-index:4;
+  font-size:0.7rem; text-shadow:0 1px 4px rgba(0,0,0,0.95); pointer-events:none; }
+.card.locked-req:hover { opacity:0.85; }
 
 /* Cursed cards: one playable round left, then they rot away. */.card.cursed { border-color:rgba(200,64,64,0.7); box-shadow:0 0 10px rgba(200,64,64,0.35) inset; }
 .card.cursed::after { content:'☠'; position:absolute; top:2px; right:4px; font-size:0.65rem; color:var(--red2); opacity:0.85; }
@@ -609,6 +609,82 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   .rs-card:not(.framed), .rs-slot { width:80px; }
 }
 .grave-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:0.4rem; max-height:55vh; overflow-y:auto; margin:1rem 0; }
+
+/* ── DECK REVEAL (Larry) ──────────────────────────────────────────────────────
+   A carved parchment table, framed in gold. Built from gradients and borders only —
+   same language as the card frames themselves, so it belongs to Inspired. */
+.peek-box { position:relative; width:100%; max-width:1180px; padding:2.4rem 2.6rem 2rem;
+  border-radius:14px; text-align:center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,240,200,0.10), transparent 60%),
+    linear-gradient(178deg, #e8d9b4 0%, #dcc79a 42%, #cbb381 100%);
+  border:3px solid var(--gold);
+  box-shadow:0 0 0 5px #2a2013, 0 0 0 7px var(--gold2), 0 30px 90px rgba(0,0,0,0.95),
+             inset 0 0 90px rgba(120,86,36,0.35);
+}
+/* Ornate corner pieces */
+.peek-corner { position:absolute; width:34px; height:34px; pointer-events:none;
+  border:3px solid var(--gold2); border-radius:4px;
+  background:radial-gradient(circle at 50% 50%, #4a3a1c 0%, #2a2013 70%);
+  box-shadow:0 0 12px rgba(0,0,0,0.6); }
+.peek-corner.tl { top:-10px; left:-10px;  transform:rotate(45deg); }
+.peek-corner.tr { top:-10px; right:-10px; transform:rotate(45deg); }
+.peek-corner.bl { bottom:-10px; left:-10px;  transform:rotate(45deg); }
+.peek-corner.br { bottom:-10px; right:-10px; transform:rotate(45deg); }
+
+/* Title banner: a ribbon across the top of the parchment */
+.peek-banner { position:relative; display:inline-flex; align-items:center; justify-content:center;
+  min-width:min(460px, 70%); margin:-3.2rem auto 0.9rem; padding:0.55rem 2.6rem;
+  background:linear-gradient(180deg, #f3e6c4 0%, #e0cb9c 50%, #c9ae77 100%);
+  border:2px solid var(--gold); border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5); }
+.peek-banner-tail { position:absolute; top:50%; width:26px; height:26px; transform:translateY(-50%) rotate(45deg);
+  background:linear-gradient(135deg, #c9ae77, #a98f5c); border:2px solid var(--gold); border-radius:4px; z-index:-1; }
+.peek-banner-tail.left  { left:-13px; }
+.peek-banner-tail.right { right:-13px; }
+.peek-title { font-family:'Playfair Display',serif; font-size:1.7rem; font-weight:700; color:#3a2a10;
+  letter-spacing:0.02em; text-shadow:0 1px 0 rgba(255,255,255,0.5); white-space:nowrap; }
+.peek-sub { font-family:'Lora',serif; font-size:0.95rem; color:#5a4520; margin-bottom:1.3rem;
+  text-shadow:0 1px 0 rgba(255,255,255,0.35); }
+
+/* The cards, laid out on the parchment */
+.peek-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:0.9rem 0.8rem;
+  max-height:52vh; overflow-y:auto; padding:0.4rem 0.2rem; }
+.peek-grid .card { height:172px; width:auto; cursor:help; transition:transform 0.16s; }
+.peek-grid .card:not(.framed) { width:120px; height:172px; }
+.peek-grid .card:hover { transform:translateY(-6px); }
+/* The cards you actually take are lit up and labelled */
+.peek-grid .card.selected { position:relative; box-shadow:0 0 0 3px var(--green2), 0 0 26px rgba(168,224,80,0.75); border-radius:8px; }
+.peek-grid .card.selected::after { content:'TAKEN'; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  background:var(--green3); color:#eaffd0; font-family:'Playfair Display',serif; font-size:0.52rem;
+  letter-spacing:0.14em; padding:2px 8px; border-radius:999px; border:1px solid var(--green2);
+  box-shadow:0 2px 8px rgba(0,0,0,0.7); white-space:nowrap; }
+.peek-grid::-webkit-scrollbar { width:8px; }
+.peek-grid::-webkit-scrollbar-track { background:rgba(90,69,32,0.18); border-radius:4px; }
+.peek-grid::-webkit-scrollbar-thumb { background:rgba(90,69,32,0.5); border-radius:4px; }
+
+/* Carved buttons */
+.peek-actions { display:flex; gap:1rem; justify-content:center; margin-top:1.6rem; }
+.peek-btn { flex:0 1 340px; padding:0.75rem 1.4rem; cursor:pointer;
+  font-family:'Playfair Display',serif; font-size:1.05rem; letter-spacing:0.02em;
+  color:#3a2a10; background:linear-gradient(180deg, #f0e2c0 0%, #d8c294 55%, #bfa572 100%);
+  border:2px solid var(--gold); border-radius:8px;
+  box-shadow:0 4px 0 #8a7038, 0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.55);
+  transition:transform 0.1s, box-shadow 0.1s; }
+.peek-btn:hover { transform:translateY(-2px); box-shadow:0 6px 0 #8a7038, 0 12px 26px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6); }
+.peek-btn:active { transform:translateY(2px); box-shadow:0 2px 0 #8a7038, 0 4px 12px rgba(0,0,0,0.4); }
+.peek-btn.primary { color:#f4ffe0;
+  background:linear-gradient(180deg, #8fd63c 0%, #6fb02a 55%, #4f8a18 100%);
+  border-color:var(--gold2);
+  box-shadow:0 4px 0 #2f5a10, 0 8px 22px rgba(80,150,20,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+  text-shadow:0 1px 3px rgba(0,0,0,0.5); }
+.peek-btn.primary:hover { box-shadow:0 6px 0 #2f5a10, 0 12px 30px rgba(120,200,40,0.5), inset 0 1px 0 rgba(255,255,255,0.4); }
+.peek-btn.primary:active { box-shadow:0 2px 0 #2f5a10, 0 4px 12px rgba(80,150,20,0.35); }
+@media (max-width:820px){
+  .peek-box { padding:2rem 1.2rem 1.4rem; }
+  .peek-grid .card { height:128px; }
+  .peek-actions { flex-direction:column; }
+}
 .floater { position:fixed; pointer-events:none; z-index:200; font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; animation:floatUp 1.4s ease-out forwards; }
 @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-70px) scale(1.3)} }
 .gameover-icon { font-size:3rem; margin-bottom:0.5rem; }
@@ -1209,13 +1285,19 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 </div>
 
 <div class="overlay hidden" id="ov-peek">
-  <div class="ov-box" style="max-width:820px">
-    <div class="ov-title" id="peek-title">Look at your deck</div>
-    <div class="ov-sub" id="peek-sub"></div>
-    <div class="grave-grid" id="peek-grid" style="max-height:44vh"></div>
-    <div style="display:flex;gap:0.6rem;margin-top:1rem">
-      <button class="btn btn-outline" id="btn-peek-keep" style="flex:1">Keep this order</button>
-      <button class="btn btn-green" id="btn-peek-shuffle" style="flex:1">Shuffle my deck</button>
+  <div class="peek-box">
+    <div class="peek-corner tl"></div><div class="peek-corner tr"></div>
+    <div class="peek-corner bl"></div><div class="peek-corner br"></div>
+    <div class="peek-banner">
+      <span class="peek-banner-tail left"></span>
+      <div class="peek-title" id="peek-title">Look at your deck</div>
+      <span class="peek-banner-tail right"></span>
+    </div>
+    <div class="peek-sub" id="peek-sub"></div>
+    <div class="peek-grid" id="peek-grid"></div>
+    <div class="peek-actions">
+      <button class="peek-btn" id="btn-peek-keep">Keep this order</button>
+      <button class="peek-btn primary" id="btn-peek-shuffle">Shuffle my deck</button>
     </div>
   </div>
 </div>
@@ -1606,14 +1688,22 @@ function krushSearch(c, n, findId, label){
   fireDrawTriggers(st, r, [card]);
 }
 
-// Can this card be played at all right now? requiresPlayed names a card that must already
-// have been played THIS GAME (the Krush chain). Returns null when it's fine, otherwise the
-// reason — used by the hand (shake + message), the CPU, and as a final guard in runCard.
+// Can this card be played at all right now? Two kinds of requirement, both plain fields on
+// the card so the hand, the CPU and the engine all read the SAME rule and can never disagree:
+//   • requiresPlayed  — a card that must already have been played this game (the Krush chain)
+//   • playIfHpBelow   — you must be under this much health (Critical Bite)
+// Returns null when it's fine, otherwise the reason. The hand refuses the click with a shake,
+// the CPU never picks it, and runCard turns it away as a last guard.
 function playBlockedReason(state, r, card){
-  if(!card || !card.requiresPlayed) return null;
-  if((state[r].playedIds||[]).includes(card.requiresPlayed)) return null;
-  const def=CARDS_DATA.find(x=>x.id===card.requiresPlayed);
-  return 'You must play '+(def?def.name:card.requiresPlayed)+' first.';
+  if(!card) return null;
+  if(card.playIfHpBelow && (state[r].hp||0) >= card.playIfHpBelow){
+    return 'Only playable below '+card.playIfHpBelow+' health (you have '+state[r].hp+').';
+  }
+  if(card.requiresPlayed && !((state[r].playedIds||[]).includes(card.requiresPlayed))){
+    const def=CARDS_DATA.find(x=>x.id===card.requiresPlayed);
+    return 'You must play '+(def?def.name:card.requiresPlayed)+' first.';
+  }
+  return null;
 }
 
 // The win-gate. The mirror image of the death-gate: a card can simply DECLARE a winner
@@ -1844,19 +1934,13 @@ const CARD_LOGIC = {
       c.log(c.state[c.self].name+' plays Different Set of Rules — both players are set to 75 health. They are Hindered next round.','effect');
     }
   },
-  // Critical Bite — checked the moment it is FLIPPED, not when you select it. You may always
-  // pick it (your opponent might knock you under 20 before your cards resolve), but if you're
-  // still at 20+ health when it turns over, it fizzles. Healing before it in your own row is
-  // simply a mistake: cards resolve left to right, so play it first.
-  // playIfHpBelow is a plain number on the card, so the hand can warn you with the exact same
-  // rule the engine uses — no chance of the UI and the engine disagreeing.
+  // Critical Bite — playIfHpBelow makes it unselectable above 20 health: the hand refuses the
+  // click, the CPU won't pick it, and runCard turns it away. So by the time onPlay runs, the
+  // requirement is already guaranteed — no fizzle branch needed here.
+  // Note the requirement is re-checked at FLIP too: select it at 15, heal past 20 earlier in
+  // your own row, and it is refused. Cards resolve left to right, so put it first.
   critical_bite: {
     onPlay:(c)=>{
-      const hp=c.state[c.self].hp;
-      if(hp >= 20){
-        c.log(c.state[c.self].name+' plays Critical Bite — but at '+hp+' health the hunger never comes. It fizzles.','system');
-        return;
-      }
       c.dealDmgTo(c.opp, 30);
       c.log(c.state[c.self].name+' plays Critical Bite — 30 damage!','damage');
     }
@@ -3647,12 +3731,12 @@ function renderHand(hand){
     const el=makeCardEl(c);
     const ft=me().forcedType;
     if(ft && matchesForced(c, ft)) el.classList.add('forced');   // Skywalker: highlight forced cards
-    // Conditional cards (Critical Bite): you may always select them — your opponent could
-    // still knock you under the threshold before your row resolves — but the hand warns you
-    // that RIGHT NOW it would fizzle. Same rule the engine uses, read off the same field.
-    if(c.playIfHpBelow && me().hp >= c.playIfHpBelow){
-      el.classList.add('will-fizzle');
-      el.title='Fizzles right now — needs less than '+c.playIfHpBelow+' health (you have '+me().hp+')';
+    // A card whose play requirement isn't met (Critical Bite above 20 HP) is dimmed with a
+    // marker and the exact reason — clicking it shakes "no". Same rule everything else reads.
+    const why = playBlockedReason(localGs, myRole, c);
+    if(why){
+      el.classList.add('locked-req');
+      el.title = why;
     }
     el.addEventListener('click',()=>toggleCard(c.uid,el));
     el.addEventListener('mouseenter',ev=>showCardPreview(c,el));
@@ -4102,10 +4186,15 @@ function pickPeek(cards, cardName, gained){
     cards.forEach(c=>{
       const el=makeCardEl(c);
       if(gained.some(g=>g.uid===c.uid)) el.classList.add('selected');   // highlight what you take
+      // The cards are laid out small enough to fit 14 of them — hover throws the full card up
+      // beside them, so you can actually read what you're deciding about.
+      el.addEventListener('mouseenter',()=>showCardPreview(c, el, 'side'));
+      el.addEventListener('mouseleave',hideCardPreview);
       grid.appendChild(el);
     });
-    document.getElementById('btn-peek-keep').onclick=()=>{ ov.classList.add('hidden'); resolve('keep'); };
-    document.getElementById('btn-peek-shuffle').onclick=()=>{ ov.classList.add('hidden'); resolve('shuffle'); };
+    const close=(choice)=>{ hideCardPreview(); ov.classList.add('hidden'); resolve(choice); };
+    document.getElementById('btn-peek-keep').onclick=()=>close('keep');
+    document.getElementById('btn-peek-shuffle').onclick=()=>close('shuffle');
     ov.classList.remove('hidden');
   });
 }
