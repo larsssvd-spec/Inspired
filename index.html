@@ -441,7 +441,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 #card-preview {
   position:fixed; display:none; z-index:100002; height:400px; pointer-events:none;
 }
-#card-preview .pv-card { height:400px; cursor:default; }
+/* The preview height is driven by --pv-h. It used to be a hard 400px, but the collection
+   grid scales with the viewport: on a big screen a grid card is ALREADY ~400px, so hovering
+   did nothing. It is now sized relative to the card you're hovering, so it always grows. */
+#card-preview .pv-card { height:var(--pv-h,400px); cursor:default; }
 #card-preview .pv-card.framed .cf-frame { filter:drop-shadow(0 16px 44px rgba(0,0,0,0.85)); }
 #card-preview .pv-card.framed:hover { transform:none; }
 #card-preview .pv-card:not(.framed) { width:275px; height:400px; box-shadow:0 16px 44px rgba(0,0,0,0.85); border-width:2px; }
@@ -462,7 +465,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
 @keyframes pvFade { from { opacity:0; } to { opacity:1; } }
 #card-preview .pv-col { display:flex; flex-direction:column; align-items:center; gap:0.55rem; }
 #card-preview .pv-col .pv-card { height:var(--pv-side,330px); }
-#card-preview .pv-col.pv-base .pv-card { height:400px; }
+#card-preview .pv-col.pv-base .pv-card { height:var(--pv-h,400px); }
 #card-preview .pv-lbl { font-family:'Playfair Display',serif; font-size:0.68rem; letter-spacing:0.16em;
   text-transform:uppercase; white-space:nowrap; color:var(--text2); background:rgba(6,16,22,0.85);
   border:1px solid var(--border); border-radius:999px; padding:0.24rem 0.75rem; box-shadow:0 2px 12px rgba(0,0,0,0.7); }
@@ -1453,6 +1456,8 @@ const CARDS_DATA = [
   {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
   {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
 
+  {id:'different_set_of_rules', collectible:true, name:'Different Set of Rules', text:"Set both player's health to 75. You are Hindered next round.", rarity:'common', emoji:'⚖️', type:'normal', art:'art/different_set_of_rules.png'},
+
   {id:'critical_bite', collectible:true, name:'Critical Bite', text:'Deal 30 damage. This card can only be played if you have less than 20 health.', rarity:'common', emoji:'🩸', dealsDamage:true, playIfHpBelow:20, type:'normal', art:'art/critical_bite.png'},
 
   {id:'blaargh', collectible:true, name:'Blaargh', text:'Deal 10 damage. When Discarded: Deal 20 damage.', rarity:'common', emoji:'👹', dealsDamage:true, type:'normal', art:'art/blaargh.png'},
@@ -1803,6 +1808,22 @@ const CARD_LOGIC = {
       return true;   // consumed: straight to the graveyard, never sits in hand
     },
     onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Fireball — it already burned out when drawn. Nothing happens.','system'); }
+  },
+  // Different Set of Rules — wipes the board state clean: BOTH players are hard-set to 75.
+  // setHealth is not a heal and not damage: it ignores can't-heal, isn't stealable (Nightlife),
+  // can't be blocked, and it's never lethal (75 > 0). It resolves at its own place in your
+  // row, so playing a damage card BEFORE it simply throws that damage away — put it first if
+  // you want the reset, last if you want to finish someone off first (you can't, they land on 75).
+  // The Hindered is the price: no draw at the end of this round, so you open the next one
+  // with whatever you still hold.
+  different_set_of_rules: {
+    onPlay:(c)=>{
+      const st=c.state;
+      setHealth(st, c.self, 75);
+      setHealth(st, c.opp,  75);
+      c.setHindered();
+      c.log(c.state[c.self].name+' plays Different Set of Rules — both players are set to 75 health. They are Hindered next round.','effect');
+    }
   },
   // Critical Bite — checked the moment it is FLIPPED, not when you select it. You may always
   // pick it (your opponent might knock you under 20 before your cards resolve), but if you're
@@ -4554,6 +4575,17 @@ function posTip(e){
 function showCardPreview(c, el, mode){
   const pv=document.getElementById('card-preview');
   pv.innerHTML='';
+  // How big should the preview be? A fixed size fails: the collection grid scales with the
+  // window, so on a large screen the grid card is already as big as a 400px preview and
+  // hovering appears to do nothing. Size it against the card being hovered instead — always
+  // a clear 40% jump — with 400px as the floor and the window height as the ceiling.
+  let pvH=400;
+  if(el && (mode==='over')){
+    const r=el.getBoundingClientRect();
+    pvH = Math.max(400, Math.round(r.height*1.4));
+    pvH = Math.min(pvH, window.innerHeight-40);
+  }
+  pv.style.setProperty('--pv-h', pvH+'px');
   // Collection hover on a card with alternate faces (variants) or cards it creates (tokens)
   // → showcase: source card dead centre of the screen, the rest lined up to its right.
   const vars = (mode==='over' && c.id && CARD_VARIANTS[c.id]) ? CARD_VARIANTS[c.id] : null;
