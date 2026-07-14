@@ -1292,6 +1292,27 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif; min-
   </div>
 </div>
 
+<div class="overlay hidden" id="ov-vault">
+  <div class="ov-box" style="max-width:520px">
+    <div class="ov-title">Marber Vault</div>
+    <div class="ov-sub" id="vault-sub">The Vault opens. Take what it offers?</div>
+    <div class="grave-grid" id="vault-offer" style="grid-template-columns:repeat(auto-fit,minmax(96px,1fr));max-height:40vh"></div>
+    <div style="display:flex;gap:0.6rem;margin-top:1rem">
+      <button class="btn btn-outline" id="btn-vault-leave" style="flex:1">Leave them</button>
+      <button class="btn btn-green" id="btn-vault-take" style="flex:1">Take them</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ov-vaultview">
+  <div class="ov-box" style="max-width:600px">
+    <div class="ov-title">Marber Vault</div>
+    <div class="ov-sub" id="vaultview-sub"></div>
+    <div class="grave-grid" id="vaultview-grid"></div>
+    <button class="btn btn-outline" onclick="document.getElementById('ov-vaultview').classList.add('hidden')" style="margin-top:1rem">Close</button>
+  </div>
+</div>
+
 <div class="overlay hidden" id="ov-grave">
   <div class="ov-box" style="max-width:560px">
     <div class="ov-title">Graveyard</div>
@@ -1518,6 +1539,23 @@ const CARDS_DATA = [
   // collection or a pack. It resolves the moment it is DRAWN and burns itself out.
   {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
   {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
+
+  // ── Alter Ego ──
+  // ONE card at deckbuilding, TWO physical cards in your deck: same name, same text, different
+  // art, shuffled in separately at game start (so a 40-card deck holds 41 cards). Each half is
+  // dead on its own — the effect only fires when you play BOTH halves in the SAME round.
+  {id:'world_splitter',   collectible:true, name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌍', alterEgo:'world_splitter_b', type:'normal', art:'art/world_splitter.png'},
+  {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
+
+  {id:'forgotten_mage', collectible:true, name:'The Forgotten Mage', text:'Heal 10. If your opponent is holding 7 cards or more: Also get an Enchanted Orb.', rarity:'common', emoji:'🧙', heals:true, type:'normal', art:'art/forgotten_mage.png'},
+
+  {id:'kong_fee', collectible:true, name:'Kong Fee', text:'Deal 10 true damage to yourself. Get an Enchanted Orb afterwards.', rarity:'common', emoji:'🥋', dealsDamage:true, type:'normal', art:'art/kong_fee.png'},
+
+  {id:'time_and_space', collectible:true, name:'Time and Space', text:'Heal 5 for each card that you shuffled into your deck last round.', rarity:'common', emoji:'⏳', heals:true, type:'normal', art:'art/time_and_space.png'},
+
+  {id:'marber_vault', collectible:true, name:'Marber Vault', text:'Blessing: Each card you Discard will go into this vault. When you are Hindered: You may take 2 random cards from this vault.', rarity:'legendary', emoji:'🗝️', type:'blessing', art:'art/marber_vault.png'},
+
+  {id:'garden_tales', collectible:true, name:'Garden Tales', text:"Heal 10 for each card in your hand from your opponent's deck.", rarity:'common', emoji:'🌿', heals:true, type:'normal', art:'art/garden_tales.png'},
 
   {id:'skull_slasher', collectible:true, name:'Skull Slasher', text:"Deal 10 damage. Deal 30 damage if your opponent has 0 cards in their hand. Enchanted: Exactly 2 cards.", rarity:'common', emoji:'💀', dealsDamage:true, enchanted:true, type:'normal', art:'art/skull_slasher.png'},
 
@@ -1803,6 +1841,7 @@ const CARD_VARIANTS = {
 // the variants: source card centre-screen, tokens lined up to the right.
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
+  world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
@@ -1881,6 +1920,99 @@ const CARD_LOGIC = {
       return true;   // consumed: straight to the graveyard, never sits in hand
     },
     onPlay:(c)=>{ c.log(c.state[c.self].name+' plays Fireball — it already burned out when drawn. Nothing happens.','system'); }
+  },
+  // ── World Splitter (Alter Ego) ──
+  // Two halves, one card. Each half checks the row you played this round: if the OTHER half is
+  // in it, the effect installs — otherwise the half is simply dead. Both halves run onPlay, so
+  // the second one finds the effect already there and does nothing (it can never double up).
+  // Once installed, it lives for the rest of the game: every card YOU discard forces a random
+  // discard out of your opponent's hand. Their forced discard is a real discard — it fires
+  // their onDiscard triggers and lands in their Marber Vault if they run one.
+  // And if they ALSO have a World Splitter running, their forced discard forces one back at
+  // you, which forces one back at them… the chain ping-pongs until a hand runs dry. That is
+  // intended. It always ends: every step removes a card and nothing adds one. SPLIT_CHAIN is
+  // only a fuse against a future card that could break that assumption.
+  world_splitter:   { onPlay:(c)=>splitterPlay(c), onDiscard:(c)=>splitterDiscard(c) },
+  world_splitter_b: { onPlay:(c)=>splitterPlay(c) },
+  // The Forgotten Mage — the heal is unconditional; the Orb is the reward for catching your
+  // opponent hoarding. Their hand is read the moment this FLIPS, so the cards they played this
+  // round are already out of it: someone who dumps two cards drops from 8 to 6 and gives you
+  // nothing. Everything they hold counts — Immune, Cursed, all of it. Max hand is 8, so 7+
+  // means they are nearly choking on cards.
+  // A full hand of your own means no Orb — the heal still lands.
+  forgotten_mage: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      c.heal(10);
+      const held=(st[c.opp].hand||[]).length;
+      if(held < 7){
+        c.log(st[r].name+' plays The Forgotten Mage — heal 10 ('+st[c.opp].name+' holds '+held+', not enough for the Orb).','heal');
+        return;
+      }
+      if((st[r].hand||[]).length >= maxHandSize(st, r)){
+        c.log(st[r].name+' plays The Forgotten Mage — heal 10, but the hand is full. No Orb.','heal');
+        return;
+      }
+      const orb=mkCard(CARDS_DATA.find(x=>x.id==='enchanted_orb'));
+      orb.owner=r;
+      st[r].hand=[...(st[r].hand||[]), orb];
+      c.log(st[r].name+' plays The Forgotten Mage — heal 10, and '+st[c.opp].name+' is hoarding '+held+' cards: an Enchanted Orb!','effect');
+    }
+  },
+  // Kong Fee — you pay in blood for the Orb. The 10 is TRUE damage to YOURSELF: no Block, no
+  // Shield, nothing saves you from it. At 10 health or less it kills you — the death-gate
+  // fires straight away and you never see the Orb. That is the deal.
+  // The Orb is conjured into your hand (not drawn, so no "when drawn" triggers). A full hand
+  // means no Orb: you take the 10 for nothing. Count your cards first.
+  kong_fee: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      c.dealDmgTo(r, 10, true);          // may kill you outright → HALT, no Orb
+      if((st[r].hand||[]).length >= maxHandSize(st, r)){
+        c.log(st[r].name+' plays Kong Fee — 10 true damage, but the hand is full. No Orb.','system');
+        return;
+      }
+      const orb=mkCard(CARDS_DATA.find(x=>x.id==='enchanted_orb'));
+      orb.owner=r;                       // conjured by you, so it counts as yours
+      st[r].hand=[...(st[r].hand||[]), orb];
+      c.log(st[r].name+' plays Kong Fee — 10 true damage to themselves, and gains an Enchanted Orb.','effect');
+    }
+  },
+  // Time and Space — 5 health per card that actually landed in your deck LAST round. It reads
+  // the rolled-over counter, so a shuffle-in this round pays out next round: Baby Krush or
+  // Vol'Dor Mook first, Time and Space after. Cards Devour Hope ate never entered the deck and
+  // never count. Cards your opponent forces into your deck aren't yours to be paid for either.
+  // A normal heal — stealable by Nightlife, shut off by the First Day's can't-heal.
+  time_and_space: {
+    onPlay:(c)=>{
+      const n=c.state[c.self].shuffledInLastRound||0;
+      if(!n){
+        c.log(c.state[c.self].name+' plays Time and Space — nothing was shuffled in last round. No healing.','system');
+        return;
+      }
+      c.heal(5*n);
+      c.log(c.state[c.self].name+' plays Time and Space — '+n+' card'+(n===1?'':'s')+' shuffled in last round: heal '+(5*n)+'.','heal');
+    }
+  },
+  // Garden Tales — 10 health for every card you hold that belongs to your OPPONENT.
+  // Ownership is stamped when a card enters a deck, and a player's hand comes out of their
+  // own deck — so a card of theirs carries their name wherever it ends up. Stealing one from
+  // their hand and taking one from their deck therefore count exactly the same: it's theirs.
+  // A normal heal — Nightlife can steal it, the First Day's can't-heal shuts it off.
+  // Cards you play this round have already left your hand when this resolves, so holding is
+  // what pays. (Cards conjured straight into a hand by an effect belong to no deck and never
+  // count — they were never anyone's.)
+  garden_tales: {
+    onPlay:(c)=>{
+      const st=c.state, r=c.self;
+      const n=(st[r].hand||[]).filter(x=>fromEnemyDeck(x, r)).length;
+      if(!n){
+        c.log(st[r].name+' plays Garden Tales — nothing of the enemy in hand. No healing.','system');
+        return;
+      }
+      c.heal(10*n);
+      c.log(st[r].name+' plays Garden Tales — holding '+n+' of the enemy\'s card'+(n===1?'':'s')+': heal '+(10*n)+'.','heal');
+    }
   },
   // Skull Slasher — reads your opponent's hand at the moment it FLIPS, so the cards they
   // played this round are already gone from it: someone who dumps their last two cards is
@@ -1973,6 +2105,7 @@ const CARD_LOGIC = {
       const o=c.opp;
       const copy=mkCard(CARDS_DATA.find(x=>x.id==='scavenger'));
       copy._variant=2; copy.text=SCAV_V2_TEXT;
+      copy.owner=o;                                   // it lives in their deck now
       c.state[o].deck=[...(c.state[o].deck||[]), copy];
       shuffleDeck(c.state, o);
       c.log(c.state[c.self].name+" plays Scavenger — a Scavenger is shuffled into "+c.state[o].name+"'s deck!",'effect');
@@ -2085,10 +2218,7 @@ const CARD_LOGIC = {
       const keep  = hand.filter(x=>x && isImmune(x));
       const dumped= hand.filter(x=>x && !isImmune(x));
       st[r].hand=keep;
-      const gy=st[r].graveyard||[];
-      dumped.forEach(card=>gy.unshift(card));
-      st[r].graveyard=gy;
-      dumped.forEach(card=>fireDiscard(st, r, card));   // real discards → onDiscard fires per card
+      dumped.forEach(card=>discardTo(st, r, card));   // real discards → Vault or graveyard, onDiscard fires
       c.setHindered();
       c.log(st[r].name+' commits Deep Lust — discards '+dumped.length+' card'+(dumped.length===1?'':'s')+
             (keep.length?' (immune cards stay)':'')+' and is Hindered — no draw this round.','effect');
@@ -2648,6 +2778,55 @@ function stealHealth(gs,r,amt){
   checkDeath(gs,o);   // stealing an opponent's health down to 0 is lethal → death-gate
 }
 
+// ── World Splitter helpers ───────────────────────────────────────────────────
+const SPLITTER_HALVES = ['world_splitter','world_splitter_b'];
+let SPLIT_CHAIN = 0;   // fuse: the forced-discard ping-pong can never run away
+
+function splitterPlay(c){
+  const st=c.state, r=c.self;
+  if((st[r].effects||[]).some(e=>e.id==='world_splitter')) return;   // already running
+  const row=(st[r].selectedCards||[]).filter(Boolean).map(x=>x.id);
+  const bothHalves = SPLITTER_HALVES.every(id=>row.includes(id));
+  if(!bothHalves){
+    c.log(st[r].name+' plays World Splitter — but only one half. The world holds.','system');
+    return;
+  }
+  c.addEffect({id:'world_splitter'});
+  c.log(st[r].name+' plays BOTH halves of World Splitter — the world splits! Every card they discard now tears one from '+st[c.opp].name+"'s hand.",'effect');
+}
+
+function splitterDiscard(c){
+  const st=c.state, r=c.self, o=c.opp;
+  if(SPLIT_CHAIN > 40){ return; }       // fuse
+  if(!(st[o].hand||[]).length) return;  // nothing left to tear out
+  SPLIT_CHAIN++;
+  try {
+    const gone = discardCards(st, o, 1);   // random, immediate, a REAL discard on their side
+    if(gone) c.log('  🌍 World Splitter — '+st[o].name+' is forced to discard a card.','effect');
+  } finally {
+    SPLIT_CHAIN--;
+  }
+}
+
+// ── The Marber Vault ─────────────────────────────────────────────────────────
+// The Vault lives on the blessing state, so it is saved and synced with everything else.
+// While you run it, your discards are stored INSTEAD of hitting the graveyard — they are
+// still real discards (Blaargh still screams), they just land somewhere you can get them
+// back from. Every discard route funnels through discardTo(), so a card can never slip
+// past the Vault by accident.
+function vaultOf(state, r){
+  const b = state[r] && state[r].blessing;
+  return (b && b.id === 'marber_vault') ? b : null;
+}
+function vaultCards(v){ return (v && v.cards) || []; }
+
+function discardTo(state, r, card){
+  const v = vaultOf(state, r);
+  if(v) v.cards = [...(v.cards||[]), card];                          // into the Vault
+  else  state[r].graveyard = [card, ...(state[r].graveyard||[])];    // or the graveyard
+  fireDiscard(state, r, card);   // it is a REAL discard either way: onDiscard still fires
+}
+
 function discardCards(gs,r,n,chosenUids){
   const hand=gs[r].hand||[];
   let discarded=0;
@@ -2657,7 +2836,7 @@ function discardCards(gs,r,n,chosenUids){
     // even if somehow selected (immunity applies against your own cards too).
     chosenUids.forEach(uid=>{
       const idx=hand.findIndex(c=>c.uid===uid && takeable(c));
-      if(idx>=0){ const c=hand.splice(idx,1)[0]; gs[r].graveyard=[c,...(gs[r].graveyard||[])]; gone.push(c); discarded++; }
+      if(idx>=0){ gone.push(hand.splice(idx,1)[0]); discarded++; }
     });
   } else {
     // Random discard (used for opponent-forced discards) — pool excludes immune cards.
@@ -2667,12 +2846,11 @@ function discardCards(gs,r,n,chosenUids){
       if(pool.length===0) break;
       const pick=pool[Math.floor(Math.random()*pool.length)];
       hand.splice(pick.idx,1);
-      gs[r].graveyard=[pick.c,...(gs[r].graveyard||[])];
       gone.push(pick.c); discarded++;
     }
   }
   gs[r].hand=hand;
-  gone.forEach(c=> fireDiscard(gs, r, c));   // bump counter + fire onDiscard per card
+  gone.forEach(c=> discardTo(gs, r, c));   // Vault or graveyard, then fire onDiscard
   return discarded;
 }
 
@@ -2707,6 +2885,18 @@ function shuffleDeck(gs,r){
 // hook so effects like Devour Hope can react (destroy the card + deal damage instead).
 // Immune cards can never be destroyed → they are always shuffled in normally.
 // Returns the number of cards actually added to the deck (not intercepted).
+// ── Card ownership ───────────────────────────────────────────────────────────
+// Every card carries the deck it came out of. It is stamped the moment a card ENTERS a
+// deck — at game start, on a shuffle-in, or when a card is pushed into the other player's
+// deck (Scavenger). That makes "a card from your opponent's deck" answerable at any time:
+// a card in your hand whose owner isn't you came across the table. Garden Tales reads this,
+// and so will every future card that mills or steals out of the enemy deck.
+function stampOwner(cards, r){
+  (Array.isArray(cards) ? cards : [cards]).forEach(c=>{ if(c) c.owner = r; });
+  return cards;
+}
+function fromEnemyDeck(card, r){ return !!(card && card.owner && card.owner !== r); }
+
 function shuffleIntoDeck(state, r, cards){
   const list = Array.isArray(cards) ? cards : [cards];
   const deck = state[r].deck || (state[r].deck = []);
@@ -2723,9 +2913,14 @@ function shuffleIntoDeck(state, r, cards){
         }
       });
     }
-    if(!intercepted){ deck.push(sc); added++; }
+    if(!intercepted){ sc.owner = r; deck.push(sc); added++; }   // it belongs to this deck now
   });
   shuffleDeck(state, r);
+  // Time and Space reads this: cards that ACTUALLY entered the deck this round. Cards eaten
+  // by Devour Hope never get here, so they rightly don't count. Every current caller shuffles
+  // into its OWN deck; a future card that shuffles into the ENEMY deck must not credit them,
+  // so it should push directly (like Scavenger) rather than come through here.
+  state[r].shuffledInThisRound = (state[r].shuffledInThisRound||0) + added;
   return added;
 }
 
@@ -2836,9 +3031,20 @@ function startWithDeck(d){
   else if(action==='solo')   startSolo(d);
 }
 // Expand a saved deck into real card instances and shuffle it.
-function buildDeckFrom(d){
+function buildDeckFrom(d, owner){
   const cards=[];
-  deckDefs(d).forEach(({card,n})=>{ for(let i=0;i<n;i++) cards.push(mkCard(card)); });
+  deckDefs(d).forEach(({card,n})=>{
+    for(let i=0;i<n;i++){
+      cards.push(mkCard(card));
+      // Alter Ego: one deck slot, two physical cards. The second half is shuffled in as its
+      // own card, so a 40-card deck really holds 41 — and you have to draw both to use it.
+      if(card.alterEgo){
+        const half=CARDS_DATA.find(x=>x.id===card.alterEgo);
+        if(half) cards.push(mkCard(half));
+      }
+    }
+  });
+  if(owner) stampOwner(cards, owner);   // these came out of THIS player's deck
   for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
   return cards;
 }
@@ -2853,7 +3059,7 @@ async function createGame(chosen){
   gRef=ref(db,'games/'+code);
   // Turn order depends on BOTH decks (Finale/Quickplay points), so it can't be decided yet —
   // p2 decides it at join time and deals both opening hands then. We only store the deck here.
-  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
+  let deck=buildDeckFrom(chosen,'p1'); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
   await set(gRef,{status:'waiting',round:1,phase:'waiting',firstPlayer:null,
     p1:{name:myName,hp:150,maxHp:150,deck,hand:[],graveyard:[],void:[],blessing:qq.blessing||null,rewards:[],quests:qq.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
     p2:null});
@@ -2879,7 +3085,7 @@ async function joinGame(chosen){
   if(!snap.exists()){setStatus('Game not found!','err');return;}
   const gs=snap.val();
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
-  let deck=buildDeckFrom(chosen); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
+  let deck=buildDeckFrom(chosen,'p2'); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
   // Both decks are known now, so decide who reveals first (Finale/Quickplay points) and deal
   // both opening hands: whoever goes FIRST opens with 4 cards, whoever goes SECOND with 6.
   const p1deck=[...(gs.p1.deck||[])];
@@ -2905,7 +3111,7 @@ function startSolo(chosen){
   if(!chosen || !deckValid(chosen)){ openDeckPicker('solo'); return; }
   myName=(myProfile&&myProfile.name)||'Player 1'; myRole='p1'; soloMode=true;
   // You play YOUR deck. The CPU still gets a random test deck (a real CPU deck comes later).
-  let deck1=buildDeckFrom(chosen);
+  let deck1=buildDeckFrom(chosen,'p1');
   const q1=extractQuests(deck1, chosen.linkedBlessing); deck1=q1.deck;   // pulls your quests, tokens and blessing out
   // ── Solo test hand ── Put card ids here to force them into your opening hand while
   // testing (they must be in the deck you picked). Leave empty for a normal draw.
@@ -2914,7 +3120,7 @@ function startSolo(chosen){
   deck1 = [...testCards, ...deck1];
   const hand1 = deck1.splice(0, Math.max(4, testCards.length));
   const graveSeed=[];
-  let deck2=buildDeck();   // CPU: random pool deck for now
+  let deck2=stampOwner(buildDeck(),'p2');   // CPU: random pool deck for now
   const q2=extractQuests(deck2); deck2=q2.deck;
   // Same rule as multiplayer: Finale/Quickplay points in both decks decide who reveals first.
   const soloFirst=decideFirstPlayer(deck1, deck2);
@@ -3690,8 +3896,17 @@ function renderBlessing(id,p){
     // A blessing that tracks progress (New Year Resolutions) shows it right on the pill,
     // for BOTH players — an opponent should be able to see the clock ticking.
     const prog=(!isReward && state.hits>0) ? ' <span class="bl-prog">'+Math.min(state.hits,5)+'/5</span>' : '';
-    pill.innerHTML='<div class="blessing-ico">'+(isReward?'★':'✨')+'</div>'+
-                   '<div><div class="blessing-nm">'+state.name+prog+'</div></div>';
+    // The Marber Vault shows how much it is holding, and clicking it opens the Vault.
+    const isVault=(state.id==='marber_vault');
+    const held=isVault ? vaultCards(state).length : 0;
+    const vlt=isVault ? ' <span class="bl-prog">'+held+'</span>' : '';
+    pill.innerHTML='<div class="blessing-ico">'+(isReward?'★':(isVault?'🗝️':'✨'))+'</div>'+
+                   '<div><div class="blessing-nm">'+state.name+prog+vlt+'</div></div>';
+    if(isVault){
+      pill.style.cursor='pointer';
+      pill.title='Open the Vault ('+held+' card'+(held===1?'':'s')+')';
+      pill.addEventListener('click',()=>showVault(state, id==='you-blessing'));
+    }
     const cardData=CARDS_DATA.find(c=>c.id===state.id);
     if(cardData){
       pill.addEventListener('mouseenter',()=>showCardPreview(cardData,pill,true));
@@ -3997,6 +4212,7 @@ async function onSelectPhase(){
   // with an invisible hand (cards present in data, nothing on screen). Always restore it.
   document.getElementById('hand').style.visibility='visible';
   await enforceHandLimit();
+  await offerVault();          // Marber Vault: your draw was skipped → the Vault opens
   selected=[]; didConfirm=false;
   const lim=selectLimit(localGs,myRole);
   const ft=me().forcedType, req=forcedRequired(localGs,myRole);
@@ -4007,6 +4223,89 @@ async function onSelectPhase(){
   }
   renderBoard();
   startTimer();
+}
+
+// Open the Vault and look at everything in it. Both players can inspect a Vault — what's
+// stored is public, which is what makes it a threat your opponent has to plan around.
+function showVault(state, mine){
+  const held=vaultCards(state);
+  document.getElementById('vaultview-sub').textContent =
+    (mine ? 'Your Vault holds ' : "Your opponent's Vault holds ")+held.length+' card'+(held.length===1?'':'s')+
+    (held.length ? '.' : ' — nothing discarded yet.');
+  const grid=document.getElementById('vaultview-grid');
+  grid.innerHTML='';
+  held.forEach(c=>{
+    const el=makeCardEl(c);
+    el.addEventListener('mouseenter',()=>showCardPreview(c, el, 'side'));
+    el.addEventListener('mouseleave',hideCardPreview);
+    grid.appendChild(el);
+  });
+  document.getElementById('ov-vaultview').classList.remove('hidden');
+}
+
+// ── Marber Vault: the offer ──
+// Your draw was taken away last round, so at the START of this one the Vault opens. It puts
+// up 2 random cards (fewer if it holds fewer, or if your hand can't fit them) and you decide:
+// take them or leave them in the Vault. Taking is a REAL draw — onDraw fires, so a Fireball
+// pulled out of the Vault goes off in your face just like one drawn from the deck.
+function offerVault(){
+  return new Promise(resolve=>{
+    const v=vaultOf(localGs, myRole);
+    const held=vaultCards(v);
+    if(!me().vaultOffer || !v || !held.length){ resolve(false); return; }
+
+    const space=Math.max(0, maxHandSize(localGs, myRole) - (me().hand||[]).length);
+    if(space<=0){                       // no room: the Vault stays shut, nothing is lost
+      me().vaultOffer=false;
+      persistVault();
+      resolve(false);
+      return;
+    }
+    const pool=[...held];
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    const offer=pool.slice(0, Math.min(2, space));
+
+    const ov=document.getElementById('ov-vault');
+    const grid=document.getElementById('vault-offer');
+    document.getElementById('vault-sub').textContent =
+      'You drew nothing this round. The Vault holds '+held.length+' card'+(held.length===1?'':'s')+
+      ' — it offers you '+offer.length+'.';
+    grid.innerHTML='';
+    offer.forEach(c=>{
+      const el=makeCardEl(c);
+      el.addEventListener('mouseenter',()=>showCardPreview(c, el, 'side'));
+      el.addEventListener('mouseleave',hideCardPreview);
+      grid.appendChild(el);
+    });
+
+    const close=(take)=>{
+      hideCardPreview();
+      ov.classList.add('hidden');
+      if(take){
+        const uids=offer.map(c=>c.uid);
+        v.cards=held.filter(c=>!uids.includes(c.uid));       // they leave the Vault
+        me().hand=[...(me().hand||[]), ...offer];
+        fireDrawTriggers(localGs, myRole, offer);            // a real draw
+      }
+      me().vaultOffer=false;
+      persistVault();
+      renderBoard();
+      resolve(take);
+    };
+    document.getElementById('btn-vault-take').onclick =()=>close(true);
+    document.getElementById('btn-vault-leave').onclick=()=>close(false);
+    ov.classList.remove('hidden');
+  });
+}
+// Write the Vault result back. Solo keeps it in localGs; multiplayer pushes only this
+// player's own fields, so it can never race the opponent's.
+function persistVault(){
+  if(soloMode || !gRef) return;
+  update(gRef, {
+    [myRole+'/hand']:       me().hand||[],
+    [myRole+'/blessing']:   me().blessing||null,
+    [myRole+'/vaultOffer']: false
+  });
 }
 
 // `selected` holds card UIDs (not hand indices). Indices break the moment the hand changes
@@ -4305,6 +4604,8 @@ function resolveRound(gs){
     state[r].blocked=false;
     state[r].dmgDealtLastRound=state[r].dmgDealtThisRound||0;
     state[r].dmgDealtThisRound=0;
+    state[r].shuffledInLastRound=state[r].shuffledInThisRound||0;   // Time and Space reads this
+    state[r].shuffledInThisRound=0;
     state[r].healedThisRound=0;
     state[r].discardedThisRound=0;
   });
@@ -4459,6 +4760,7 @@ function resolveRound(gs){
 
   // Draw for each player — drawCount folds in Journey draw modifiers; Hindered forces 0.
   ['p1','p2'].forEach(r=>{
+    const wasHindered = !!state[r].hindered;
     const before=(state[r].hand||[]).length;
     const n=drawCount(state,r);
     drawCards(state,r,n,n<=0);
@@ -4466,6 +4768,10 @@ function resolveRound(gs){
     state[r].drewThisRound=(drawn.length>0);
     // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
     fireDrawTriggers(state, r, drawn);
+    // Marber Vault: your draw was just taken away. The Vault opens at the START of the next
+    // round — the moment you notice you have nothing new in hand.
+    const v=vaultOf(state, r);
+    if(wasHindered && v && vaultCards(v).length) state[r].vaultOffer = true;
   });
   state.p1.extraDraw=0; state.p2.extraDraw=0;
   state.p1.noDraw=false; state.p2.noDraw=false;
