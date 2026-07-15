@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T12:52';
+const APP_VERSION = '2026-07-15T15:22';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1541,6 +1541,9 @@ const FB = initializeApp({
   appId:"1:772511597371:web:a2d3f7a4e5207fc7fdad1e"
 });
 const db = getDatabase(FB);
+// Track the offset between this device's clock and Firebase's server clock, so both players
+// measure the round timer against the SAME reference — this is what removes the 1s drift.
+try { onValue(ref(db,'.info/serverTimeOffset'), s=>{ serverTimeOffset = s.val()||0; }); } catch(e){}
 const auth = getAuth(FB);
 
 // ── Card data (NO functions — safe for Firebase) ──
@@ -2975,6 +2978,8 @@ function hasJourney(state, r, opt){ return (state[r].journeyEffects||[]).include
 let gRef, myRole, myName, localGs;
 let selected=[], didConfirm=false;
 let timerInt, secLeft=60;
+let timerDeadline=0, timerDeadlineRound=null;   // shared-deadline timer: absolute end time + which round it belongs to
+let serverTimeOffset=0;                          // Firebase server clock offset, so both clients align to the same time
 let logs=[];
 let soloMode=false;
 let gameStarted=false;
@@ -4984,7 +4989,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
   }
 
   didConfirm=true;
-  clearInterval(timerInt);
+  if(soloMode) clearInterval(timerInt);   // solo resolves at once; in MP the timer keeps ticking so you see the opponent's time
 
   const newHand=hand.filter(c=>c && !selected.includes(c.uid));
 
@@ -5174,14 +5179,40 @@ function pickSplit(total, cardName){
 }
 
 // ── Timer ──
+// One shared deadline instead of two local countdowns. p1 (authoritative) writes an absolute
+// end time to Firebase; both clients read it and compute the remaining seconds against the
+// server clock, so they always show the SAME time and never drift. The timer keeps running
+// after you confirm, so you can watch how long your opponent still has.
+function serverNow(){ return Date.now() + (serverTimeOffset||0); }
 function startTimer(){
-  secLeft=TIMER;
+  clearInterval(timerInt);
+  const round = (localGs && localGs.round) || 1;
+  if(soloMode){
+    timerDeadline = serverNow() + TIMER*1000; timerDeadlineRound = round;
+  } else if(myRole==='p1'){
+    timerDeadline = serverNow() + TIMER*1000; timerDeadlineRound = round;
+    update(gRef, { deadline: timerDeadline, deadlineRound: round }).catch(()=>{});
+  }
+  tickTimer();
+  timerInt = setInterval(tickTimer, 250);
+}
+function tickTimer(){
+  const round = (localGs && localGs.round) || 1;
+  let dl = null;
+  if(soloMode){
+    dl = timerDeadline;
+  } else if(localGs && localGs.deadline && localGs.deadlineRound === round){
+    dl = localGs.deadline;                                   // the synced deadline for THIS round
+  } else if(myRole==='p1' && timerDeadlineRound === round){
+    dl = timerDeadline;                                      // p1 just wrote it; use it before it round-trips
+  }
+  if(!dl){ secLeft = TIMER; updateTimer(); return; }         // still waiting for this round's deadline — don't act
+  secLeft = Math.max(0, Math.ceil((dl - serverNow())/1000));
   updateTimer();
-  timerInt=setInterval(()=>{
-    secLeft--;
-    updateTimer();
-    if(secLeft<=0){clearInterval(timerInt);if(!didConfirm)document.getElementById('btn-confirm').onclick();}
-  },1000);
+  if(secLeft<=0){
+    clearInterval(timerInt);
+    if(!didConfirm) document.getElementById('btn-confirm').onclick();   // auto-confirm only if you haven't yet
+  }
 }
 
 function updateTimer(){
