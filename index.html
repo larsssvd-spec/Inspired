@@ -231,7 +231,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .ns-waterbody { position:absolute; inset:0; background:linear-gradient(180deg,#0b2f3f 0%,#082330 42%,#04141d 100%); }
 .ns-glowline { position:absolute; left:0; right:0; top:-16px; height:32px;
   background:radial-gradient(ellipse 62% 100% at 50% 50%, rgba(80,220,235,0.45), transparent 72%);
-  filter:blur(5px); animation:cloudbreathe 9s ease-in-out infinite; }
+  opacity:0.9; }
 .ns-waves { position:absolute; left:0; width:200%; pointer-events:none; }
 .ns-waves.w2 { top:-14px; height:44px; animation:waveslide 44s linear infinite reverse; }
 .ns-waves.w1 { top:-26px; height:58px; animation:waveslide 26s linear infinite; }
@@ -248,7 +248,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 #screen-lobby > #lb-waiting { position:relative; z-index:3; }
 .lobby-title { font-family:'Playfair Display',serif; font-size:clamp(2.8rem,8vw,5rem); font-weight:700; color:#ecfbff; text-shadow:0 0 40px rgba(130,230,255,0.55), 0 0 90px rgba(70,190,230,0.35), 0 2px 12px rgba(0,0,0,0.85); letter-spacing:0.04em; margin-bottom:0.2rem; text-align:center; }
 .lobby-tagline { font-style:italic; color:#c2e2e8; font-size:1rem; margin-bottom:2.5rem; text-align:center; letter-spacing:0.08em; text-shadow:0 2px 8px rgba(0,0,0,0.7); }
-.lobby-box { background:rgba(8,22,30,0.8); backdrop-filter:blur(8px); border:1px solid var(--border2); border-radius:var(--r); padding:2rem 2.2rem; width:100%; max-width:420px; box-shadow:0 12px 48px rgba(0,0,0,0.7); }
+.lobby-box { background:rgba(8,22,30,0.92); border:1px solid var(--border2); border-radius:var(--r); padding:2rem 2.2rem; width:100%; max-width:420px; box-shadow:0 12px 48px rgba(0,0,0,0.7); }
 .lobby-box h2 { font-family:'Playfair Display',serif; font-size:1rem; color:var(--green); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:1.5rem; text-align:center; }
 .field { margin-bottom:1rem; }
 .field label { display:block; font-size:0.72rem; color:var(--text2); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.35rem; }
@@ -276,7 +276,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
   padding:1.1rem 1.5rem; border-radius:var(--r); cursor:pointer;
   font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:700; letter-spacing:0.04em;
   color:var(--text); text-align:left;
-  background:rgba(8,22,30,0.78); backdrop-filter:blur(8px);
+  background:rgba(8,22,30,0.9);
   border:1px solid var(--border2);
   box-shadow:0 8px 32px rgba(0,0,0,0.55);
   transition:transform 0.16s, border-color 0.16s, box-shadow 0.16s, background 0.16s;
@@ -1155,14 +1155,14 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
     var f=document.getElementById('ns-starfield');
     if(!f) return;
     var frag=document.createDocumentFragment();
-    for(var i=0;i<130;i++){
+    for(var i=0;i<45;i++){
       var s=document.createElement('span');
       s.className='ns-star';
       var sz=(Math.random()*1.8+0.8).toFixed(1);
       s.style.cssText='left:'+(Math.random()*100).toFixed(2)+'%;top:'+(Math.random()*55).toFixed(2)+'%;width:'+sz+'px;height:'+sz+'px;--d:'+(2.5+Math.random()*4).toFixed(1)+'s;--dl:'+(Math.random()*6).toFixed(1)+'s;--o1:'+(0.12+Math.random()*0.3).toFixed(2)+';--o2:'+(0.65+Math.random()*0.35).toFixed(2);
       frag.appendChild(s);
     }
-    for(var j=0;j<9;j++){
+    for(var j=0;j<4;j++){
       var fl=document.createElement('span');
       fl.className='ns-flash';
       fl.style.cssText='left:'+(4+Math.random()*92).toFixed(2)+'%;top:'+(3+Math.random()*46).toFixed(2)+'%;--d:'+(7+Math.random()*9).toFixed(1)+'s;--dl:'+(Math.random()*11).toFixed(1)+'s';
@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T16:07';
+const APP_VERSION = '2026-07-15T16:16';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1794,6 +1794,8 @@ const CARDS_DATA = [
   {id:'bad_landing', collectible:true, name:'Bad Landing', text:'(In development — coming soon.)', rarity:'common', emoji:'💥', type:'normal', art:'art/bad_landing.png'},
   {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'(In development — coming soon.)', rarity:'common', emoji:'🌑', type:'normal', art:'art/bloodmoon_princess.png'},
   {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'(In development — coming soon.)', rarity:'common', emoji:'👀', type:'normal', art:'art/peek_a_boo.png'},
+  {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'(In development — coming soon.)', rarity:'legendary', emoji:'🌀', type:'normal', art:'art/dreaming_zephyrax.png'},
+  {id:'unleashed_zephyrax', name:'Unleashed Zephyrax', text:'(In development — coming soon.)', rarity:'legendary', emoji:'🌪️', noDeck:true, type:'normal', art:'art/unleashed_zephyrax.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -2072,6 +2074,7 @@ const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
+  dreaming_zephyrax:{ label:'Zephyrax',     ids: ['unleashed_zephyrax'] },
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
@@ -3619,7 +3622,7 @@ document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
   const starG=document.getElementById('ls-stars');
   if(starG){
     const NS='http://www.w3.org/2000/svg';
-    for(let i=0;i<90;i++){
+    for(let i=0;i<32;i++){
       const s=document.createElementNS(NS,'circle');
       const y=Math.pow(Math.random(),1.6)*520;          // crowd them up high, thin out lower
       s.setAttribute('cx',(Math.random()*1600).toFixed(0));
@@ -3636,7 +3639,7 @@ document.getElementById('btn-solo').onclick=()=>openDeckPicker('solo');
   const dust=document.getElementById('lobby-dust');
   if(dust){
     const frag=document.createDocumentFragment();
-    for(let i=0;i<22;i++){
+    for(let i=0;i<8;i++){
       const d=document.createElement('div');
       d.className='dust';
       const size=(1+Math.random()*2.4).toFixed(1);
