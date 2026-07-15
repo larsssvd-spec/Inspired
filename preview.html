@@ -1,0 +1,162 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Inspired — hero portrait</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lora&display=swap" rel="stylesheet">
+<style>
+:root{--green2:#a8e050;--text:#dff0b8}
+*{box-sizing:border-box}
+body{margin:0;background:#0d1810;font-family:'Lora',serif;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;gap:4rem;padding:2rem;color:var(--text)}
+
+/* ── THE PORTRAIT ─────────────────────────────────────────────────────────────
+   Each eye is now its OWN image at its OWN measured position. That is what fixes the
+   misalignment: a single shared eye layer could only be shifted as a block, so the moment
+   the breathing scaled it, the two eyes drifted off their painted sockets by different
+   amounts. Separate layers cannot drift apart.
+
+     his right eye  left 15.54%  top 34.14%   (narrow — half cut off in the painting)
+     his left eye   left 33.97%  top 32.89%   (the big round one) */
+.pet{position:relative;width:230px;aspect-ratio:1313/1198;cursor:help;
+  filter:drop-shadow(0 12px 30px rgba(0,0,0,.75))}
+
+.pet-art{position:absolute;inset:0;background:url('art/pet.png') center/100% 100% no-repeat;
+  animation:breathe 5.5s ease-in-out infinite;transform-origin:50% 88%}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
+
+/* The eyes do NOT breathe with him — they stay welded to their sockets. At 1.8% you cannot
+   see the difference, and it buys perfect alignment. */
+/* Each eye lives INSIDE a socket that clips it. That is the real fix: the eye layer sits on
+   top of the whole painting, including the horn and snout that are supposed to be IN FRONT of
+   his eye. Standing still you never notice — but the moment the eye shifted a pixel it slid
+   out from behind them and its glow spilled across his skull.
+   A socket cannot be escaped. The eye drifts inside it and is cut off at the rim, exactly
+   like an eye in a head. */
+/* The socket sits exactly where the eye was cut from, so it lands pixel-perfect on the
+   painted one. It clips everything inside it — nothing can escape onto his skull. */
+.socket{position:absolute;overflow:hidden;border-radius:50%}
+.socket.l{left:15.54%;top:34.14%;width:4.19%;height:10.60%}
+.socket.r{left:33.97%;top:32.89%;width:9.82%;height:11.19%}
+/* And the eye is drawn 14% LARGER than it was cut. That was the ring you saw: my eye was
+   the same size as the painted one underneath, so the painted rim showed around the edge —
+   a circle inside a circle. Oversized, it swallows the painted eye completely. */
+.eye{position:absolute;inset:0;background-size:100% 100%;background-repeat:no-repeat;
+  transform:scale(1.28);transform-origin:50% 50%}
+.socket.l .eye{background-image:url('art/pet_eye_l.png')}
+.socket.r .eye{background-image:url('art/pet_eye_r.png')}
+/* He looks around on his OWN. No mouse-following: that scaled the movement to the window,
+   so a cursor far away dragged the eyes clean out of their sockets. An eye has a socket —
+   it can only travel a couple of pixels, and never more.
+   The wander is 23 seconds long and the two eyes run at slightly different speeds, so the
+   pattern never lines up twice and you cannot catch the loop. The narrow eye sits further
+   from the centre of his skull, so it moves LESS — that parallax is what sells a head. */
+.socket.l .eye{animation:glanceL 23s ease-in-out infinite}
+.socket.r .eye{animation:glanceR 19s ease-in-out infinite}
+@keyframes glanceL{
+  0%,9%   {translate:0 0}
+  14%,22% {translate:-.4px .2px}
+  28%,37% {translate:.3px -.25px}
+  44%,52% {translate:-.15px .4px}
+  58%,66% {translate:.45px .1px}
+  72%,81% {translate:-.3px -.2px}
+  88%,100%{translate:0 0}
+}
+@keyframes glanceR{
+  0%,9%   {translate:0 0}
+  14%,22% {translate:-1px .5px}
+  28%,37% {translate:.8px -.6px}
+  44%,52% {translate:-.4px 1px}
+  58%,66% {translate:1.1px .25px}
+  72%,81% {translate:-.7px -.5px}
+  88%,100%{translate:0 0}
+}
+
+/* The lids. These were the last thing still being GUESSED, and it showed. They are now
+   calculated from the same measurements as the eyes — and deliberately a little LARGER than the
+   painted eye, because a lid has to cover the eye that is painted into pet.png as well.
+   Cover only the socket and a rim of painted eye stays lit around the edge.
+   Stone-coloured, not black: this is a rock dragon, and a black bar reads as a hole. */
+/* The lid lives INSIDE the socket now. Clipped to that circle, it can only ever read as an
+   eye closing — before, it was a free-floating slab that hung out over his snout like a
+   tongue. It is drawn past the socket edges (inset:-15%) so no rim of eye survives a blink. */
+.lid{position:absolute;inset:-15%;pointer-events:none;
+  background:linear-gradient(180deg,#4a3a33 0%,#2c2119 55%,#170f0c 100%);
+  box-shadow:inset 0 -3px 4px rgba(0,0,0,.7);
+  transform:scaleY(0);transform-origin:50% 0%;
+  animation:blink 6.2s cubic-bezier(.4,0,.5,1) infinite}
+.socket.r .lid{animation-delay:.04s}
+/* Shut, then open — over in about a tenth of a second. A blink you can follow is not a blink. */
+@keyframes blink{
+  0%,94%,100%{transform:scaleY(0)}
+  96%,97%    {transform:scaleY(1)}
+  99%        {transform:scaleY(0)}
+}
+
+.pet-heat{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(ellipse 55% 45% at 45% 62%,rgba(255,110,20,.16),transparent 70%);
+  animation:heat 3.8s ease-in-out infinite}
+@keyframes heat{0%,100%{opacity:.45}50%{opacity:1}}
+
+/* Reactions */
+.pet.hurt .pet-art{animation:shake .45s ease-in-out}
+@keyframes shake{0%,100%{transform:translate(0,0) rotate(0)}
+  15%{transform:translate(-5px,2px) rotate(-1.6deg)}
+  35%{transform:translate(4px,-1px) rotate(1.2deg)}
+  55%{transform:translate(-3px,1px) rotate(-.8deg)}
+  75%{transform:translate(2px,0) rotate(.4deg)}}
+.pet.hurt .socket{animation:shake .45s ease-in-out}
+.pet.hurt::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%,rgba(220,40,40,.5),transparent 70%);
+  animation:flash .45s ease-out}
+.pet.healed::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%,rgba(140,230,70,.45),transparent 70%);
+  animation:flash .8s ease-out}
+@keyframes flash{from{opacity:1}to{opacity:0}}
+.pet.dying{filter:drop-shadow(0 12px 30px rgba(0,0,0,.75)) saturate(.45) brightness(.7)}
+.pet.dying .pet-heat{animation:panic 1s ease-in-out infinite}
+@keyframes panic{0%,100%{opacity:.2}50%{opacity:.95}}
+
+.pet-name{position:absolute;left:20%;right:20%;bottom:2.5%;text-align:center;
+  font-family:'Playfair Display',serif;font-size:.72rem;letter-spacing:.12em;
+  text-transform:uppercase;color:#c9b280;text-shadow:0 1px 3px #000}
+
+.panel{display:flex;flex-direction:column;align-items:center;gap:1.2rem}
+button{font-family:'Lora',serif;font-size:.85rem;padding:.5rem 1rem;cursor:pointer;
+  background:rgba(8,20,28,.9);color:var(--text);border:1px solid rgba(126,200,50,.4);border-radius:8px}
+button:hover{border-color:var(--green2)}
+.note{max-width:290px;color:#7aaa40;font-size:.82rem;line-height:1.75}
+.dbg{outline:1px solid rgba(255,60,60,.9)}
+</style></head><body>
+
+<div class="panel">
+  <div class="pet idle" id="pet">
+    <div class="pet-art"></div>
+    <div class="socket l"><div class="eye"></div><div class="lid"></div></div>
+    <div class="socket r"><div class="eye"></div><div class="lid"></div></div>
+    <div class="pet-heat"></div>
+    <div class="pet-name">Larry</div>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center">
+    <button onclick="react('hurt')">Take damage</button>
+    <button onclick="react('healed')">Heal</button>
+    <button onclick="pet.classList.toggle('dying')">Near death</button>
+    <button onclick="dbg()">Show the layers</button>
+  </div>
+</div>
+
+<div class="note">
+  <p>Elk oog is nu een <strong>eigen afbeelding op zijn eigen gemeten plek</strong>. Ze kunnen niet meer uit elkaar drijven.</p>
+  <p>Hij kijkt <strong>uit zichzelf</strong> rond (23s en 19s, dus het patroon herhaalt zich pas na minuten).</p>
+  <p>Elk oog zit nu <strong>opgesloten in zijn kas</strong> — hij kan er niet meer uitrollen, hoe ver hij ook kijkt.</p>
+  <p>Zit er nog iets scheef? Klik <strong>Show the layers</strong> voor rode kaders.</p>
+</div>
+
+<script>
+const pet = document.getElementById('pet');
+
+function react(kind){
+  pet.classList.remove('hurt','healed');
+  void pet.offsetWidth;
+  pet.classList.add(kind);
+  setTimeout(() => pet.classList.remove(kind), 900);
+}
+function dbg(){ pet.querySelectorAll('.socket,.lid').forEach(l => l.classList.toggle('dbg')); }
+</script>
+</body></html>

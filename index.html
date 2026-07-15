@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-14T17:15';
+const APP_VERSION = '2026-07-15T15:22';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1541,6 +1541,9 @@ const FB = initializeApp({
   appId:"1:772511597371:web:a2d3f7a4e5207fc7fdad1e"
 });
 const db = getDatabase(FB);
+// Track the offset between this device's clock and Firebase's server clock, so both players
+// measure the round timer against the SAME reference — this is what removes the 1s drift.
+try { onValue(ref(db,'.info/serverTimeOffset'), s=>{ serverTimeOffset = s.val()||0; }); } catch(e){}
 const auth = getAuth(FB);
 
 // ── Card data (NO functions — safe for Firebase) ──
@@ -1701,6 +1704,7 @@ const CARDS_DATA = [
   {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
   {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal'},
   {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
+  {id:'quicksilver', collectible:true, name:'Quicksilver', text:'Next round, all cards in your hand are Immune (including the ones you draw).', rarity:'common', emoji:'⚡', type:'normal', art:'art/quick_silver.png'},
   {id:'bolvar', collectible:true, name:'Bolvar', text:'For the rest of the game: deal 20 true damage to your opponent after each round they play fewer than 2 cards.', rarity:'legendary', emoji:'🛡️', type:'normal', art:'art/bolvar.png'},
   {id:'energies_silk', collectible:true, name:'Energies Silk', text:'Shuffle each Enchanted Orb you used back into your deck.', rarity:'legendary', emoji:'🕸️', type:'normal', art:'art/energies_silk.png'},
   {id:'scavenger', collectible:true, name:'Scavenger', text:"Shuffle this card into your opponent's deck.", rarity:'common', emoji:'🦅', type:'normal', art:'art/scavenger.png'},
@@ -1738,6 +1742,8 @@ const CARDS_DATA = [
   // dead on its own — the effect only fires when you play BOTH halves in the SAME round.
   {id:'world_splitter',   collectible:true, name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌍', alterEgo:'world_splitter_b', type:'normal', art:'art/world_splitter.png'},
   {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
+  {id:'misses_azazel',    collectible:true, name:'Misses Azazel', text:'Alter Ego: Mister Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'😈', alterEgo:'mister_azazel', type:'normal', art:'art/misses_azazel.png'},
+  {id:'mister_azazel',                      name:'Mister Azazel', text:'Alter Ego: Misses Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'👹', noDeck:true, alterEgoOf:'misses_azazel', type:'normal', art:'art/mister_azazel.png'},
 
   {id:'forgotten_mage', collectible:true, name:'The Forgotten Mage', text:'Heal 10. If your opponent is holding 7 cards or more: Also get an Enchanted Orb.', rarity:'common', emoji:'🧙', heals:true, type:'normal', art:'art/forgotten_mage.png'},
 
@@ -1767,6 +1773,15 @@ const CARDS_DATA = [
   // TODO: Sins 2-4 are still placeholders — names/texts/effects to be written. sin:true is
   //       all the quest needs to count them; their own effect can be anything.
   {id:'zorya', collectible:true, name:'Zorya, Goddess of the Deep', text:'Shuffle the 4 Sins into your deck. Quest: play all 4 Sins. Survive 1 more round afterwards: you instantly win the game.', rarity:'legendary', emoji:'🔱', quest:'zorya', type:'quest', art:'art/zorya.png'},
+  {id:'constellation_council_control', collectible:true, name:'Constellation Council Control', text:"Quest: play 10 cards from your opponent's deck. Reward: your maximum hand size is increased by 2.", rarity:'legendary', emoji:'🔭', quest:'constellation_council_control', type:'quest', art:'art/constellation_council_control.png'},
+  {id:'deep_sea_queen', collectible:true, name:'Deepsea Queen', text:"Swap a card in your hand with a random card in your opponent's hand.", rarity:'common', emoji:'🧜‍♀️', swapHands:true, type:'normal', art:'art/deep_sea_queen.png'},
+  {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
+  {id:'whitefoot', collectible:true, name:'Whitefoot', text:'Your opponent has to give you 1 non-legendary card (they choose which).', rarity:'common', emoji:'🐾', type:'normal', art:'art/white_foot.png'},
+  {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, enchanted:true, type:'normal', art:'art/from_far_away.png'},
+  {id:'wish_dralivering', collectible:true, name:'Wish Dralivering', text:'Transform this into a random non-legendary Celebration card.', rarity:'common', emoji:'🌟', type:'normal', art:'art/wish_dralivering.png'},
+  {id:'soul_shatter', collectible:true, name:'Soul Shatter', text:"Curse 2 random cards in your opponent's hand.", rarity:'common', emoji:'💔', type:'normal', art:'art/soul_shatter.png'},
+  {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, type:'normal', art:'art/zargoor.png'},
+  {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, type:'normal', art:'art/nauren_shock.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -1907,6 +1922,16 @@ function krushSearch(c, n, findId, label){
 // the CPU never picks it, and runCard turns it away as a last guard.
 function playBlockedReason(state, r, card){
   if(!card) return null;
+  if(card.swapHands){
+    // Deepsea Queen — a swap needs a tradable card on BOTH sides. Immune cards never count:
+    // you can't give one away and you can't pull one from the opponent. (A rare same-round
+    // race where the opponent plays their last tradable card is caught by the onPlay fizzle.)
+    const o=opp(r);
+    const mine=(state[r].hand||[]).filter(x=>x && x.uid!==card.uid && takeable(x));
+    const theirs=(state[o].hand||[]).filter(x=>x && takeable(x));
+    if(mine.length===0) return 'You need another (non-Immune) card in hand to swap away.';
+    if(theirs.length===0) return 'Your opponent has no (non-Immune) card to swap.';
+  }
   if(card.playIfHpBelow && (state[r].hp||0) >= card.playIfHpBelow){
     return 'Only playable below '+card.playIfHpBelow+' health (you have '+state[r].hp+').';
   }
@@ -2034,6 +2059,8 @@ const CARD_VARIANTS = {
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
+  misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel'] },
+  starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
@@ -2136,6 +2163,13 @@ const CARD_LOGIC = {
   // only a fuse against a future card that could break that assumption.
   world_splitter:   { onPlay:(c)=>splitterPlay(c), onDiscard:(c)=>splitterDiscard(c) },
   world_splitter_b: { onPlay:(c)=>splitterPlay(c) },
+  // ── Azazel Family (Alter Ego) ──
+  // Same two-halves rule as World Splitter: dead alone, unites when you play Misses AND Mister
+  // in the same round. Uniting installs True Form (id 'misses_azazel' in effects) — a GLOBAL
+  // flag that dealDmg reads to double ALL True damage for everyone, for the rest of the game —
+  // then deals 10 True, which the freshly-installed doubling turns into 20.
+  misses_azazel:    { onPlay:(c)=>azazelPlay(c) },
+  mister_azazel:    { onPlay:(c)=>azazelPlay(c) },
   // The Forgotten Mage — the heal is unconditional; the Orb is the reward for catching your
   // opponent hoarding. Their hand is read the moment this FLIPS, so the cards they played this
   // round are already out of it: someone who dumps two cards drops from 8 to 6 and gives you
@@ -2499,6 +2533,135 @@ const CARD_LOGIC = {
   // for exactly the next round (see the resolve round-reset). Enforced in confirm (human)
   // and CPU auto-select. unplayable/immune cards are never forced.
   skywalker:       { onPlay:(c)=>{ const choice=(c.card&&c.card._choice)||'damage'; c.state[c.opp].forcedTypeNext=choice; c.log(c.state[c.self].name+' plays Skywalker — '+c.state[c.opp].name+' is forced to play '+choice+' cards next round!','effect'); } },
+  // Quicksilver — at the START of next round your whole hand becomes Immune for that one round,
+  // including the cards you draw entering it. Queued now as handImmuneNext; the resolve step
+  // stamps the hand AFTER the draw (so fresh cards are covered) and strips it one round later.
+  quicksilver:     { onPlay:(c)=>{ c.state[c.self].handImmuneNext=true; c.log(c.state[c.self].name+' plays Quicksilver — their whole hand will be Immune next round.','effect'); } },
+  // Constellation Council Control — the quest card is never played; this entry exists only so the
+  // reward effect (pushed onto effects when the quest completes) can fold +2 into maxHandSize.
+  constellation_council_control: { handSizeMod:(c)=>c.amount+2 },
+  // Deepsea Queen — you give ONE card you chose (_swapGive, set at reveal) and receive a RANDOM
+  // one from the opponent. Immune cards are never eligible on either side. Ownership follows
+  // origin, not possession: the card you give came from YOUR deck (so it counts toward the
+  // opponent's Constellation quest), the one you take came from THEIRS (so it counts toward
+  // yours). If either side has nothing tradable when it resolves, it fizzles harmlessly.
+  deep_sea_queen: { onPlay:(c)=>{
+    const meR=c.self, opR=c.opp;
+    const myHand=c.state[meR].hand||(c.state[meR].hand=[]);
+    const opHand=c.state[opR].hand||(c.state[opR].hand=[]);
+    // the card to give: the one you picked, else a random tradable fallback (CPU / lost pick)
+    let giveIdx = (c.card._swapGive!==undefined)
+      ? myHand.findIndex(x=>x && x.uid===c.card._swapGive && takeable(x)) : -1;
+    if(giveIdx<0){ const pool=myHand.map((x,i)=>({x,i})).filter(o=>o.x && takeable(o.x)); if(pool.length) giveIdx=pool[Math.floor(Math.random()*pool.length)].i; }
+    const takePool=opHand.map((x,i)=>({x,i})).filter(o=>o.x && takeable(o.x));
+    if(giveIdx<0 || takePool.length===0){ c.log('Deepsea Queen finds nothing to swap.','system'); return; }
+    const giveCard=myHand[giveIdx];
+    const takeCard=takePool[Math.floor(Math.random()*takePool.length)].x;
+    myHand.splice(giveIdx,1);
+    const ti=opHand.indexOf(takeCard); if(ti>=0) opHand.splice(ti,1);
+    giveCard.owner=meR;   // it came from your deck → foreign to the opponent
+    takeCard.owner=opR;   // it came from their deck → foreign to you (counts for your quest)
+    opHand.push(giveCard);
+    myHand.push(takeCard);
+    c.state[meR].hand=myHand; c.state[opR].hand=opHand;
+    c.log(c.state[meR].name+' plays Deepsea Queen — swaps a card with '+c.state[opR].name+'.','effect');
+  } },
+  // The Bad and the Worse — queue a steal against the opponent's NEXT draw. onPlay runs before
+  // the draw loop in this same resolve, so the marker is consumed the moment they draw for the
+  // coming round. The actual theft (random, Immune-safe, hand-full-safe) lives in the draw loop.
+  the_bad_and_the_worse: { onPlay:(c)=>{ c.state[c.opp].stealDrawBy=c.self; c.log(c.state[c.self].name+' plays The Bad and the Worse — a card from '+c.state[c.opp].name+"'s next draw will be stolen.",'effect'); } },
+  // Whitefoot — the opponent hands over one NON-legendary card. The VICTIM chooses which (their
+  // pick is collected at reveal into their choices as __whitefootGive); if there's no stored
+  // choice (a CPU victim) a random eligible card is taken. Immune and legendary cards are never
+  // eligible. Nothing happens if they have no eligible card or your hand is full. owner=victim so
+  // it counts toward your Constellation quest.
+  whitefoot: { onPlay:(c)=>{
+    const st=c.state, thief=c.self, victim=c.opp;
+    const vhand=st[victim].hand||[];
+    const eligible=vhand.filter(x=>x && takeable(x) && x.rarity!=='legendary');
+    const thHand=st[thief].hand||(st[thief].hand=[]);
+    if(eligible.length===0){ c.log(st[thief].name+' plays Whitefoot — '+st[victim].name+' has no non-legendary card to give.','system'); return; }
+    if(thHand.length >= maxHandSize(st, thief)){ c.log(st[thief].name+' plays Whitefoot — but your hand is full. Nothing is taken.','system'); return; }
+    const chosen = st[victim].choices && st[victim].choices.__whitefootGive;
+    let pick = chosen ? eligible.find(x=>x.uid===chosen) : null;
+    if(!pick) pick = eligible[Math.floor(Math.random()*eligible.length)];   // CPU victim / no valid pick
+    const hi=vhand.indexOf(pick); if(hi>=0) vhand.splice(hi,1);
+    st[victim].hand=vhand;
+    pick.owner=victim;   // came from their deck → counts toward the thief's Constellation
+    pick.stolen=true;
+    thHand.push(pick); st[thief].hand=thHand;
+    c.log(st[thief].name+' plays Whitefoot — '+st[victim].name+' hands over '+pick.name+'.','effect');
+  } },
+  // From Far Away — a landmine. onPlay plants a copy in the OPPONENT's deck (the _planted flag
+  // is what arms it — a copy in YOUR OWN deck does nothing when drawn). When THEY draw it, it
+  // deals 20 to the drawer (them) and is consumed. Enchanted (Orb): the copy is marked endless,
+  // so instead of the graveyard it shuffles back into their deck — a landmine that keeps resetting.
+  from_far_away: {
+    onPlay:(c)=>{
+      if(c.card._planted){ c.log(c.state[c.self].name+' plays From Far Away — but this one is already armed. Nothing happens.','system'); return; }
+      const o=c.opp;
+      const copy=mkCard(CARDS_DATA.find(x=>x.id==='from_far_away'));
+      copy.owner=o;            // it lives in their deck now
+      copy._planted=true;      // only the planted copy fires its when-drawn effect
+      if(c.useOrb) copy.endless=true;   // Enchanted: recurs into their deck instead of the graveyard
+      c.state[o].deck=[...(c.state[o].deck||[]), copy];
+      shuffleDeck(c.state, o);
+      c.log(c.state[c.self].name+' plays From Far Away — a landmine is shuffled into '+c.state[o].name+"'s deck"+(c.useOrb?' (Enchanted: Endless!)':'')+'.','effect');
+    },
+    onDraw:(c)=>{
+      if(!c.card._planted) return false;   // a copy in your OWN deck is inert when drawn
+      c.dealDmgTo(c.self, 20);             // the drawer (your opponent, whose deck it was in) takes 20
+      c.log('  🌠 '+c.state[c.self].name+' draws From Far Away — 20 damage!','damage');
+      return true;                          // consumed → graveyard, unless endless (handled in fireDrawTriggers)
+    }
+  },
+  // Wish Dralivering — transforms (Pyrax-style, via toHand) into a random non-legendary
+  // Celebration card placed in your hand. The pool is read live from the card data, so any
+  // Celebration card added later is automatically eligible. Legendary Celebrations (Larry) are out.
+  wish_dralivering: { onPlay:(c)=>{
+    const pool=CARDS_DATA.filter(x=>x.collectible && x.rarity!=='legendary' && x.tags && x.tags.includes('celebration'));
+    if(pool.length===0){ c.log(c.state[c.self].name+' plays Wish Dralivering — but there are no Celebration cards to become.','system'); return; }
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    c.toHand(pick.id);
+    c.log(c.state[c.self].name+' plays Wish Dralivering — it transforms into '+pick.name+'!','effect');
+  } },
+  // Soul Shatter — Curse 2 random cards in the opponent's hand (Immune and already-Cursed cards
+  // are skipped). curseCard stamps cursedUntil = round+1, so they have exactly next round to
+  // play them before they rot to the graveyard. Same Curse the rest of the game already uses.
+  soul_shatter: { onPlay:(c)=>{
+    const st=c.state, o=c.opp;
+    const pool=(st[o].hand||[]).filter(x=>x && !isImmune(x) && x.cursedUntil===undefined);
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    const hit=pool.slice(0,2);
+    hit.forEach(x=>curseCard(st, x));
+    c.log(c.state[c.self].name+' plays Soul Shatter — '+(hit.length?'Curses '+hit.length+' of '+st[o].name+"'s cards (play them next round or they rot)":'but there is nothing to Curse')+'.','effect');
+  } },
+  // Zargoor — 10 damage, or 20 if the opponent is holding at least one Cursed card (the higher
+  // value replaces the base, it isn't added). Pairs with Soul Shatter / any Curse in their hand.
+  zargoor: { onPlay:(c)=>{
+    const hasCursed=(c.state[c.opp].hand||[]).some(x=>x && x.cursedUntil!==undefined);
+    const dmg=hasCursed?20:10;
+    c.dealDmgTo(c.opp, dmg);
+    c.log(c.state[c.self].name+' plays Zargoor — '+(hasCursed?c.state[c.opp].name+' holds a Cursed card → 20 damage':'10 damage')+'.','damage');
+  } },
+  // Nauren Shock — 25 damage at the START of next round, minus the opponent's TOTAL damage the
+  // round you played it. onPlay installs the strike; because round-start triggers already fired
+  // this round, it can only go off next round. It reads dmgDealtLastRound (which, at that next
+  // round's start, holds the round-you-played-it total), then removes itself — one strike only.
+  nauren_shock: {
+    onPlay:(c)=>{
+      c.addEffect({id:'nauren_shock'});
+      c.log(c.state[c.self].name+' plays Nauren Shock — it strikes at the start of next round.','effect');
+    },
+    onRoundStart:(c)=>{
+      const st=c.state, r=c.self, o=c.opp;
+      st[r].effects=(st[r].effects||[]).filter(e=>e && e.id!=='nauren_shock');   // one-shot
+      const oppDmg=st[o].dmgDealtLastRound||0;   // the opponent's total from the round you played it
+      const dmg=Math.max(0, 25-oppDmg);
+      if(dmg>0){ c.dealDmgTo(o, dmg); c.log('  ⚡ '+st[r].name+"'s Nauren Shock strikes for "+dmg+' ('+st[o].name+' dealt '+oppDmg+' last round).','damage'); }
+      else c.log('  ⚡ '+st[r].name+"'s Nauren Shock is fully absorbed ("+st[o].name+' dealt '+oppDmg+' last round).','system');
+    }
+  },
   // Detective Bubbles — take 10 self-damage now (respects your own Block; can be lethal),
   // then queue a 15 heal for the START of next round. Stacks (each copy queues its own 15).
   detective_bubbles: { onPlay:(c)=>{ c.hurtSelf(10); c.queueHeal(15); c.log(c.state[c.self].name+' plays Detective Bubbles — 10 self-damage, 15 heal queued for next round.','damage'); } },
@@ -2722,7 +2885,7 @@ function journeyLabel(dayId, opt){
 // ── IMMUNE keyword (see DESIGN_NOTES) ──
 // A card is "takeable" by an effect unless it's immune. Immunity only matters in
 // hand/deck; callers that operate on the graveyard ignore this on purpose.
-function isImmune(card){ return !!(card && card.immune); }
+function isImmune(card){ return !!(card && (card.immune || card._tempImmune)); }   // _tempImmune: round-scoped, granted by Quicksilver
 function takeable(card){ return !isImmune(card); }
 function hasTag(card, tag){ return !!(card && card.tags && card.tags.includes(tag)); }
 // Enchanted: some cards have an extra "enchanted" part that only fires if you spend an
@@ -2815,6 +2978,8 @@ function hasJourney(state, r, opt){ return (state[r].journeyEffects||[]).include
 let gRef, myRole, myName, localGs;
 let selected=[], didConfirm=false;
 let timerInt, secLeft=60;
+let timerDeadline=0, timerDeadlineRound=null;   // shared-deadline timer: absolute end time + which round it belongs to
+let serverTimeOffset=0;                          // Firebase server clock offset, so both clients align to the same time
 let logs=[];
 let soloMode=false;
 let gameStarted=false;
@@ -2930,6 +3095,7 @@ function dealDmg(gs,target,amt,trueDmg,attacker){
   if(!trueDmg&&gs[target].blocked){log('  → Blocked!','effect');return;}
   // Fold the amount through the attacker's damage modifiers (e.g. EXTERNUS +5).
   let dmg=foldValue(gs,attacker,'modifyDamage',amt,{target});
+  if(trueDmg && azazelTrueFormActive(gs)) dmg=dmg*2;   // Azazel True Form: all True damage doubled, for everyone, rest of game
   gs[target].hp=Math.max(0,gs[target].hp-dmg);
   spawnFloater(target,'-'+dmg,false);
   gs[attacker].dmgDealtThisRound=(gs[attacker].dmgDealtThisRound||0)+dmg;
@@ -2982,6 +3148,30 @@ function stealHealth(gs,r,amt){
 
 // ── World Splitter helpers ───────────────────────────────────────────────────
 const SPLITTER_HALVES = ['world_splitter','world_splitter_b'];
+
+// ── Azazel Family (Alter Ego) ────────────────────────────────────────────────
+const AZAZEL_HALVES = ['misses_azazel','mister_azazel'];
+// True Form is installed as an effect keyed 'misses_azazel' (a real card id, so logicSources
+// never trips). It carries no per-effect hook — the doubling is read globally in dealDmg.
+function azazelTrueFormActive(gs){
+  return ['p1','p2'].some(r =>
+    ((gs[r]&&gs[r].effects)||[]).some(e=>e&&e.id==='misses_azazel') ||
+    ((gs[r]&&gs[r].rewards)||[]).some(e=>e&&e.id==='misses_azazel'));
+}
+function azazelPlay(c){
+  const st=c.state, r=c.self;
+  if((st[r].effects||[]).some(e=>e.id==='misses_azazel')) return;   // already in True Form
+  const row=(st[r].selectedCards||[]).filter(Boolean).map(x=>x.id);
+  const both = AZAZEL_HALVES.every(id=>row.includes(id));
+  if(!both){
+    c.log(st[r].name+' plays '+((c.card&&c.card.name)||'an Azazel')+' — but the family is not whole. Nothing happens.','system');
+    return;
+  }
+  c.addEffect({id:'misses_azazel'});   // installs the GLOBAL True-damage doubling for the rest of the game
+  c.log(st[r].name+' unites the Azazel Family — TRUE FORM! All True damage is doubled for the rest of the game.','effect');
+  c.dealDmgTo(c.opp, 10, true);         // the doubling is already live → this lands for 20
+}
+
 let SPLIT_CHAIN = 0;   // fuse: the forced-discard ping-pong can never run away
 
 function splitterPlay(c){
@@ -3152,6 +3342,7 @@ function drawExtra(gs,r,n){
 const QUEST_DEFS = {
   opening_ceremony: { name:'Opening Ceremony', goal:3, reward:'journey_flip' },
   zorya:            { name:'Zorya — the Four Sins', goal:4, reward:'zorya_arm' },
+  constellation_council_control: { name:'Constellation Council Control', goal:10, reward:'handsize_plus2' },
 };
 
 function advanceQuestsFor(gs,r,card){
@@ -3162,6 +3353,10 @@ function advanceQuestsFor(gs,r,card){
     let advance=0;
     if(q.id==='opening_ceremony' && card && card.journeyDay) advance=1;   // playing a Day advances it
     if(q.id==='zorya' && card && card.sin) advance=1;                     // playing a Sin advances it
+    // Constellation Council Control — every card you play that ORIGINATED in the opponent's deck
+    // (owner-stamped, e.g. a Scavenger copy they shuffled into your deck) advances it. Each play
+    // counts, including a second play of the same card. Own-deck cards (no foreign owner) never count.
+    if(q.id==='constellation_council_control' && card && fromEnemyDeck(card, r)) advance=1;
     if(advance>0){
       q.progress=(q.progress||0)+advance;
       if(q.progress>=def.goal && !q.done){
@@ -3175,6 +3370,12 @@ function advanceQuestsFor(gs,r,card){
         if(def.reward==='zorya_arm'){
           (gs[r].effects||(gs[r].effects=[])).push({id:'zorya', armed:(gs.round||1)});
           log('  🌊 All four Sins are committed — survive one more round and Zorya takes the game!','effect');
+        }
+        // handsize_plus2: a persistent reward. Push an effect keyed on this quest card's own id;
+        // its CARD_LOGIC.handSizeMod (+2) then folds into maxHandSize for the rest of the game.
+        if(def.reward==='handsize_plus2'){
+          (gs[r].effects||(gs[r].effects=[])).push({id:'constellation_council_control'});
+          log('  🔭 Constellation Council Control — your maximum hand size is increased by 2!','effect');
         }
       }
     }
@@ -4557,6 +4758,20 @@ async function onRevealPhase(gs){
     }
   }
 
+  for(const c of myCards){
+    if(c && c.id==='deep_sea_queen'){
+      const pool=(me().hand||[]).filter(x=>x && takeable(x));
+      if(pool.length){ const ch=await pickDiscards(pool,1,'Deepsea Queen — choose a card to give'); choices[c.uid]=Object.assign(choices[c.uid]||{}, {swapGive: ch[0]}); }
+    }
+  }
+
+  // Whitefoot played BY the opponent against me — I (the victim) choose which non-legendary
+  // card to hand over. Stored under a fixed key the thief's onPlay reads from my choices.
+  if((gs[opp(myRole)].selectedCards||[]).some(c=>c && c.id==='whitefoot')){
+    const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
+    if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); choices['__whitefootGive']=ch[0]; }
+  }
+
   // Write my choices to Firebase
   await update(gRef, { [myRole+'/choices']: choices, [myRole+'/choicesReady']: true });
   document.getElementById('action-info').innerHTML='<em>Waiting for opponent…</em>';
@@ -4774,7 +4989,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
   }
 
   didConfirm=true;
-  clearInterval(timerInt);
+  if(soloMode) clearInterval(timerInt);   // solo resolves at once; in MP the timer keeps ticking so you see the opponent's time
 
   const newHand=hand.filter(c=>c && !selected.includes(c.uid));
 
@@ -4807,6 +5022,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     p2played.forEach(c=>{ if(c.peek) c._peek = Math.random()<0.5 ? 'keep' : 'shuffle'; });
     localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2full.filter(c=>!p2played.includes(c));   // blocked cards stay in hand — they're just not played
+    p2played.forEach(c=>{ if(c.id==='deep_sea_queen'){ const pool=(localGs.p2.hand||[]).filter(x=>x && takeable(x)); if(pool.length) c._swapGive=pool[Math.floor(Math.random()*pool.length)].uid; } });
     localGs.p2.confirmed=true;
     renderHand(newHand);
 
@@ -4821,6 +5037,11 @@ document.getElementById('btn-confirm').onclick=async()=>{
       let orbsLeft=(me().hand||[]).filter(isOrb).length;
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
       for(const c of played){ if(c.peek){ const {top,gained}=larryGains(localGs, myRole, c.peek); c._peek=await pickPeek(top, c.name, gained); } }
+      for(const c of played){ if(c.id==='deep_sea_queen'){ const pool=(me().hand||[]).filter(x=>x && takeable(x)); if(pool.length){ const ch=await pickDiscards(pool,1,'Deepsea Queen — choose a card to give'); c._swapGive=ch[0]; } } }
+      if((localGs.p2.selectedCards||[]).some(c=>c && c.id==='whitefoot')){
+        const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
+        if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__whitefootGive: ch[0]}); }
+      }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
     }, 900);
@@ -4958,14 +5179,40 @@ function pickSplit(total, cardName){
 }
 
 // ── Timer ──
+// One shared deadline instead of two local countdowns. p1 (authoritative) writes an absolute
+// end time to Firebase; both clients read it and compute the remaining seconds against the
+// server clock, so they always show the SAME time and never drift. The timer keeps running
+// after you confirm, so you can watch how long your opponent still has.
+function serverNow(){ return Date.now() + (serverTimeOffset||0); }
 function startTimer(){
-  secLeft=TIMER;
+  clearInterval(timerInt);
+  const round = (localGs && localGs.round) || 1;
+  if(soloMode){
+    timerDeadline = serverNow() + TIMER*1000; timerDeadlineRound = round;
+  } else if(myRole==='p1'){
+    timerDeadline = serverNow() + TIMER*1000; timerDeadlineRound = round;
+    update(gRef, { deadline: timerDeadline, deadlineRound: round }).catch(()=>{});
+  }
+  tickTimer();
+  timerInt = setInterval(tickTimer, 250);
+}
+function tickTimer(){
+  const round = (localGs && localGs.round) || 1;
+  let dl = null;
+  if(soloMode){
+    dl = timerDeadline;
+  } else if(localGs && localGs.deadline && localGs.deadlineRound === round){
+    dl = localGs.deadline;                                   // the synced deadline for THIS round
+  } else if(myRole==='p1' && timerDeadlineRound === round){
+    dl = timerDeadline;                                      // p1 just wrote it; use it before it round-trips
+  }
+  if(!dl){ secLeft = TIMER; updateTimer(); return; }         // still waiting for this round's deadline — don't act
+  secLeft = Math.max(0, Math.ceil((dl - serverNow())/1000));
   updateTimer();
-  timerInt=setInterval(()=>{
-    secLeft--;
-    updateTimer();
-    if(secLeft<=0){clearInterval(timerInt);if(!didConfirm)document.getElementById('btn-confirm').onclick();}
-  },1000);
+  if(secLeft<=0){
+    clearInterval(timerInt);
+    if(!didConfirm) document.getElementById('btn-confirm').onclick();   // auto-confirm only if you haven't yet
+  }
 }
 
 function updateTimer(){
@@ -5013,6 +5260,7 @@ function resolveRound(gs){
         if(ch[c.uid].split!==undefined) c._split=ch[c.uid].split;
         if(ch[c.uid].useOrb!==undefined) c._useOrb=ch[c.uid].useOrb;
         if(ch[c.uid].peek!==undefined) c._peek=ch[c.uid].peek;
+        if(ch[c.uid].swapGive!==undefined) c._swapGive=ch[c.uid].swapGive;
       }
     });
   });
@@ -5149,6 +5397,16 @@ function resolveRound(gs){
   }
   state._dead=null; state._winner=null; state._instantWin=null;
 
+  // Quicksilver — hand-immunity covers exactly the round it was granted for. That round has
+  // now resolved (immune cards were protected through the resolution above), so strip the temp
+  // flag BEFORE this round's draw — the cards drawn for the NEXT round must not inherit it.
+  ['p1','p2'].forEach(r=>{
+    if(state[r].handImmuneActive){
+      ['hand','deck','graveyard','void'].forEach(z=>{ (state[r][z]||[]).forEach(c=>{ if(c) delete c._tempImmune; }); });
+      state[r].handImmuneActive=false;
+    }
+  });
+
   // Draw for each player — drawCount folds in Journey draw modifiers; Hindered forces 0.
   ['p1','p2'].forEach(r=>{
     const wasHindered = !!state[r].hindered;
@@ -5159,6 +5417,25 @@ function resolveRound(gs){
     state[r].drewThisRound=(drawn.length>0);
     // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
     fireDrawTriggers(state, r, drawn);
+    // The Bad and the Worse — a steal queued against THIS player's draw takes one random card
+    // they just drew. Immune cards can't be taken; if the draw was empty or the thief's hand is
+    // full, nothing happens. owner=r so it counts toward the thief's Constellation; stolenFromDraw
+    // flags it so the UI can show it flew in from the opponent, not from your own deck.
+    if(state[r].stealDrawBy){
+      const thief=state[r].stealDrawBy; state[r].stealDrawBy=null;
+      const hand=state[r].hand||[];
+      const pool=drawn.filter(x=>x && takeable(x) && hand.includes(x));
+      const thHand=state[thief].hand||(state[thief].hand=[]);
+      if(pool.length>0 && thHand.length < maxHandSize(state, thief)){
+        const pick=pool[Math.floor(Math.random()*pool.length)];
+        const hi=hand.indexOf(pick); if(hi>=0) hand.splice(hi,1);
+        state[r].hand=hand;
+        pick.owner=r;
+        pick.stolenFromDraw=true;
+        thHand.push(pick); state[thief].hand=thHand;
+        log('  🎭 '+state[thief].name+' steals a card from '+state[r].name+"'s draw ("+pick.name+')!','effect');
+      }
+    }
     // Marber Vault: your draw was just taken away. The Vault opens at the START of the next
     // round — the moment you notice you have nothing new in hand.
     const v=vaultOf(state, r);
@@ -5167,6 +5444,17 @@ function resolveRound(gs){
   state.p1.extraDraw=0; state.p2.extraDraw=0;
   state.p1.noDraw=false; state.p2.noDraw=false;
   state.p1.hindered=false; state.p2.hindered=false;
+
+  // Quicksilver — a hand queued for immunity activates NOW, after the draw, so the cards drawn
+  // entering this round are covered too. Every card in hand gets the temp flag; it is stripped
+  // at the top of the next resolve, giving exactly one round of protection.
+  ['p1','p2'].forEach(r=>{
+    if(state[r].handImmuneNext){
+      (state[r].hand||[]).forEach(c=>{ if(c) c._tempImmune=true; });
+      state[r].handImmuneActive=true;
+      state[r].handImmuneNext=false;
+    }
+  });
 
   // Skywalker forced-play lasts exactly ONE round: clear the type that was active for the
   // round just resolved, then promote any newly queued force (forcedTypeNext) for next round.
@@ -5203,7 +5491,17 @@ function fireDrawTriggers(state, r, drawn){
       const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
       if(consumed===true){
         const h=state[r].hand||[]; const i=h.indexOf(dc);
-        if(i>=0){ h.splice(i,1); state[r].graveyard=[dc,...(state[r].graveyard||[])]; }
+        if(i>=0){
+          h.splice(i,1);
+          if(dc.endless){
+            // Endless (e.g. an enchanted From Far Away): recurs in the drawer's own deck.
+            const added=shuffleIntoDeck(state, r, dc);
+            if(added) log('  ↺ '+dc.name+' returns endlessly to '+state[r].name+"'s deck.",'effect');
+            else state[r].graveyard=[dc,...(state[r].graveyard||[])];
+          } else {
+            state[r].graveyard=[dc,...(state[r].graveyard||[])];
+          }
+        }
       }
     }
   });
