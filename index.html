@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T08:27';
+const APP_VERSION = '2026-07-15T09:56';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1769,6 +1769,8 @@ const CARDS_DATA = [
   //       all the quest needs to count them; their own effect can be anything.
   {id:'zorya', collectible:true, name:'Zorya, Goddess of the Deep', text:'Shuffle the 4 Sins into your deck. Quest: play all 4 Sins. Survive 1 more round afterwards: you instantly win the game.', rarity:'legendary', emoji:'🔱', quest:'zorya', type:'quest', art:'art/zorya.png'},
   {id:'constellation_council_control', collectible:true, name:'Constellation Council Control', text:"Quest: play 10 cards from your opponent's deck. Reward: your maximum hand size is increased by 2.", rarity:'legendary', emoji:'🔭', quest:'constellation_council_control', type:'quest', art:'art/constellation_council_control.png'},
+  {id:'deep_sea_queen', collectible:true, name:'Deepsea Queen', text:"Swap a card in your hand with a random card in your opponent's hand.", rarity:'common', emoji:'🧜‍♀️', swapHands:true, type:'normal', art:'art/deep_sea_queen.png'},
+  {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -1909,6 +1911,16 @@ function krushSearch(c, n, findId, label){
 // the CPU never picks it, and runCard turns it away as a last guard.
 function playBlockedReason(state, r, card){
   if(!card) return null;
+  if(card.swapHands){
+    // Deepsea Queen — a swap needs a tradable card on BOTH sides. Immune cards never count:
+    // you can't give one away and you can't pull one from the opponent. (A rare same-round
+    // race where the opponent plays their last tradable card is caught by the onPlay fizzle.)
+    const o=opp(r);
+    const mine=(state[r].hand||[]).filter(x=>x && x.uid!==card.uid && takeable(x));
+    const theirs=(state[o].hand||[]).filter(x=>x && takeable(x));
+    if(mine.length===0) return 'You need another (non-Immune) card in hand to swap away.';
+    if(theirs.length===0) return 'Your opponent has no (non-Immune) card to swap.';
+  }
   if(card.playIfHpBelow && (state[r].hp||0) >= card.playIfHpBelow){
     return 'Only playable below '+card.playIfHpBelow+' health (you have '+state[r].hp+').';
   }
@@ -2508,6 +2520,36 @@ const CARD_LOGIC = {
   // Constellation Council Control — the quest card is never played; this entry exists only so the
   // reward effect (pushed onto effects when the quest completes) can fold +2 into maxHandSize.
   constellation_council_control: { handSizeMod:(c)=>c.amount+2 },
+  // Deepsea Queen — you give ONE card you chose (_swapGive, set at reveal) and receive a RANDOM
+  // one from the opponent. Immune cards are never eligible on either side. Ownership follows
+  // origin, not possession: the card you give came from YOUR deck (so it counts toward the
+  // opponent's Constellation quest), the one you take came from THEIRS (so it counts toward
+  // yours). If either side has nothing tradable when it resolves, it fizzles harmlessly.
+  deep_sea_queen: { onPlay:(c)=>{
+    const meR=c.self, opR=c.opp;
+    const myHand=c.state[meR].hand||(c.state[meR].hand=[]);
+    const opHand=c.state[opR].hand||(c.state[opR].hand=[]);
+    // the card to give: the one you picked, else a random tradable fallback (CPU / lost pick)
+    let giveIdx = (c.card._swapGive!==undefined)
+      ? myHand.findIndex(x=>x && x.uid===c.card._swapGive && takeable(x)) : -1;
+    if(giveIdx<0){ const pool=myHand.map((x,i)=>({x,i})).filter(o=>o.x && takeable(o.x)); if(pool.length) giveIdx=pool[Math.floor(Math.random()*pool.length)].i; }
+    const takePool=opHand.map((x,i)=>({x,i})).filter(o=>o.x && takeable(o.x));
+    if(giveIdx<0 || takePool.length===0){ c.log('Deepsea Queen finds nothing to swap.','system'); return; }
+    const giveCard=myHand[giveIdx];
+    const takeCard=takePool[Math.floor(Math.random()*takePool.length)].x;
+    myHand.splice(giveIdx,1);
+    const ti=opHand.indexOf(takeCard); if(ti>=0) opHand.splice(ti,1);
+    giveCard.owner=meR;   // it came from your deck → foreign to the opponent
+    takeCard.owner=opR;   // it came from their deck → foreign to you (counts for your quest)
+    opHand.push(giveCard);
+    myHand.push(takeCard);
+    c.state[meR].hand=myHand; c.state[opR].hand=opHand;
+    c.log(c.state[meR].name+' plays Deepsea Queen — swaps a card with '+c.state[opR].name+'.','effect');
+  } },
+  // The Bad and the Worse — queue a steal against the opponent's NEXT draw. onPlay runs before
+  // the draw loop in this same resolve, so the marker is consumed the moment they draw for the
+  // coming round. The actual theft (random, Immune-safe, hand-full-safe) lives in the draw loop.
+  the_bad_and_the_worse: { onPlay:(c)=>{ c.state[c.opp].stealDrawBy=c.self; c.log(c.state[c.self].name+' plays The Bad and the Worse — a card from '+c.state[c.opp].name+"'s next draw will be stolen.",'effect'); } },
   // Detective Bubbles — take 10 self-damage now (respects your own Block; can be lethal),
   // then queue a 15 heal for the START of next round. Stacks (each copy queues its own 15).
   detective_bubbles: { onPlay:(c)=>{ c.hurtSelf(10); c.queueHeal(15); c.log(c.state[c.self].name+' plays Detective Bubbles — 10 self-damage, 15 heal queued for next round.','damage'); } },
@@ -4577,6 +4619,13 @@ async function onRevealPhase(gs){
     }
   }
 
+  for(const c of myCards){
+    if(c && c.id==='deep_sea_queen'){
+      const pool=(me().hand||[]).filter(x=>x && takeable(x));
+      if(pool.length){ const ch=await pickDiscards(pool,1,'Deepsea Queen — choose a card to give'); choices[c.uid]=Object.assign(choices[c.uid]||{}, {swapGive: ch[0]}); }
+    }
+  }
+
   // Write my choices to Firebase
   await update(gRef, { [myRole+'/choices']: choices, [myRole+'/choicesReady']: true });
   document.getElementById('action-info').innerHTML='<em>Waiting for opponent…</em>';
@@ -4827,6 +4876,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     p2played.forEach(c=>{ if(c.peek) c._peek = Math.random()<0.5 ? 'keep' : 'shuffle'; });
     localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2full.filter(c=>!p2played.includes(c));   // blocked cards stay in hand — they're just not played
+    p2played.forEach(c=>{ if(c.id==='deep_sea_queen'){ const pool=(localGs.p2.hand||[]).filter(x=>x && takeable(x)); if(pool.length) c._swapGive=pool[Math.floor(Math.random()*pool.length)].uid; } });
     localGs.p2.confirmed=true;
     renderHand(newHand);
 
@@ -4841,6 +4891,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
       let orbsLeft=(me().hand||[]).filter(isOrb).length;
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
       for(const c of played){ if(c.peek){ const {top,gained}=larryGains(localGs, myRole, c.peek); c._peek=await pickPeek(top, c.name, gained); } }
+      for(const c of played){ if(c.id==='deep_sea_queen'){ const pool=(me().hand||[]).filter(x=>x && takeable(x)); if(pool.length){ const ch=await pickDiscards(pool,1,'Deepsea Queen — choose a card to give'); c._swapGive=ch[0]; } } }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
     }, 900);
@@ -5033,6 +5084,7 @@ function resolveRound(gs){
         if(ch[c.uid].split!==undefined) c._split=ch[c.uid].split;
         if(ch[c.uid].useOrb!==undefined) c._useOrb=ch[c.uid].useOrb;
         if(ch[c.uid].peek!==undefined) c._peek=ch[c.uid].peek;
+        if(ch[c.uid].swapGive!==undefined) c._swapGive=ch[c.uid].swapGive;
       }
     });
   });
@@ -5189,6 +5241,25 @@ function resolveRound(gs){
     state[r].drewThisRound=(drawn.length>0);
     // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
     fireDrawTriggers(state, r, drawn);
+    // The Bad and the Worse — a steal queued against THIS player's draw takes one random card
+    // they just drew. Immune cards can't be taken; if the draw was empty or the thief's hand is
+    // full, nothing happens. owner=r so it counts toward the thief's Constellation; stolenFromDraw
+    // flags it so the UI can show it flew in from the opponent, not from your own deck.
+    if(state[r].stealDrawBy){
+      const thief=state[r].stealDrawBy; state[r].stealDrawBy=null;
+      const hand=state[r].hand||[];
+      const pool=drawn.filter(x=>x && takeable(x) && hand.includes(x));
+      const thHand=state[thief].hand||(state[thief].hand=[]);
+      if(pool.length>0 && thHand.length < maxHandSize(state, thief)){
+        const pick=pool[Math.floor(Math.random()*pool.length)];
+        const hi=hand.indexOf(pick); if(hi>=0) hand.splice(hi,1);
+        state[r].hand=hand;
+        pick.owner=r;
+        pick.stolenFromDraw=true;
+        thHand.push(pick); state[thief].hand=thHand;
+        log('  🎭 '+state[thief].name+' steals a card from '+state[r].name+"'s draw ("+pick.name+')!','effect');
+      }
+    }
     // Marber Vault: your draw was just taken away. The Vault opens at the START of the next
     // round — the moment you notice you have nothing new in hand.
     const v=vaultOf(state, r);
