@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T12:13';
+const APP_VERSION = '2026-07-15T12:52';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1775,6 +1775,10 @@ const CARDS_DATA = [
   {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
   {id:'whitefoot', collectible:true, name:'Whitefoot', text:'Your opponent has to give you 1 non-legendary card (they choose which).', rarity:'common', emoji:'🐾', type:'normal', art:'art/white_foot.png'},
   {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, enchanted:true, type:'normal', art:'art/from_far_away.png'},
+  {id:'wish_dralivering', collectible:true, name:'Wish Dralivering', text:'Transform this into a random non-legendary Celebration card.', rarity:'common', emoji:'🌟', type:'normal', art:'art/wish_dralivering.png'},
+  {id:'soul_shatter', collectible:true, name:'Soul Shatter', text:"Curse 2 random cards in your opponent's hand.", rarity:'common', emoji:'💔', type:'normal', art:'art/soul_shatter.png'},
+  {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, type:'normal', art:'art/zargoor.png'},
+  {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, type:'normal', art:'art/nauren_shock.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -2606,6 +2610,53 @@ const CARD_LOGIC = {
       c.dealDmgTo(c.self, 20);             // the drawer (your opponent, whose deck it was in) takes 20
       c.log('  🌠 '+c.state[c.self].name+' draws From Far Away — 20 damage!','damage');
       return true;                          // consumed → graveyard, unless endless (handled in fireDrawTriggers)
+    }
+  },
+  // Wish Dralivering — transforms (Pyrax-style, via toHand) into a random non-legendary
+  // Celebration card placed in your hand. The pool is read live from the card data, so any
+  // Celebration card added later is automatically eligible. Legendary Celebrations (Larry) are out.
+  wish_dralivering: { onPlay:(c)=>{
+    const pool=CARDS_DATA.filter(x=>x.collectible && x.rarity!=='legendary' && x.tags && x.tags.includes('celebration'));
+    if(pool.length===0){ c.log(c.state[c.self].name+' plays Wish Dralivering — but there are no Celebration cards to become.','system'); return; }
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    c.toHand(pick.id);
+    c.log(c.state[c.self].name+' plays Wish Dralivering — it transforms into '+pick.name+'!','effect');
+  } },
+  // Soul Shatter — Curse 2 random cards in the opponent's hand (Immune and already-Cursed cards
+  // are skipped). curseCard stamps cursedUntil = round+1, so they have exactly next round to
+  // play them before they rot to the graveyard. Same Curse the rest of the game already uses.
+  soul_shatter: { onPlay:(c)=>{
+    const st=c.state, o=c.opp;
+    const pool=(st[o].hand||[]).filter(x=>x && !isImmune(x) && x.cursedUntil===undefined);
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    const hit=pool.slice(0,2);
+    hit.forEach(x=>curseCard(st, x));
+    c.log(c.state[c.self].name+' plays Soul Shatter — '+(hit.length?'Curses '+hit.length+' of '+st[o].name+"'s cards (play them next round or they rot)":'but there is nothing to Curse')+'.','effect');
+  } },
+  // Zargoor — 10 damage, or 20 if the opponent is holding at least one Cursed card (the higher
+  // value replaces the base, it isn't added). Pairs with Soul Shatter / any Curse in their hand.
+  zargoor: { onPlay:(c)=>{
+    const hasCursed=(c.state[c.opp].hand||[]).some(x=>x && x.cursedUntil!==undefined);
+    const dmg=hasCursed?20:10;
+    c.dealDmgTo(c.opp, dmg);
+    c.log(c.state[c.self].name+' plays Zargoor — '+(hasCursed?c.state[c.opp].name+' holds a Cursed card → 20 damage':'10 damage')+'.','damage');
+  } },
+  // Nauren Shock — 25 damage at the START of next round, minus the opponent's TOTAL damage the
+  // round you played it. onPlay installs the strike; because round-start triggers already fired
+  // this round, it can only go off next round. It reads dmgDealtLastRound (which, at that next
+  // round's start, holds the round-you-played-it total), then removes itself — one strike only.
+  nauren_shock: {
+    onPlay:(c)=>{
+      c.addEffect({id:'nauren_shock'});
+      c.log(c.state[c.self].name+' plays Nauren Shock — it strikes at the start of next round.','effect');
+    },
+    onRoundStart:(c)=>{
+      const st=c.state, r=c.self, o=c.opp;
+      st[r].effects=(st[r].effects||[]).filter(e=>e && e.id!=='nauren_shock');   // one-shot
+      const oppDmg=st[o].dmgDealtLastRound||0;   // the opponent's total from the round you played it
+      const dmg=Math.max(0, 25-oppDmg);
+      if(dmg>0){ c.dealDmgTo(o, dmg); c.log('  ⚡ '+st[r].name+"'s Nauren Shock strikes for "+dmg+' ('+st[o].name+' dealt '+oppDmg+' last round).','damage'); }
+      else c.log('  ⚡ '+st[r].name+"'s Nauren Shock is fully absorbed ("+st[o].name+' dealt '+oppDmg+' last round).','system');
     }
   },
   // Detective Bubbles — take 10 self-damage now (respects your own Block; can be lethal),
