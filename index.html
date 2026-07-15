@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T11:35';
+const APP_VERSION = '2026-07-15T12:13';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -2053,6 +2053,7 @@ const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel'] },
+  starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
