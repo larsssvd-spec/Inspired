@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T15:22';
+const APP_VERSION = '2026-07-15T15:47';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1744,6 +1744,7 @@ const CARDS_DATA = [
   {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
   {id:'misses_azazel',    collectible:true, name:'Misses Azazel', text:'Alter Ego: Mister Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'😈', alterEgo:'mister_azazel', type:'normal', art:'art/misses_azazel.png'},
   {id:'mister_azazel',                      name:'Mister Azazel', text:'Alter Ego: Misses Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'👹', noDeck:true, alterEgoOf:'misses_azazel', type:'normal', art:'art/mister_azazel.png'},
+  {id:'true_form', name:'True Form of the Azazel Family', text:'For the rest of the game all True damage is doubled. Deal 10 True damage.', rarity:'legendary', emoji:'🔥', noDeck:true, dealsDamage:true, art:'art/true_form.png', type:'normal'},
 
   {id:'forgotten_mage', collectible:true, name:'The Forgotten Mage', text:'Heal 10. If your opponent is holding 7 cards or more: Also get an Enchanted Orb.', rarity:'common', emoji:'🧙', heals:true, type:'normal', art:'art/forgotten_mage.png'},
 
@@ -2059,7 +2060,7 @@ const CARD_VARIANTS = {
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
-  misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel'] },
+  misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
@@ -2170,6 +2171,14 @@ const CARD_LOGIC = {
   // then deals 10 True, which the freshly-installed doubling turns into 20.
   misses_azazel:    { onPlay:(c)=>azazelPlay(c) },
   mister_azazel:    { onPlay:(c)=>azazelPlay(c) },
+  // True Form of the Azazel Family — the reward card you get from uniting. Playing it installs
+  // the GLOBAL True-damage doubling (keyed 'misses_azazel', which dealDmg reads), then deals 10
+  // True — which the freshly-live doubling turns into 20.
+  true_form: { onPlay:(c)=>{
+    if(!(c.state[c.self].effects||[]).some(e=>e.id==='misses_azazel')) c.addEffect({id:'misses_azazel'});
+    c.log(c.state[c.self].name+' plays True Form of the Azazel Family — all True damage is doubled for the rest of the game!','effect');
+    c.dealDmgTo(c.opp, 10, true);
+  } },
   // The Forgotten Mage — the heal is unconditional; the Orb is the reward for catching your
   // opponent hoarding. Their hand is read the moment this FLIPS, so the cards they played this
   // round are already out of it: someone who dumps two cards drops from 8 to 6 and gives you
@@ -3160,16 +3169,16 @@ function azazelTrueFormActive(gs){
 }
 function azazelPlay(c){
   const st=c.state, r=c.self;
-  if((st[r].effects||[]).some(e=>e.id==='misses_azazel')) return;   // already in True Form
-  const row=(st[r].selectedCards||[]).filter(Boolean).map(x=>x.id);
-  const both = AZAZEL_HALVES.every(id=>row.includes(id));
+  const row=(st[r].selectedCards||[]).filter(Boolean);
+  const both = AZAZEL_HALVES.every(id=>row.map(x=>x.id).includes(id));
   if(!both){
     c.log(st[r].name+' plays '+((c.card&&c.card.name)||'an Azazel')+' — but the family is not whole. Nothing happens.','system');
     return;
   }
-  c.addEffect({id:'misses_azazel'});   // installs the GLOBAL True-damage doubling for the rest of the game
-  c.log(st[r].name+' unites the Azazel Family — TRUE FORM! All True damage is doubled for the rest of the game.','effect');
-  c.dealDmgTo(c.opp, 10, true);         // the doubling is already live → this lands for 20
+  if(row.some(x=>x._azazelUnited)) return;                 // once per unite: the second half no-ops
+  row.forEach(x=>{ if(AZAZEL_HALVES.includes(x.id)) x._azazelUnited=true; });
+  c.toHand('true_form');                                   // the reward is a real card, handed to you
+  c.log(st[r].name+' unites the Azazel Family — Misses and Mister fuse into TRUE FORM! (added to your hand)','effect');
 }
 
 let SPLIT_CHAIN = 0;   // fuse: the forced-discard ping-pong can never run away
@@ -5689,7 +5698,8 @@ function showCardPreview(c, el, mode){
     if(vars) vars.forEach(v=>pv.appendChild(col(v.label, {...c, text:v.text}, false)));
     if(toks) toks.ids.forEach(id=>{
       const def=CARDS_DATA.find(x=>x.id===id);
-      if(def) pv.appendChild(col(toks.label, def, false));
+      const lbl=(toks.labelFor && toks.labelFor[id]) || toks.label;
+      if(def) pv.appendChild(col(lbl, def, false));
     });
     pv.style.display='flex';
     pv.style.left='0px'; pv.style.top='0px';        // measure from a known origin
