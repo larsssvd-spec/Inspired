@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T15:47';
+const APP_VERSION = '2026-07-15T16:07';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1702,7 +1702,7 @@ const CARDS_DATA = [
   {id:'death_stare', collectible:true, name:'Death Stare', text:'When drawn: put a copy in both hands (you keep variant 1, your opponent gets variant 2).', rarity:'legendary', emoji:'👁️', hold:true, type:'normal', art:'art/death_stare.png'},
   {id:'detective_bubbles', collectible:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, heals:true, type:'normal', art:'art/detective_bubbles.png'},
   {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
-  {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal'},
+  {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal', art:'art/enchanted_orb.png'},
   {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
   {id:'quicksilver', collectible:true, name:'Quicksilver', text:'Next round, all cards in your hand are Immune (including the ones you draw).', rarity:'common', emoji:'⚡', type:'normal', art:'art/quick_silver.png'},
   {id:'bolvar', collectible:true, name:'Bolvar', text:'For the rest of the game: deal 20 true damage to your opponent after each round they play fewer than 2 cards.', rarity:'legendary', emoji:'🛡️', type:'normal', art:'art/bolvar.png'},
@@ -1783,6 +1783,17 @@ const CARDS_DATA = [
   {id:'soul_shatter', collectible:true, name:'Soul Shatter', text:"Curse 2 random cards in your opponent's hand.", rarity:'common', emoji:'💔', type:'normal', art:'art/soul_shatter.png'},
   {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, type:'normal', art:'art/zargoor.png'},
   {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, type:'normal', art:'art/nauren_shock.png'},
+  // ── In development: art placed, mechanics to follow (no logic yet — these do nothing when played) ──
+  {id:'infinite_rollercoaster', collectible:true, name:'Infinite Rollercoaster', text:'(In development — coming soon.)', rarity:'legendary', emoji:'🎢', type:'normal', art:'art/infinite_rollercoaster.png'},
+  {id:'space_dog', collectible:true, name:'Space Dog', text:'(In development — coming soon.)', rarity:'common', emoji:'🚀', type:'normal', art:'art/space_dog.png'},
+  {id:'find_a_way', collectible:true, name:'Find a Way', text:'(In development — coming soon.)', rarity:'common', emoji:'🧭', type:'normal', art:'art/find_a_way.png'},
+  {id:'a_sweet_life', collectible:true, name:'A Sweet Life', text:'(In development — coming soon.)', rarity:'common', emoji:'🍬', type:'normal', art:'art/a_sweet_life.png'},
+  {id:'enlightened', collectible:true, name:'Enlightened', text:'(In development — coming soon.)', rarity:'common', emoji:'💡', type:'normal', art:'art/enlightened.png'},
+  {id:'precise_shot', collectible:true, name:'Precise Shot', text:'(In development — coming soon.)', rarity:'common', emoji:'🎯', type:'normal', art:'art/precise_shot.png'},
+  {id:'chompzilla', collectible:true, name:'Chompzilla', text:'(In development — coming soon.)', rarity:'common', emoji:'🦖', type:'normal', art:'art/chompzilla.png'},
+  {id:'bad_landing', collectible:true, name:'Bad Landing', text:'(In development — coming soon.)', rarity:'common', emoji:'💥', type:'normal', art:'art/bad_landing.png'},
+  {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'(In development — coming soon.)', rarity:'common', emoji:'🌑', type:'normal', art:'art/bloodmoon_princess.png'},
+  {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'(In development — coming soon.)', rarity:'common', emoji:'👀', type:'normal', art:'art/peek_a_boo.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
