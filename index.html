@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-14T17:15';
+const APP_VERSION = '2026-07-15T08:27';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1701,6 +1701,7 @@ const CARDS_DATA = [
   {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
   {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal'},
   {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
+  {id:'quicksilver', collectible:true, name:'Quicksilver', text:'Next round, all cards in your hand are Immune (including the ones you draw).', rarity:'common', emoji:'⚡', type:'normal', art:'art/quick_silver.png'},
   {id:'bolvar', collectible:true, name:'Bolvar', text:'For the rest of the game: deal 20 true damage to your opponent after each round they play fewer than 2 cards.', rarity:'legendary', emoji:'🛡️', type:'normal', art:'art/bolvar.png'},
   {id:'energies_silk', collectible:true, name:'Energies Silk', text:'Shuffle each Enchanted Orb you used back into your deck.', rarity:'legendary', emoji:'🕸️', type:'normal', art:'art/energies_silk.png'},
   {id:'scavenger', collectible:true, name:'Scavenger', text:"Shuffle this card into your opponent's deck.", rarity:'common', emoji:'🦅', type:'normal', art:'art/scavenger.png'},
@@ -1767,6 +1768,7 @@ const CARDS_DATA = [
   // TODO: Sins 2-4 are still placeholders — names/texts/effects to be written. sin:true is
   //       all the quest needs to count them; their own effect can be anything.
   {id:'zorya', collectible:true, name:'Zorya, Goddess of the Deep', text:'Shuffle the 4 Sins into your deck. Quest: play all 4 Sins. Survive 1 more round afterwards: you instantly win the game.', rarity:'legendary', emoji:'🔱', quest:'zorya', type:'quest', art:'art/zorya.png'},
+  {id:'constellation_council_control', collectible:true, name:'Constellation Council Control', text:"Quest: play 10 cards from your opponent's deck. Reward: your maximum hand size is increased by 2.", rarity:'legendary', emoji:'🔭', quest:'constellation_council_control', type:'quest', art:'art/constellation_council_control.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -2499,6 +2501,13 @@ const CARD_LOGIC = {
   // for exactly the next round (see the resolve round-reset). Enforced in confirm (human)
   // and CPU auto-select. unplayable/immune cards are never forced.
   skywalker:       { onPlay:(c)=>{ const choice=(c.card&&c.card._choice)||'damage'; c.state[c.opp].forcedTypeNext=choice; c.log(c.state[c.self].name+' plays Skywalker — '+c.state[c.opp].name+' is forced to play '+choice+' cards next round!','effect'); } },
+  // Quicksilver — at the START of next round your whole hand becomes Immune for that one round,
+  // including the cards you draw entering it. Queued now as handImmuneNext; the resolve step
+  // stamps the hand AFTER the draw (so fresh cards are covered) and strips it one round later.
+  quicksilver:     { onPlay:(c)=>{ c.state[c.self].handImmuneNext=true; c.log(c.state[c.self].name+' plays Quicksilver — their whole hand will be Immune next round.','effect'); } },
+  // Constellation Council Control — the quest card is never played; this entry exists only so the
+  // reward effect (pushed onto effects when the quest completes) can fold +2 into maxHandSize.
+  constellation_council_control: { handSizeMod:(c)=>c.amount+2 },
   // Detective Bubbles — take 10 self-damage now (respects your own Block; can be lethal),
   // then queue a 15 heal for the START of next round. Stacks (each copy queues its own 15).
   detective_bubbles: { onPlay:(c)=>{ c.hurtSelf(10); c.queueHeal(15); c.log(c.state[c.self].name+' plays Detective Bubbles — 10 self-damage, 15 heal queued for next round.','damage'); } },
@@ -2722,7 +2731,7 @@ function journeyLabel(dayId, opt){
 // ── IMMUNE keyword (see DESIGN_NOTES) ──
 // A card is "takeable" by an effect unless it's immune. Immunity only matters in
 // hand/deck; callers that operate on the graveyard ignore this on purpose.
-function isImmune(card){ return !!(card && card.immune); }
+function isImmune(card){ return !!(card && (card.immune || card._tempImmune)); }   // _tempImmune: round-scoped, granted by Quicksilver
 function takeable(card){ return !isImmune(card); }
 function hasTag(card, tag){ return !!(card && card.tags && card.tags.includes(tag)); }
 // Enchanted: some cards have an extra "enchanted" part that only fires if you spend an
@@ -3152,6 +3161,7 @@ function drawExtra(gs,r,n){
 const QUEST_DEFS = {
   opening_ceremony: { name:'Opening Ceremony', goal:3, reward:'journey_flip' },
   zorya:            { name:'Zorya — the Four Sins', goal:4, reward:'zorya_arm' },
+  constellation_council_control: { name:'Constellation Council Control', goal:10, reward:'handsize_plus2' },
 };
 
 function advanceQuestsFor(gs,r,card){
@@ -3162,6 +3172,10 @@ function advanceQuestsFor(gs,r,card){
     let advance=0;
     if(q.id==='opening_ceremony' && card && card.journeyDay) advance=1;   // playing a Day advances it
     if(q.id==='zorya' && card && card.sin) advance=1;                     // playing a Sin advances it
+    // Constellation Council Control — every card you play that ORIGINATED in the opponent's deck
+    // (owner-stamped, e.g. a Scavenger copy they shuffled into your deck) advances it. Each play
+    // counts, including a second play of the same card. Own-deck cards (no foreign owner) never count.
+    if(q.id==='constellation_council_control' && card && fromEnemyDeck(card, r)) advance=1;
     if(advance>0){
       q.progress=(q.progress||0)+advance;
       if(q.progress>=def.goal && !q.done){
@@ -3175,6 +3189,12 @@ function advanceQuestsFor(gs,r,card){
         if(def.reward==='zorya_arm'){
           (gs[r].effects||(gs[r].effects=[])).push({id:'zorya', armed:(gs.round||1)});
           log('  🌊 All four Sins are committed — survive one more round and Zorya takes the game!','effect');
+        }
+        // handsize_plus2: a persistent reward. Push an effect keyed on this quest card's own id;
+        // its CARD_LOGIC.handSizeMod (+2) then folds into maxHandSize for the rest of the game.
+        if(def.reward==='handsize_plus2'){
+          (gs[r].effects||(gs[r].effects=[])).push({id:'constellation_council_control'});
+          log('  🔭 Constellation Council Control — your maximum hand size is increased by 2!','effect');
         }
       }
     }
@@ -5149,6 +5169,16 @@ function resolveRound(gs){
   }
   state._dead=null; state._winner=null; state._instantWin=null;
 
+  // Quicksilver — hand-immunity covers exactly the round it was granted for. That round has
+  // now resolved (immune cards were protected through the resolution above), so strip the temp
+  // flag BEFORE this round's draw — the cards drawn for the NEXT round must not inherit it.
+  ['p1','p2'].forEach(r=>{
+    if(state[r].handImmuneActive){
+      ['hand','deck','graveyard','void'].forEach(z=>{ (state[r][z]||[]).forEach(c=>{ if(c) delete c._tempImmune; }); });
+      state[r].handImmuneActive=false;
+    }
+  });
+
   // Draw for each player — drawCount folds in Journey draw modifiers; Hindered forces 0.
   ['p1','p2'].forEach(r=>{
     const wasHindered = !!state[r].hindered;
@@ -5167,6 +5197,17 @@ function resolveRound(gs){
   state.p1.extraDraw=0; state.p2.extraDraw=0;
   state.p1.noDraw=false; state.p2.noDraw=false;
   state.p1.hindered=false; state.p2.hindered=false;
+
+  // Quicksilver — a hand queued for immunity activates NOW, after the draw, so the cards drawn
+  // entering this round are covered too. Every card in hand gets the temp flag; it is stripped
+  // at the top of the next resolve, giving exactly one round of protection.
+  ['p1','p2'].forEach(r=>{
+    if(state[r].handImmuneNext){
+      (state[r].hand||[]).forEach(c=>{ if(c) c._tempImmune=true; });
+      state[r].handImmuneActive=true;
+      state[r].handImmuneNext=false;
+    }
+  });
 
   // Skywalker forced-play lasts exactly ONE round: clear the type that was active for the
   // round just resolved, then promote any newly queued force (forcedTypeNext) for next round.
