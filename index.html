@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-15T09:56';
+const APP_VERSION = '2026-07-15T11:35';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1739,6 +1739,8 @@ const CARDS_DATA = [
   // dead on its own — the effect only fires when you play BOTH halves in the SAME round.
   {id:'world_splitter',   collectible:true, name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌍', alterEgo:'world_splitter_b', type:'normal', art:'art/world_splitter.png'},
   {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
+  {id:'misses_azazel',    collectible:true, name:'Misses Azazel', text:'Alter Ego: Mister Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'😈', alterEgo:'mister_azazel', type:'normal', art:'art/misses_azazel.png'},
+  {id:'mister_azazel',                      name:'Mister Azazel', text:'Alter Ego: Misses Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'👹', noDeck:true, alterEgoOf:'misses_azazel', type:'normal', art:'art/mister_azazel.png'},
 
   {id:'forgotten_mage', collectible:true, name:'The Forgotten Mage', text:'Heal 10. If your opponent is holding 7 cards or more: Also get an Enchanted Orb.', rarity:'common', emoji:'🧙', heals:true, type:'normal', art:'art/forgotten_mage.png'},
 
@@ -1771,6 +1773,8 @@ const CARDS_DATA = [
   {id:'constellation_council_control', collectible:true, name:'Constellation Council Control', text:"Quest: play 10 cards from your opponent's deck. Reward: your maximum hand size is increased by 2.", rarity:'legendary', emoji:'🔭', quest:'constellation_council_control', type:'quest', art:'art/constellation_council_control.png'},
   {id:'deep_sea_queen', collectible:true, name:'Deepsea Queen', text:"Swap a card in your hand with a random card in your opponent's hand.", rarity:'common', emoji:'🧜‍♀️', swapHands:true, type:'normal', art:'art/deep_sea_queen.png'},
   {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
+  {id:'whitefoot', collectible:true, name:'Whitefoot', text:'Your opponent has to give you 1 non-legendary card (they choose which).', rarity:'common', emoji:'🐾', type:'normal', art:'art/white_foot.png'},
+  {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, enchanted:true, type:'normal', art:'art/from_far_away.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -2048,6 +2052,7 @@ const CARD_VARIANTS = {
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
+  misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
@@ -2150,6 +2155,13 @@ const CARD_LOGIC = {
   // only a fuse against a future card that could break that assumption.
   world_splitter:   { onPlay:(c)=>splitterPlay(c), onDiscard:(c)=>splitterDiscard(c) },
   world_splitter_b: { onPlay:(c)=>splitterPlay(c) },
+  // ── Azazel Family (Alter Ego) ──
+  // Same two-halves rule as World Splitter: dead alone, unites when you play Misses AND Mister
+  // in the same round. Uniting installs True Form (id 'misses_azazel' in effects) — a GLOBAL
+  // flag that dealDmg reads to double ALL True damage for everyone, for the rest of the game —
+  // then deals 10 True, which the freshly-installed doubling turns into 20.
+  misses_azazel:    { onPlay:(c)=>azazelPlay(c) },
+  mister_azazel:    { onPlay:(c)=>azazelPlay(c) },
   // The Forgotten Mage — the heal is unconditional; the Orb is the reward for catching your
   // opponent hoarding. Their hand is read the moment this FLIPS, so the cards they played this
   // round are already out of it: someone who dumps two cards drops from 8 to 6 and gives you
@@ -2550,6 +2562,51 @@ const CARD_LOGIC = {
   // the draw loop in this same resolve, so the marker is consumed the moment they draw for the
   // coming round. The actual theft (random, Immune-safe, hand-full-safe) lives in the draw loop.
   the_bad_and_the_worse: { onPlay:(c)=>{ c.state[c.opp].stealDrawBy=c.self; c.log(c.state[c.self].name+' plays The Bad and the Worse — a card from '+c.state[c.opp].name+"'s next draw will be stolen.",'effect'); } },
+  // Whitefoot — the opponent hands over one NON-legendary card. The VICTIM chooses which (their
+  // pick is collected at reveal into their choices as __whitefootGive); if there's no stored
+  // choice (a CPU victim) a random eligible card is taken. Immune and legendary cards are never
+  // eligible. Nothing happens if they have no eligible card or your hand is full. owner=victim so
+  // it counts toward your Constellation quest.
+  whitefoot: { onPlay:(c)=>{
+    const st=c.state, thief=c.self, victim=c.opp;
+    const vhand=st[victim].hand||[];
+    const eligible=vhand.filter(x=>x && takeable(x) && x.rarity!=='legendary');
+    const thHand=st[thief].hand||(st[thief].hand=[]);
+    if(eligible.length===0){ c.log(st[thief].name+' plays Whitefoot — '+st[victim].name+' has no non-legendary card to give.','system'); return; }
+    if(thHand.length >= maxHandSize(st, thief)){ c.log(st[thief].name+' plays Whitefoot — but your hand is full. Nothing is taken.','system'); return; }
+    const chosen = st[victim].choices && st[victim].choices.__whitefootGive;
+    let pick = chosen ? eligible.find(x=>x.uid===chosen) : null;
+    if(!pick) pick = eligible[Math.floor(Math.random()*eligible.length)];   // CPU victim / no valid pick
+    const hi=vhand.indexOf(pick); if(hi>=0) vhand.splice(hi,1);
+    st[victim].hand=vhand;
+    pick.owner=victim;   // came from their deck → counts toward the thief's Constellation
+    pick.stolen=true;
+    thHand.push(pick); st[thief].hand=thHand;
+    c.log(st[thief].name+' plays Whitefoot — '+st[victim].name+' hands over '+pick.name+'.','effect');
+  } },
+  // From Far Away — a landmine. onPlay plants a copy in the OPPONENT's deck (the _planted flag
+  // is what arms it — a copy in YOUR OWN deck does nothing when drawn). When THEY draw it, it
+  // deals 20 to the drawer (them) and is consumed. Enchanted (Orb): the copy is marked endless,
+  // so instead of the graveyard it shuffles back into their deck — a landmine that keeps resetting.
+  from_far_away: {
+    onPlay:(c)=>{
+      if(c.card._planted){ c.log(c.state[c.self].name+' plays From Far Away — but this one is already armed. Nothing happens.','system'); return; }
+      const o=c.opp;
+      const copy=mkCard(CARDS_DATA.find(x=>x.id==='from_far_away'));
+      copy.owner=o;            // it lives in their deck now
+      copy._planted=true;      // only the planted copy fires its when-drawn effect
+      if(c.useOrb) copy.endless=true;   // Enchanted: recurs into their deck instead of the graveyard
+      c.state[o].deck=[...(c.state[o].deck||[]), copy];
+      shuffleDeck(c.state, o);
+      c.log(c.state[c.self].name+' plays From Far Away — a landmine is shuffled into '+c.state[o].name+"'s deck"+(c.useOrb?' (Enchanted: Endless!)':'')+'.','effect');
+    },
+    onDraw:(c)=>{
+      if(!c.card._planted) return false;   // a copy in your OWN deck is inert when drawn
+      c.dealDmgTo(c.self, 20);             // the drawer (your opponent, whose deck it was in) takes 20
+      c.log('  🌠 '+c.state[c.self].name+' draws From Far Away — 20 damage!','damage');
+      return true;                          // consumed → graveyard, unless endless (handled in fireDrawTriggers)
+    }
+  },
   // Detective Bubbles — take 10 self-damage now (respects your own Block; can be lethal),
   // then queue a 15 heal for the START of next round. Stacks (each copy queues its own 15).
   detective_bubbles: { onPlay:(c)=>{ c.hurtSelf(10); c.queueHeal(15); c.log(c.state[c.self].name+' plays Detective Bubbles — 10 self-damage, 15 heal queued for next round.','damage'); } },
@@ -2981,6 +3038,7 @@ function dealDmg(gs,target,amt,trueDmg,attacker){
   if(!trueDmg&&gs[target].blocked){log('  → Blocked!','effect');return;}
   // Fold the amount through the attacker's damage modifiers (e.g. EXTERNUS +5).
   let dmg=foldValue(gs,attacker,'modifyDamage',amt,{target});
+  if(trueDmg && azazelTrueFormActive(gs)) dmg=dmg*2;   // Azazel True Form: all True damage doubled, for everyone, rest of game
   gs[target].hp=Math.max(0,gs[target].hp-dmg);
   spawnFloater(target,'-'+dmg,false);
   gs[attacker].dmgDealtThisRound=(gs[attacker].dmgDealtThisRound||0)+dmg;
@@ -3033,6 +3091,30 @@ function stealHealth(gs,r,amt){
 
 // ── World Splitter helpers ───────────────────────────────────────────────────
 const SPLITTER_HALVES = ['world_splitter','world_splitter_b'];
+
+// ── Azazel Family (Alter Ego) ────────────────────────────────────────────────
+const AZAZEL_HALVES = ['misses_azazel','mister_azazel'];
+// True Form is installed as an effect keyed 'misses_azazel' (a real card id, so logicSources
+// never trips). It carries no per-effect hook — the doubling is read globally in dealDmg.
+function azazelTrueFormActive(gs){
+  return ['p1','p2'].some(r =>
+    ((gs[r]&&gs[r].effects)||[]).some(e=>e&&e.id==='misses_azazel') ||
+    ((gs[r]&&gs[r].rewards)||[]).some(e=>e&&e.id==='misses_azazel'));
+}
+function azazelPlay(c){
+  const st=c.state, r=c.self;
+  if((st[r].effects||[]).some(e=>e.id==='misses_azazel')) return;   // already in True Form
+  const row=(st[r].selectedCards||[]).filter(Boolean).map(x=>x.id);
+  const both = AZAZEL_HALVES.every(id=>row.includes(id));
+  if(!both){
+    c.log(st[r].name+' plays '+((c.card&&c.card.name)||'an Azazel')+' — but the family is not whole. Nothing happens.','system');
+    return;
+  }
+  c.addEffect({id:'misses_azazel'});   // installs the GLOBAL True-damage doubling for the rest of the game
+  c.log(st[r].name+' unites the Azazel Family — TRUE FORM! All True damage is doubled for the rest of the game.','effect');
+  c.dealDmgTo(c.opp, 10, true);         // the doubling is already live → this lands for 20
+}
+
 let SPLIT_CHAIN = 0;   // fuse: the forced-discard ping-pong can never run away
 
 function splitterPlay(c){
@@ -4626,6 +4708,13 @@ async function onRevealPhase(gs){
     }
   }
 
+  // Whitefoot played BY the opponent against me — I (the victim) choose which non-legendary
+  // card to hand over. Stored under a fixed key the thief's onPlay reads from my choices.
+  if((gs[opp(myRole)].selectedCards||[]).some(c=>c && c.id==='whitefoot')){
+    const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
+    if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); choices['__whitefootGive']=ch[0]; }
+  }
+
   // Write my choices to Firebase
   await update(gRef, { [myRole+'/choices']: choices, [myRole+'/choicesReady']: true });
   document.getElementById('action-info').innerHTML='<em>Waiting for opponent…</em>';
@@ -4892,6 +4981,10 @@ document.getElementById('btn-confirm').onclick=async()=>{
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
       for(const c of played){ if(c.peek){ const {top,gained}=larryGains(localGs, myRole, c.peek); c._peek=await pickPeek(top, c.name, gained); } }
       for(const c of played){ if(c.id==='deep_sea_queen'){ const pool=(me().hand||[]).filter(x=>x && takeable(x)); if(pool.length){ const ch=await pickDiscards(pool,1,'Deepsea Queen — choose a card to give'); c._swapGive=ch[0]; } } }
+      if((localGs.p2.selectedCards||[]).some(c=>c && c.id==='whitefoot')){
+        const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
+        if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__whitefootGive: ch[0]}); }
+      }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
     }, 900);
@@ -5315,7 +5408,17 @@ function fireDrawTriggers(state, r, drawn){
       const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
       if(consumed===true){
         const h=state[r].hand||[]; const i=h.indexOf(dc);
-        if(i>=0){ h.splice(i,1); state[r].graveyard=[dc,...(state[r].graveyard||[])]; }
+        if(i>=0){
+          h.splice(i,1);
+          if(dc.endless){
+            // Endless (e.g. an enchanted From Far Away): recurs in the drawer's own deck.
+            const added=shuffleIntoDeck(state, r, dc);
+            if(added) log('  ↺ '+dc.name+' returns endlessly to '+state[r].name+"'s deck.",'effect');
+            else state[r].graveyard=[dc,...(state[r].graveyard||[])];
+          } else {
+            state[r].graveyard=[dc,...(state[r].graveyard||[])];
+          }
+        }
       }
     }
   });
