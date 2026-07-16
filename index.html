@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T08:04';
+const APP_VERSION = '2026-07-16T10:11';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1796,6 +1796,9 @@ const CARDS_DATA = [
   {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'Steal 2 Cursed cards from your opponent. Enchanted: steal any 2 random cards instead.', rarity:'common', emoji:'👀', enchanted:true, type:'normal', art:'art/peek_a_boo.png'},
   {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'Quest: reach 20 health or less. Reward: Unleashed Zephyrax (added to your hand).', rarity:'legendary', emoji:'🌀', type:'quest', quest:'dreaming_zephyrax', art:'art/dreaming_zephyrax.png'},
   {id:'unleashed_zephyrax', name:'Unleashed Zephyrax', text:"You can't die for the next 3 rounds (this round and the next 2).", rarity:'legendary', emoji:'🌪️', noDeck:true, type:'normal', art:'art/unleashed_zephyrax.png'},
+  {id:'hatching_egg', collectible:true, name:'Hatching Egg', text:'Quest: both players have completed a quest. Reward: Mother\'s Firebreath (added to your hand).', rarity:'common', emoji:'🥚', quest:'hatching_egg', type:'quest', art:'art/hatching_egg.png'},
+  {id:'mothers_firebreath', name:"Mother's Firebreath", text:'Deal 30 damage.', rarity:'common', emoji:'🔥', noDeck:true, dealsDamage:true, type:'normal', art:'art/mothers_firebreath.png'},
+  {id:'best_friend_for_always', collectible:true, name:'Best Friend for Always', text:"When drawn: shuffle this into your opponent's deck. They can't play, discard or curse it. Steal it back and play it to Heal 100 (then it's spent).", rarity:'legendary', emoji:'💛', type:'normal', art:'art/best_friend_for_always.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -1936,6 +1939,11 @@ function krushSearch(c, n, findId, label){
 // the CPU never picks it, and runCard turns it away as a last guard.
 function playBlockedReason(state, r, card){
   if(!card) return null;
+  // Best Friend for Always — only its owner (_bffOwner, the player whose deck it came from) can
+  // ever play it. In anyone else's hand it is unplayable; they must steal it back to the owner.
+  if(card._bffOwner!==undefined && card._bffOwner!==r){
+    return "Best Friend for Always belongs to your opponent — you can't play it.";
+  }
   if(card.swapHands){
     // Deepsea Queen — a swap needs a tradable card on BOTH sides. Immune cards never count:
     // you can't give one away and you can't pull one from the opponent. (A rare same-round
@@ -2075,6 +2083,7 @@ const CARD_TOKENS = {
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
   dreaming_zephyrax:{ label:'Reward',      ids: ['unleashed_zephyrax'] },
+  hatching_egg:     { label:'Reward',      ids: ['mothers_firebreath'] },
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
@@ -2773,6 +2782,43 @@ const CARD_LOGIC = {
       }
     }
   },
+  // Mother's Firebreath — the Hatching Egg reward. Simple burst.
+  mothers_firebreath: { onPlay:(c)=>{
+    c.dealDmgTo(c.opp, 30);
+    c.log(c.state[c.self].name+" plays Mother's Firebreath — 30 damage!",'damage');
+  } },
+  // Best Friend for Always — a boomerang. When YOU draw it, a copy (owner = you) is shuffled into
+  // the opponent's deck; they can never play it (playBlockedReason blocks non-owners). Steal it
+  // back from their hand and play it → Heal 100, and it returns to their deck to be stolen again.
+  // The very first copy (no _bffOwner yet) does NOT heal — only reclaimed copies do. owner is kept
+  // as the true origin (you), so it never wrongly feeds your Constellation.
+  best_friend_for_always: {
+    onDraw:(c)=>{
+      const st=c.state, drawer=c.self;
+      if(c.card._bffOwner!==undefined && c.card._bffOwner!==drawer) return false;   // opponent drew it → stays in their hand, unplayable
+      const o=c.opp;
+      const copy=mkCard(CARDS_DATA.find(x=>x.id==='best_friend_for_always'));
+      copy._bffOwner=drawer; copy.owner=drawer;
+      st[o].deck=[...(st[o].deck||[]), copy]; shuffleDeck(st, o);
+      c.log(c.state[drawer].name+' draws Best Friend for Always — it slips into '+st[o].name+"'s deck (they can't play it).",'effect');
+      return true;   // the drawn copy is spent
+    },
+    onPlay:(c)=>{
+      if(c.card._bffOwner!==undefined){
+        // you reclaimed it → Heal 100, then it is spent (goes to your graveyard — no endless loop)
+        c.card.owner=c.card._bffOwner;
+        c.heal(100);
+        c.log(c.state[c.self].name+' plays Best Friend for Always — Heal 100! It is spent.','effect');
+      } else {
+        // first play (from your opening hand) → seed a copy into the opponent's deck, no heal
+        const o=c.opp;
+        const copy=mkCard(CARDS_DATA.find(x=>x.id==='best_friend_for_always'));
+        copy._bffOwner=c.self; copy.owner=c.self;
+        c.state[o].deck=[...(c.state[o].deck||[]), copy]; shuffleDeck(c.state, o);
+        c.log(c.state[c.self].name+' plays Best Friend for Always — it slips into '+c.state[o].name+"'s deck (they can't play it).",'effect');
+      }
+    }
+  },
   // Wish Dralivering — transforms (Pyrax-style, via toHand) into a random non-legendary
   // Celebration card placed in your hand. The pool is read live from the card data, so any
   // Celebration card added later is automatically eligible. Legendary Celebrations (Larry) are out.
@@ -3086,7 +3132,7 @@ function hasEnchanted(card){ return !!(card && card.enchanted); }
 // Curse a card: it must be played within one full round or it rots away. Immune cards and
 // already-cursed cards are skipped. Returns true if it newly cursed the card.
 function curseCard(state, card){
-  if(!card || isImmune(card) || card.cursedUntil!==undefined) return false;
+  if(!card || isImmune(card) || card.id==='best_friend_for_always' || card.cursedUntil!==undefined) return false;   // Best Friend can't be cursed
   card.cursedUntil=(state.round||1)+1;
   return true;
 }
@@ -3432,14 +3478,14 @@ function discardCards(gs,r,n,chosenUids){
     // Discard specific chosen cards (player's own choice) — immune cards are skipped
     // even if somehow selected (immunity applies against your own cards too).
     chosenUids.forEach(uid=>{
-      const idx=hand.findIndex(c=>c.uid===uid && takeable(c));
+      const idx=hand.findIndex(c=>c.uid===uid && takeable(c) && c.id!=='best_friend_for_always');
       if(idx>=0){ gone.push(hand.splice(idx,1)[0]); discarded++; }
     });
   } else {
     // Random discard (used for opponent-forced discards) — pool excludes immune cards.
     // If fewer takeable cards than n, fewer are discarded (immune cards never fill in).
     for(let i=0;i<n;i++){
-      const pool=hand.map((c,idx)=>({c,idx})).filter(x=>takeable(x.c));
+      const pool=hand.map((c,idx)=>({c,idx})).filter(x=>takeable(x.c) && x.c.id!=='best_friend_for_always');
       if(pool.length===0) break;
       const pick=pool[Math.floor(Math.random()*pool.length)];
       hand.splice(pick.idx,1);
@@ -3549,21 +3595,35 @@ const QUEST_DEFS = {
   zorya:            { name:'Zorya — the Four Sins', goal:4, reward:'zorya_arm' },
   constellation_council_control: { name:'Constellation Council Control', goal:10, reward:'handsize_plus2' },
   dreaming_zephyrax: { name:'Dreaming Zephyrax', goal:1, reward:'unleash_zephyrax' },
+  hatching_egg: { name:'Hatching Egg', goal:1, reward:'mothers_firebreath' },
 };
 
-// Threshold quests complete on a STATE condition (HP <= 20 for Dreaming Zephyrax), not on a
-// counted event, so they are checked after damage each round rather than in advanceQuestsFor.
-function checkHpQuests(gs, r){
+// State/threshold quests complete on a game-state condition (not a counted event), so they are
+// checked after damage each round rather than in advanceQuestsFor:
+//   • Dreaming Zephyrax — your HP is 20 or less.
+//   • Hatching Egg — both players have completed a quest (yours must be a quest OTHER than the
+//     Egg itself, so pair it with a second quest in your deck).
+// Both reward cards are handed to you; you play them when you like.
+const QUEST_REWARD_CARDS = { unleash_zephyrax:'unleashed_zephyrax', mothers_firebreath:'mothers_firebreath' };
+function checkStateQuests(gs, r){
   (gs[r].quests||[]).forEach(q=>{
     if(q.done) return;
     const def=QUEST_DEFS[q.id];
     if(!def) return;
-    if(q.id==='dreaming_zephyrax' && (gs[r].hp||0) <= 20){
+    let complete=false;
+    if(q.id==='dreaming_zephyrax') complete = (gs[r].hp||0) <= 20;
+    if(q.id==='hatching_egg'){
+      const ownerHasOther = (gs[r].quests||[]).some(x=>x.done && x.id!=='hatching_egg');
+      const oppHasDone    = (gs[opp(r)].quests||[]).some(x=>x.done);
+      complete = ownerHasOther && oppHasDone;
+    }
+    if(complete){
       q.progress=def.goal; q.done=true;
       log('  ★ Quest complete: '+def.name+'!','effect');
-      if(def.reward==='unleash_zephyrax'){
-        const tokDef=CARDS_DATA.find(x=>x.id==='unleashed_zephyrax');
-        if(tokDef){ gs[r].hand=[...(gs[r].hand||[]), mkCard(tokDef)]; log('  🌪️ Dreaming Zephyrax awakens — Unleashed Zephyrax is added to your hand!','effect'); }
+      const rewardId=QUEST_REWARD_CARDS[def.reward];
+      if(rewardId){
+        const tokDef=CARDS_DATA.find(x=>x.id===rewardId);
+        if(tokDef){ gs[r].hand=[...(gs[r].hand||[]), mkCard(tokDef)]; log('  ✨ '+def.name+' — '+tokDef.name+' is added to your hand!','effect'); }
       }
     }
   });
@@ -5579,7 +5639,7 @@ function resolveRound(gs){
     // End-of-round triggers for persistent effects / blessings, in turn order.
     emit(state,'onRoundEnd',first,{});
     emit(state,'onRoundEnd',second,{});
-    checkHpQuests(state, first); checkHpQuests(state, second);   // Dreaming Zephyrax: reached 20 HP or less?
+    checkStateQuests(state, first); checkStateQuests(state, second);   // Dreaming Zephyrax (HP<=20) + Hatching Egg (both completed a quest)
   } catch(e){
     if(e!==HALT) throw e;   // genuine errors still propagate; HALT just stops resolution
   }
