@@ -1538,7 +1538,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T17:46:32';
+const APP_VERSION = '2026-07-16T18:59:22';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1710,7 +1710,7 @@ const CARDS_DATA = [
   {id:'fifth_day',  name:'The Fifth Day',  text:"Choose: for the rest of the game you take 5 damage at the start of each round OR you can't play more than 1 card each round.", rarity:'legendary', emoji:'🎏', journeyDay:true, noDeck:true, art:'art/fifth_day.png', type:'normal'},
   // ── New cards (art + metadata; effects/logic added later) ──
   {id:'death_stare', collectible:true, name:'Death Stare', text:'When drawn: put a copy in both hands (you keep variant 1, your opponent gets variant 2).', rarity:'legendary', emoji:'👁️', hold:true, type:'normal', art:'art/death_stare.png'},
-  {id:'detective_bubbles', collectible:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, heals:true, type:'normal', art:'art/detective_bubbles.png'},
+  {id:'detective_bubbles', collectible:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, dmg:10, heals:true, type:'normal', art:'art/detective_bubbles.png'},
   {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
   {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal', art:'art/enchanted_orb.png'},
   {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
@@ -1720,12 +1720,12 @@ const CARDS_DATA = [
   {id:'scavenger', collectible:true, name:'Scavenger', text:"Shuffle this card into your opponent's deck.", rarity:'common', emoji:'🦅', type:'normal', art:'art/scavenger.png'},
   {id:'devour_hope', collectible:true, name:'Devour Hope', text:'For the rest of the game: destroy each card shuffled into your deck to deal 5 true damage.', rarity:'legendary', emoji:'🕳️', type:'normal', art:'art/devour_hope.png'},
   {id:'deepception', collectible:true, name:'Deepception', text:'Immune. While holding: revive yourself with 25 health upon death (once per game). Discard this card afterwards.', rarity:'legendary', emoji:'🌀', immune:true, hold:true, type:'normal', art:'art/deepception.png'},
-  {id:'fireblast_confetti', collectible:true, name:'Fireblast Confetti', text:'Celebration. Deal 5 damage. +10 damage for each Celebration card you are holding.', rarity:'common', emoji:'🎆', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/fireblast_confetti.png'},
+  {id:'fireblast_confetti', collectible:true, name:'Fireblast Confetti', text:'Celebration. Deal 5 damage. +10 damage for each Celebration card you are holding.', rarity:'common', emoji:'🎆', tags:['celebration'], dealsDamage:true, dmg:5, type:'normal', art:'art/fireblast_confetti.png'},
   {id:'larry_birthday_hero', collectible:true, name:'Larry, the Birthday Hero', text:'Celebration. Look at the top 14 cards of your deck: you get all Celebration cards. Then keep the order or shuffle your deck.', rarity:'legendary', emoji:'🎂', tags:['celebration'], peek:14, type:'normal', art:'art/larry_birthday_hero.png'},
-  {id:'pest_doctor', collectible:true, name:'Pest Doctor', text:'Deal 10 damage. If your opponent played a Cursed card this round: deal 25 damage instead.', rarity:'common', emoji:'🦠', dealsDamage:true, type:'normal', art:'art/pest_doctor.png'},
+  {id:'pest_doctor', collectible:true, name:'Pest Doctor', text:'Deal 10 damage. If your opponent played a Cursed card this round: deal 25 damage instead.', rarity:'common', emoji:'🦠', dealsDamage:true, dmg:10, type:'normal', art:'art/pest_doctor.png'},
   {id:'arcane_cake_celebration', collectible:true, name:'Arcane Cake Celebration', text:'Celebration. Shuffle 2 Prinny\'s Vanilla Cakes into your deck. Enchanted: shuffle 4 into your deck.', rarity:'common', emoji:'🎉', tags:['celebration'], enchanted:true, type:'normal', art:'art/arcane_cake_celebration.png'},
-  {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'Celebration. Both players deal half the damage they dealt last round.', rarity:'common', emoji:'🍾', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/hangover_hex.png'},
-  {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'Celebration. Deal 10 damage. Each future Prinny\'s Vanilla Cake deals 5 additional damage.', rarity:'common', emoji:'🍰', tags:['celebration'], dealsDamage:true, type:'normal', art:'art/prinnys_vanilla_cake.png'},
+  {id:'hangover_hex', collectible:true, name:'Hangover Hex', text:'Celebration. Both players deal half the damage they dealt last round.', rarity:'common', emoji:'🍾', tags:['celebration'], dealsDamage:true, dmg:0, type:'normal', art:'art/hangover_hex.png'},
+  {id:'prinnys_vanilla_cake', collectible:true, name:'Prinny\'s Vanilla Cake', text:'Celebration. Deal 10 damage. Each future Prinny\'s Vanilla Cake deals 5 additional damage.', rarity:'common', emoji:'🍰', tags:['celebration'], dealsDamage:true, dmg:10, type:'normal', art:'art/prinnys_vanilla_cake.png'},
   {id:'larrys_lover', collectible:true, name:'Larry\'s Lover', text:'Celebration. If you hold another Celebration card: gain a Shield for the next 2 rounds.', rarity:'common', emoji:'💝', tags:['celebration'], type:'normal', art:'art/larrys_lover.png'},
 
   // ── The Krush family ──
@@ -1733,16 +1733,16 @@ const CARDS_DATA = [
   // they unlock in order: Krush needs Baby played, King needs Krush, The Krush needs King.
   // requiresPlayed is a plain card id — the hand, the CPU and the engine all read that one
   // field, so they can never disagree about what's playable.
-  {id:'baby_krush', collectible:true, name:'Baby Krush', text:'Deal 5 true damage. Shuffle the entire Krush family into your deck.', rarity:'legendary', emoji:'🦖', dealsDamage:true, type:'normal', art:'art/baby_krush.png'},
-  {id:'krush',      name:'Krush',      text:'Deal 15 true damage. Reveal the next 4 cards of your deck. If you find King Krush: draw it. This card can only be played if you have played Baby Krush this game.', rarity:'legendary', emoji:'🦕', dealsDamage:true, noDeck:true, requiresPlayed:'baby_krush', type:'normal', art:'art/krush.png'},
-  {id:'king_krush', name:'King Krush', text:'Deal 25 true damage. Reveal the next 6 cards of your deck. If you find The Krush: draw it. This card can only be played if you have played Krush this game.', rarity:'legendary', emoji:'👑', dealsDamage:true, noDeck:true, requiresPlayed:'krush', type:'normal', art:'art/king_krush.png'},
-  {id:'the_krush',  name:'The Krush',  text:'Deal 45 true damage. This card can only be played if you have played King Krush this game.', rarity:'legendary', emoji:'💀', dealsDamage:true, noDeck:true, requiresPlayed:'king_krush', type:'normal', art:'art/the_krush.png'},
+  {id:'baby_krush', collectible:true, name:'Baby Krush', text:'Deal 5 true damage. Shuffle the entire Krush family into your deck.', rarity:'legendary', emoji:'🦖', dealsDamage:true, dmg:5, type:'normal', art:'art/baby_krush.png'},
+  {id:'krush',      name:'Krush',      text:'Deal 15 true damage. Reveal the next 4 cards of your deck. If you find King Krush: draw it. This card can only be played if you have played Baby Krush this game.', rarity:'legendary', emoji:'🦕', dealsDamage:true, dmg:15, noDeck:true, requiresPlayed:'baby_krush', type:'normal', art:'art/krush.png'},
+  {id:'king_krush', name:'King Krush', text:'Deal 25 true damage. Reveal the next 6 cards of your deck. If you find The Krush: draw it. This card can only be played if you have played Krush this game.', rarity:'legendary', emoji:'👑', dealsDamage:true, dmg:25, noDeck:true, requiresPlayed:'krush', type:'normal', art:'art/king_krush.png'},
+  {id:'the_krush',  name:'The Krush',  text:'Deal 45 true damage. This card can only be played if you have played King Krush this game.', rarity:'legendary', emoji:'💀', dealsDamage:true, dmg:45, noDeck:true, requiresPlayed:'king_krush', type:'normal', art:'art/the_krush.png'},
 
   // ── Vol'Dor Mook + Fireball ──
   // Fireball is a token: it can ONLY enter a deck through Vol'Dor Mook, never through the
   // collection or a pack. It resolves the moment it is DRAWN and burns itself out.
   {id:'vol_dor_mook', collectible:true, name:"Vol'Dor Mook", text:'Shuffle a Fireball into your deck for each Cursed card in both hands.', rarity:'legendary', emoji:'🔥', type:'normal', art:'art/vol_dor_mook.png'},
-  {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, type:'normal', art:'art/fireball.png'},
+  {id:'fireball', name:'Fireball', text:"When drawn: Deal 20 damage and Curse 2 cards randomly in your opponent's hand.", rarity:'legendary', emoji:'☄️', noDeck:true, dealsDamage:true, dmg:20, type:'normal', art:'art/fireball.png'},
 
   {id:'hearth_of_our_galaxy', collectible:true, name:'Hearth of our Galaxy', text:'Blessing: Deal 5 damage for each card that you or your opponent steals.', rarity:'common', emoji:'🌌', type:'blessing', art:'art/hearth_of_our_galaxy.png'},
 
@@ -1754,11 +1754,11 @@ const CARDS_DATA = [
   {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
   {id:'misses_azazel',    collectible:true, name:'Misses Azazel', text:'Alter Ego: Mister Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'😈', alterEgo:'mister_azazel', type:'normal', art:'art/misses_azazel.png'},
   {id:'mister_azazel',                      name:'Mister Azazel', text:'Alter Ego: Misses Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'👹', noDeck:true, alterEgoOf:'misses_azazel', type:'normal', art:'art/mister_azazel.png'},
-  {id:'true_form', name:'True Form of the Azazel Family', text:'For the rest of the game all True damage is doubled. Deal 10 True damage.', rarity:'legendary', emoji:'🔥', noDeck:true, dealsDamage:true, art:'art/true_form.png', type:'normal'},
+  {id:'true_form', name:'True Form of the Azazel Family', text:'For the rest of the game all True damage is doubled. Deal 10 True damage.', rarity:'legendary', emoji:'🔥', noDeck:true, dealsDamage:true, dmg:10, art:'art/true_form.png', type:'normal'},
 
   {id:'forgotten_mage', collectible:true, name:'The Forgotten Mage', text:'Heal 10. If your opponent is holding 7 cards or more: Also get an Enchanted Orb.', rarity:'common', emoji:'🧙', heals:true, type:'normal', art:'art/forgotten_mage.png'},
 
-  {id:'kong_fee', collectible:true, name:'Kong Fee', text:'Deal 10 true damage to yourself. Get an Enchanted Orb afterwards.', rarity:'common', emoji:'🥋', dealsDamage:true, type:'normal', art:'art/kong_fee.png'},
+  {id:'kong_fee', collectible:true, name:'Kong Fee', text:'Deal 10 true damage to yourself. Get an Enchanted Orb afterwards.', rarity:'common', emoji:'🥋', dealsDamage:true, dmg:10, type:'normal', art:'art/kong_fee.png'},
 
   {id:'time_and_space', collectible:true, name:'Time and Space', text:'Heal 5 for each card that you shuffled into your deck last round.', rarity:'common', emoji:'⏳', heals:true, type:'normal', art:'art/time_and_space.png'},
 
@@ -1766,13 +1766,13 @@ const CARDS_DATA = [
 
   {id:'garden_tales', collectible:true, name:'Garden Tales', text:"Heal 10 for each card in your hand from your opponent's deck.", rarity:'common', emoji:'🌿', heals:true, type:'normal', art:'art/garden_tales.png'},
 
-  {id:'skull_slasher', collectible:true, name:'Skull Slasher', text:"Deal 10 damage. Deal 30 damage if your opponent has 0 cards in their hand. Enchanted: Exactly 2 cards.", rarity:'common', emoji:'💀', dealsDamage:true, enchanted:true, type:'normal', art:'art/skull_slasher.png'},
+  {id:'skull_slasher', collectible:true, name:'Skull Slasher', text:"Deal 10 damage. Deal 30 damage if your opponent has 0 cards in their hand. Enchanted: Exactly 2 cards.", rarity:'common', emoji:'💀', dealsDamage:true, dmg:10, enchanted:true, type:'normal', art:'art/skull_slasher.png'},
 
   {id:'different_set_of_rules', collectible:true, name:'Different Set of Rules', text:"Set both player's health to 75. You are Hindered next round.", rarity:'common', emoji:'⚖️', type:'normal', art:'art/different_set_of_rules.png'},
 
-  {id:'critical_bite', collectible:true, name:'Critical Bite', text:'Deal 30 damage. This card can only be played if you have less than 20 health.', rarity:'common', emoji:'🩸', dealsDamage:true, playIfHpBelow:20, type:'normal', art:'art/critical_bite.png'},
+  {id:'critical_bite', collectible:true, name:'Critical Bite', text:'Deal 30 damage. This card can only be played if you have less than 20 health.', rarity:'common', emoji:'🩸', dealsDamage:true, dmg:30, playIfHpBelow:20, type:'normal', art:'art/critical_bite.png'},
 
-  {id:'blaargh', collectible:true, name:'Blaargh', text:'Deal 10 damage. When Discarded: Deal 20 damage.', rarity:'common', emoji:'👹', dealsDamage:true, type:'normal', art:'art/blaargh.png'},
+  {id:'blaargh', collectible:true, name:'Blaargh', text:'Deal 10 damage. When Discarded: Deal 20 damage.', rarity:'common', emoji:'👹', dealsDamage:true, dmg:10, type:'normal', art:'art/blaargh.png'},
 
   {id:'new_year_resolutions', collectible:true, name:'New Year Resolutions', text:'Blessing: every time your total damage this round reaches exactly 10, deal 15 instead. After 5 activations this becomes a Reward instead of a Blessing.', rarity:'legendary', emoji:'🎆', type:'blessing', linksBlessing:true, art:'art/new_year_resolutions.png'},
 
@@ -1788,18 +1788,18 @@ const CARDS_DATA = [
   {id:'deep_sea_queen', collectible:true, name:'Deepsea Queen', text:"Swap a card in your hand with a random card in your opponent's hand.", rarity:'common', emoji:'🧜‍♀️', swapHands:true, type:'normal', art:'art/deep_sea_queen.png'},
   {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
   {id:'whitefoot', collectible:true, name:'Whitefoot', text:'Your opponent has to give you 1 non-legendary card (they choose which).', rarity:'common', emoji:'🐾', type:'normal', art:'art/white_foot.png'},
-  {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, enchanted:true, type:'normal', art:'art/from_far_away.png'},
+  {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, dmg:20, enchanted:true, type:'normal', art:'art/from_far_away.png'},
   {id:'wish_dralivering', collectible:true, name:'Wish Dralivering', text:'Transform this into a random non-legendary Celebration card.', rarity:'common', emoji:'🌟', type:'normal', art:'art/wish_dralivering.png'},
   {id:'soul_shatter', collectible:true, name:'Soul Shatter', text:"Curse 2 random cards in your opponent's hand.", rarity:'common', emoji:'💔', type:'normal', art:'art/soul_shatter.png'},
-  {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, type:'normal', art:'art/zargoor.png'},
-  {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, type:'normal', art:'art/nauren_shock.png'},
+  {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, dmg:10, type:'normal', art:'art/zargoor.png'},
+  {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, dmg:25, type:'normal', art:'art/nauren_shock.png'},
   // ── In development: art placed, mechanics to follow (no logic yet — these do nothing when played) ──
   {id:'infinite_rollercoaster', collectible:true, name:'Infinite Rollercoaster', text:'Endless. When drawn: Heal 15.', rarity:'legendary', emoji:'🎢', endless:true, type:'normal', art:'art/infinite_rollercoaster.png'},
   {id:'space_dog', collectible:true, name:'Space Dog', text:'Heal 10. If you played another healing card this round: shuffle this card into your deck.', rarity:'common', emoji:'🚀', heals:true, type:'normal', art:'art/space_dog.png'},
   {id:'find_a_way', collectible:true, name:'Find a Way', text:"Shuffle a random card from your opponent's graveyard into your deck.", rarity:'common', emoji:'🧭', type:'normal', art:'art/find_a_way.png'},
   {id:'a_sweet_life', collectible:true, name:'A Sweet Life', text:'Blessing: Heal 5 at the end of a round in which you drew an extra card.', rarity:'common', emoji:'🍬', type:'blessing', art:'art/a_sweet_life.png'},
   {id:'enlightened', collectible:true, name:'Enlightened', text:'Your opponent reveals 2 random cards from their hand.', rarity:'common', emoji:'💡', type:'normal', art:'art/enlightened.png'},
-  {id:'precise_shot', collectible:true, name:'Precise Shot', text:'Deal 5 damage. If your opponent has exactly 5 cards in their hand: deal 25 damage.', rarity:'common', emoji:'🎯', dealsDamage:true, type:'normal', art:'art/precise_shot.png'},
+  {id:'precise_shot', collectible:true, name:'Precise Shot', text:'Deal 5 damage. If your opponent has exactly 5 cards in their hand: deal 25 damage.', rarity:'common', emoji:'🎯', dealsDamage:true, dmg:5, type:'normal', art:'art/precise_shot.png'},
   {id:'chompzilla', collectible:true, name:'Chompzilla', text:'Reveal the top 2 cards of your opponent\'s deck. Discard any that deals damage.', rarity:'common', emoji:'🦖', type:'normal', art:'art/chompzilla.png'},
   {id:'bad_landing', collectible:true, name:'Bad Landing', text:'Curse all cards that both players draw next round.', rarity:'common', emoji:'💥', type:'normal', art:'art/bad_landing.png'},
   {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'While holding: the first round your opponent discards a card, you gain all cards they discard that round. Then discard this card.', rarity:'common', emoji:'🌑', hold:true, type:'normal', art:'art/bloodmoon_princess.png'},
@@ -1807,26 +1807,34 @@ const CARDS_DATA = [
   {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'Quest: reach 20 health or less. Reward: Unleashed Zephyrax (added to your hand).', rarity:'legendary', emoji:'🌀', type:'quest', quest:'dreaming_zephyrax', art:'art/dreaming_zephyrax.png'},
   {id:'unleashed_zephyrax', name:'Unleashed Zephyrax', text:"You can't die for the next 3 rounds (this round and the next 2).", rarity:'legendary', emoji:'🌪️', noDeck:true, type:'normal', art:'art/unleashed_zephyrax.png'},
   {id:'hatching_egg', collectible:true, name:'Hatching Egg', text:'Quest: both players have completed a quest. Reward: Mother\'s Firebreath (added to your hand).', rarity:'common', emoji:'🥚', quest:'hatching_egg', type:'quest', art:'art/hatching_egg.png'},
-  {id:'mothers_firebreath', name:"Mother's Firebreath", text:'Deal 30 damage.', rarity:'common', emoji:'🔥', noDeck:true, dealsDamage:true, type:'normal', art:'art/mothers_firebreath.png'},
+  {id:'mothers_firebreath', name:"Mother's Firebreath", text:'Deal 30 damage.', rarity:'common', emoji:'🔥', noDeck:true, dealsDamage:true, dmg:30, type:'normal', art:'art/mothers_firebreath.png'},
   {id:'best_friend_for_always', collectible:true, name:'Best Friend for Always', text:"When drawn: shuffle this into your opponent's deck. They can't play, discard or curse it. Steal it back and play it to Heal 100 (then it's spent).", rarity:'legendary', emoji:'💛', type:'normal', art:'art/best_friend_for_always.png'},
   {id:'the_missruler', collectible:true, name:'The Missruler', text:"Choose: draw the bottom 2 cards of your deck, OR remove the bottom 2 cards of your opponent's deck.", rarity:'common', emoji:'👑', type:'normal', art:'art/the_missruler.png'},
   {id:'thaa', collectible:true, name:'Thaa', text:'Permanently: at the start of each round, you may discard up to 2 cards instead of drawing 2.', rarity:'legendary', emoji:'🌀', type:'normal', art:'art/thaa.png'},
   {id:'murozond', collectible:true, name:'Murozond', text:'Split 30. At the end of this round, any damage you dealt is also dealt to you, and any self-healing you did also heals your opponent by the same amount.', rarity:'common', emoji:'⏳', type:'normal', art:'art/murozond.png'},
   {id:'under_pressure', collectible:true, name:'Under Pressure', text:'Split 0. Increase the Split by 5 for each card your opponent shuffled into their deck last round.', rarity:'common', emoji:'🎚️', type:'normal', art:'art/under_pressure.png'},
-  {id:'kazure', collectible:true, name:'Kazure', text:'Deal 25 damage, decreased by 5 for each ongoing Quest on the board.', rarity:'common', emoji:'🗿', dealsDamage:true, type:'normal', art:'art/kazure.png'},
-  {id:'the_5_annoying_siblings', collectible:true, name:'The 5 Annoying Siblings', text:'Deal 5 damage for each you meet vs your opponent: fewer cards in hand, higher health, fewer cards in deck, more damage dealt this round, healed more last round. If all 5: double the damage.', rarity:'common', emoji:'👨‍👩‍👧‍👦', dealsDamage:true, type:'normal', art:'art/the_5_annoying_siblings.png'},
+  {id:'kazure', collectible:true, name:'Kazure', text:'Deal 25 damage, decreased by 5 for each ongoing Quest on the board.', rarity:'common', emoji:'🗿', dealsDamage:true, dmg:25, type:'normal', art:'art/kazure.png'},
+  {id:'the_5_annoying_siblings', collectible:true, name:'The 5 Annoying Siblings', text:'Deal 5 damage for each you meet vs your opponent: fewer cards in hand, higher health, fewer cards in deck, more damage dealt this round, healed more last round. If all 5: double the damage.', rarity:'common', emoji:'👨‍👩‍👧‍👦', dealsDamage:true, dmg:5, type:'normal', art:'art/the_5_annoying_siblings.png'},
   {id:'tall_kroog', collectible:true, name:'Tall Kroog', text:'Heal 10. If your opponent drew an extra card last round: Heal 20 instead.', rarity:'common', emoji:'🌵', heals:true, type:'normal', art:'art/tall_kroog.png'},
-  {id:'kaakan', collectible:true, name:'Kaakan', text:'Deal 5 damage to each player for every card in their hand.', rarity:'common', emoji:'💥', dealsDamage:true, type:'normal', art:'art/kaakan.png'},
-  {id:'geor_the_mountain_god', collectible:true, name:'Geor the Mountain God', text:'Deal 10 damage to yourself. But if your opponent dealt more than 10 damage to you this round: deal 25 damage to your opponent instead.', rarity:'common', emoji:'⛰️', dealsDamage:true, type:'normal', art:'art/geor_the_mountain_god.png'},
+  {id:'kaakan', collectible:true, name:'Kaakan', text:'Deal 5 damage to each player for every card in their hand.', rarity:'common', emoji:'💥', dealsDamage:true, dmg:5, type:'normal', art:'art/kaakan.png'},
+  {id:'geor_the_mountain_god', collectible:true, name:'Geor the Mountain God', text:'Deal 10 damage to yourself. But if your opponent dealt more than 10 damage to you this round: deal 25 damage to your opponent instead.', rarity:'common', emoji:'⛰️', dealsDamage:true, dmg:10, type:'normal', art:'art/geor_the_mountain_god.png'},
   {id:'dragonhood', collectible:true, name:'Dragonhood', text:"Set both players' health to the average of your health and your opponent's. You skip your next round.", rarity:'legendary', emoji:'🐲', type:'normal', art:'art/dragonhood.png'},
+  {id:'the_big_quack', collectible:true, name:'The Big Quack', text:"Discard all cards from your opponent's hand that deal 20 damage or more. Deal 10 damage to yourself for each card discarded.", rarity:'common', emoji:'🦆', type:'normal', art:'art/the_big_quack.png'},
+  {id:'bonzana_gloom', collectible:true, name:'Bonzana Gloom', text:'Deal 25 damage. Choose: you are Hindered next round, OR you also deal 10 damage to yourself.', rarity:'common', emoji:'🌩️', dealsDamage:true, dmg:25, type:'normal', art:'art/bonzana_gloom.png'},
+  {id:'skar_narloggs_pet', collectible:true, name:"Skar, Narlogg's Pet", text:"Deal 10 damage to yourself. This card can't be played while you are holding Narlogg's Absurd Rage.", rarity:'common', emoji:'🐗', dealsDamage:true, dmg:10, blockedIfHolding:'narloggs_absurd_rage', type:'normal', art:'art/skar_narloggs_pet.png'},
+  {id:'narloggs_absurd_rage', collectible:true, name:"Narlogg's Absurd Rage", text:"Deal 10 damage. If you played Skar, Narlogg's Pet last round: deal 60 damage instead.", rarity:'common', emoji:'😡', dealsDamage:true, dmg:10, type:'normal', art:'art/narloggs_absurd_rage.png'},
+  {id:'geehjarok', collectible:true, name:'Geehjarok', text:'Choose: deal 15 True damage to yourself and 25 True damage to your opponent, OR heal yourself 25 and heal your opponent 15.', rarity:'common', emoji:'⚖️', dealsDamage:true, dmg:25, heals:true, type:'normal', art:'art/geehjarok.png'},
+  {id:'punching_betrayal', collectible:true, name:'Punching Betrayal', text:'Curse your entire hand. Deal 5 damage for each card cursed.', rarity:'common', emoji:'👊', dealsDamage:true, dmg:5, type:'normal', art:'art/punching_betrayal.png'},
+  {id:'tinker_leaf', collectible:true, name:'Tinker Leaf', text:"Your opponent reveals 4 random cards from their deck. Choose 1 to get a copy of.", rarity:'common', emoji:'🍃', type:'normal', art:'art/tinker_leaf.png'},
+  {id:'inner_focus', collectible:true, name:'Inner Focus', text:'Blessing: Heal 5 after each round your opponent dealt damage to you. Your other healing cards heal 5 less.', rarity:'common', emoji:'🧘', type:'blessing', art:'art/inner_focus.png'},
   {id:'seven_symphonies', collectible:true, name:'7 Symphonies of Java', text:'Quest: hold exactly 7 cards in your hand at the end of 7 rounds (cumulative). Reward: shuffle the 7 Symphonies into both decks — you become the Pianist, your opponent the Listener.', rarity:'legendary', emoji:'🎼', type:'quest', quest:'seven_symphonies', art:'art/seven_symphonies.png'},
   {id:'symphony_1', name:'1st Symphony of Java', text:'When drawn: the Pianist steals 4 non-legendary cards from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_1.png'},
   {id:'symphony_2', name:'2nd Symphony of Java', text:'When drawn: the Pianist heals 25 health.', rarity:'legendary', emoji:'🎹', noDeck:true, heals:true, type:'normal', art:'art/symphony_2.png'},
-  {id:'symphony_3', name:'3rd Symphony of Java', text:'When drawn: the Pianist steals 15 health from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, heals:true, type:'normal', art:'art/symphony_3.png'},
+  {id:'symphony_3', name:'3rd Symphony of Java', text:'When drawn: the Pianist steals 15 health from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, dmg:15, heals:true, type:'normal', art:'art/symphony_3.png'},
   {id:'symphony_4', name:'4th Symphony of Java', text:"When drawn: the Pianist blocks this round and the Listener can't block this round.", rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_4.png'},
   {id:'symphony_5', name:'5th Symphony of Java', text:'When drawn: the Pianist draws 4 extra cards.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_5.png'},
   {id:'symphony_6', name:'6th Symphony of Java', text:'When drawn: the Listener has to discard 4 cards.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_6.png'},
-  {id:'symphony_7', name:'7th Symphony of Java', text:'When drawn: the Pianist deals 15 damage to the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, type:'normal', art:'art/symphony_7.png'},
+  {id:'symphony_7', name:'7th Symphony of Java', text:'When drawn: the Pianist deals 15 damage to the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, dmg:15, type:'normal', art:'art/symphony_7.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -1847,6 +1855,8 @@ const CHOOSE_OPTIONS = {
   fourth_day: [ {key:'opp_sees_draws', label:'Opponent sees the cards you draw'},  {key:'discard_bottom',  label:'Discard 1 from bottom of deck each round'} ],
   fifth_day:  [ {key:'dmg_5_start',    label:'Take 5 damage at each round start'}, {key:'max_1_card',      label:'Play max 1 card per round'} ],
   the_missruler: [ {key:'draw', label:'Draw the bottom 2 of your deck'}, {key:'remove', label:"Remove the bottom 2 of your opponent's deck"} ],
+  bonzana_gloom: [ {key:'hindered', label:'Be Hindered next round (no draw)'}, {key:'self', label:'Deal 10 damage to yourself'} ],
+  geehjarok: [ {key:'damage', label:'Deal 15 True to yourself, 25 True to your opponent'}, {key:'heal', label:'Heal yourself 25, heal your opponent 15'} ],
 };
 
 // Cards with SPLIT X: player divides X between damage and heal
@@ -1993,6 +2003,10 @@ function playBlockedReason(state, r, card){
   if(card.requiresPlayed && !((state[r].playedIds||[]).includes(card.requiresPlayed))){
     const def=CARDS_DATA.find(x=>x.id===card.requiresPlayed);
     return 'You must play '+(def?def.name:card.requiresPlayed)+' first.';
+  }
+  if(card.blockedIfHolding && (state[r].hand||[]).some(x=>x && x.id===card.blockedIfHolding)){
+    const bd=CARDS_DATA.find(x=>x.id===card.blockedIfHolding);
+    return "Can't be played while holding "+(bd?bd.name:card.blockedIfHolding)+'.';
   }
   return null;
 }
@@ -2987,6 +3001,90 @@ const CARD_LOGIC = {
     st[me].skipRound = true;   // active for the caster's NEXT select phase, cleared next resolve
     c.log(c.state[me].name+' plays Dragonhood — both players set to '+avg+' HP; '+st[me].name+' skips next round.','effect');
   } },
+  // The Big Quack — discard every card in the opponent's hand whose base damage is 20 or more
+  // (Immune cards can't be discarded, so they're skipped). Take 10 self-damage per card discarded.
+  the_big_quack: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const hand=st[o].hand||[];
+    const heavy=hand.filter(x=>x && (x.dmg||0) >= 20 && takeable(x));
+    heavy.forEach(cardObj=>{ const idx=hand.indexOf(cardObj); if(idx>=0){ hand.splice(idx,1); discardTo(st, o, cardObj); } });
+    st[o].hand=hand;
+    const n=heavy.length;
+    if(n>0) dealDmg(st, me, 10*n, false, me);
+    c.log(c.state[me].name+' plays The Big Quack — discards '+n+' heavy card'+(n===1?'':'s')+' from '+st[o].name+"'s hand"+(n>0?', taking '+(10*n)+' self-damage':'')+'.','effect');
+  } },
+  // Bonzana Gloom — 25 damage, then a choice: Hindered next round (no draw), or 10 self-damage.
+  bonzana_gloom: { onPlay:(c)=>{
+    c.dealDmgTo(c.opp, 25);
+    const choice = (c.card && c.card._choice) || 'self';
+    if(choice==='hindered'){
+      c.setHindered();
+      c.log(c.state[c.self].name+' plays Bonzana Gloom — 25 damage; Hindered next round (no draw).','damage');
+    } else {
+      dealDmg(c.state, c.self, 10, false, c.self);
+      c.log(c.state[c.self].name+' plays Bonzana Gloom — 25 damage; 10 self-damage.','damage');
+    }
+  } },
+  // Skar, Narlogg's Pet — 10 self-damage. The "can't play while holding Narlogg's Absurd Rage"
+  // restriction is handled by playBlockedReason via the blockedIfHolding flag (inert until that
+  // card exists).
+  skar_narloggs_pet: { onPlay:(c)=>{
+    dealDmg(c.state, c.self, 10, false, c.self);
+    c.log(c.state[c.self].name+" plays Skar, Narlogg's Pet — 10 self-damage.",'damage');
+  } },
+  // Narlogg's Absurd Rage — 10 damage, or 60 if you played Skar, Narlogg's Pet last round
+  // (playedLastRound holds the previous round's played cards, carried before this round's plays).
+  narloggs_absurd_rage: { onPlay:(c)=>{
+    const playedSkar = (c.state[c.self].playedLastRound||[]).some(x=>x && x.id==='skar_narloggs_pet');
+    const dmg = playedSkar ? 60 : 10;
+    c.dealDmgTo(c.opp, dmg);
+    c.log(c.state[c.self].name+" plays Narlogg's Absurd Rage — "+(playedSkar?'Skar was played last round → 60 damage!':'10 damage')+'.','damage');
+  } },
+  // Geehjarok — a choice. 'damage': 15 True to yourself + 25 True to the opponent. 'heal': heal
+  // yourself 25 + heal the opponent 15. Both sides are affected either way.
+  geehjarok: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const choice=(c.card && c.card._choice) || 'damage';
+    if(choice==='heal'){
+      heal(st, me, 25); heal(st, o, 15);
+      c.log(c.state[me].name+' plays Geehjarok — heals itself 25 and '+st[o].name+' 15.','heal');
+    } else {
+      c.dealDmgTo(o, 25, true);
+      dealDmg(st, me, 15, true, me);
+      c.log(c.state[me].name+' plays Geehjarok — 25 True to '+st[o].name+', 15 True to itself.','damage');
+    }
+  } },
+  // Punching Betrayal — curse every card in your own hand (curseCard skips Immune/already-cursed/
+  // Best Friend), then deal 5 damage to the opponent per card actually cursed.
+  punching_betrayal: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    let cursed=0;
+    (st[me].hand||[]).forEach(cardObj=>{ if(curseCard(st, cardObj)) cursed++; });
+    const dmg=5*cursed;
+    if(dmg>0) c.dealDmgTo(o, dmg);
+    c.log(c.state[me].name+' plays Punching Betrayal — curses '+cursed+' card'+(cursed===1?'':'s')+' in hand → '+dmg+' damage.','damage');
+  } },
+  // Tinker Leaf — you revealed 4 random cards from the opponent's deck and chose one (_tinkerPick,
+  // stored as a card id). Put a fresh copy of it into your hand; owner = opponent (sacred rule),
+  // so playing it later feeds your Constellation.
+  tinker_leaf: { onPlay:(c)=>{
+    const id = c.card && c.card._tinkerPick;
+    if(!id){ c.log(c.state[c.self].name+' plays Tinker Leaf — nothing to copy.','system'); return; }
+    const def=CARDS_DATA.find(x=>x.id===id);
+    if(!def){ c.log(c.state[c.self].name+' plays Tinker Leaf — the chosen card no longer exists.','system'); return; }
+    const copy=mkCard(def); copy.owner=c.opp;
+    (c.state[c.self].hand||(c.state[c.self].hand=[])).push(copy);
+    c.log(c.state[c.self].name+' plays Tinker Leaf — copies '+def.name+' from '+c.state[c.opp].name+"'s deck into hand.",'effect');
+  } },
+  // Inner Focus (Blessing) — Heal 5 (raw, unreduced) at the end of any round the opponent dealt
+  // damage to you. The "your other heals are 5 less" half is handled in the heal function itself.
+  inner_focus: { onRoundEnd:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    if((st[o].dmgDealtThisRound||0) > 0){
+      heal(st, me, 5, true);
+      c.log('  🧘 '+st[me].name+"'s Inner Focus — you took damage this round, Heal 5.",'heal');
+    }
+  } },
   // 1st Symphony of Java — a Symphony token (shuffled into both decks by the 7 Symphonies reward).
   // When ANYONE draws it, the Pianist steals up to 4 non-legendary cards from the Listener's hand
   // (Immune skipped, hand limit respected, owner=Listener so it feeds the Pianist's Constellation).
@@ -3622,8 +3720,10 @@ function tryInterceptHeal(gs, healTarget, amt){
   return false;
 }
 
-function heal(gs,r,amt){
+function heal(gs,r,amt,raw){
   if(!canHeal(gs,r)){ log('  → '+gs[r].name+" can't heal (Journey).",'system'); return; }  // First Day: no_heal
+  if(!raw && gs[r].blessing && gs[r].blessing.id==='inner_focus') amt=Math.max(0, amt-5);   // Inner Focus: your OTHER heals are reduced by 5
+  if(amt<=0) return;
   if(tryInterceptHeal(gs,r,amt)) return;   // heal was stolen/redirected → r heals nothing
   const _beforeHp=gs[r].hp;
   gs[r].hp=Math.min(gs[r].maxHp,gs[r].hp+amt);
@@ -5306,6 +5406,11 @@ async function onRevealPhase(gs){
   const choices={}; // uid -> choice/split
   for(const c of myCards){
     if(c && CHOOSE_OPTIONS[c.id]){ choices[c.uid]={choice: await pickChoice(CHOOSE_OPTIONS[c.id], c.name)}; }
+    if(c && c.id==='tinker_leaf'){
+      const deck=(gs[opp(myRole)] && gs[opp(myRole)].deck) || [];
+      const pool=[...deck].sort(()=>Math.random()-0.5).slice(0,4);
+      if(pool.length){ const picked=await pickDiscards(pool, 1, 'Tinker Leaf', 'copy'); const pc=pool.find(x=>x.uid===picked[0]); choices[c.uid]=Object.assign(choices[c.uid]||{}, {tinkerPick: pc?pc.id:null}); }
+    }
   }
   for(const c of myCards){
     if(c && SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, gs, myRole); choices[c.uid]=Object.assign(choices[c.uid]||{}, {split: t>0 ? await pickSplit(t, c.name) : {dmg:0,heal:0}}); }
@@ -5598,6 +5703,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     p2played=p2played.concat(rest.slice(0, extra));
     p2played.forEach(c=>{
       if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
+      if(c.id==='tinker_leaf'){ const deck=localGs.p1.deck||[]; if(deck.length){ c._tinkerPick=deck[Math.floor(Math.random()*deck.length)].id; } }
       if(SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, localGs, 'p2'); const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
     });
     // CPU: randomly spend held Orbs on its enchanted cards.
@@ -5617,6 +5723,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
 
     setTimeout(async()=>{
       for(const c of played){ if(CHOOSE_OPTIONS[c.id]) c._choice=await pickChoice(CHOOSE_OPTIONS[c.id], c.name); }
+      for(const c of played){ if(c.id==='tinker_leaf'){ const deck=(localGs[opp(myRole)]&&localGs[opp(myRole)].deck)||[]; const pool=[...deck].sort(()=>Math.random()-0.5).slice(0,4); if(pool.length){ const picked=await pickDiscards(pool, 1, 'Tinker Leaf', 'copy'); const pc=pool.find(x=>x.uid===picked[0]); c._tinkerPick=pc?pc.id:null; } } }
       for(const c of played){ if(SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, localGs, myRole); c._split = t>0 ? await pickSplit(t, c.name) : {dmg:0,heal:0}; } }
       let orbsLeft=(me().hand||[]).filter(isOrb).length;
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
@@ -5696,13 +5803,13 @@ function larryGains(state, r, peekCount){
   return { top, gained: top.filter(c=>hasTag(c,'celebration')).slice(0, space) };
 }
 
-function pickDiscards(hand, count, cardName){
+function pickDiscards(hand, count, cardName, verb){
   return new Promise(resolve=>{
     const ov=document.getElementById('ov-discard');
     const grid=document.getElementById('discard-grid');
     const sub=document.getElementById('discard-sub');
     const btn=document.getElementById('btn-discard-confirm');
-    sub.textContent=cardName+': choose '+count+' card'+(count>1?'s':'')+' to discard.';
+    sub.textContent=cardName+': choose '+count+' card'+(count>1?'s':'')+' to '+(verb||'discard')+'.';
     const chosen=[];
     grid.innerHTML='';
     hand.forEach(c=>{
@@ -5859,12 +5966,15 @@ function resolveRound(gs){
         if(ch[c.uid].useOrb!==undefined) c._useOrb=ch[c.uid].useOrb;
         if(ch[c.uid].peek!==undefined) c._peek=ch[c.uid].peek;
         if(ch[c.uid].swapGive!==undefined) c._swapGive=ch[c.uid].swapGive;
+        if(ch[c.uid].tinkerPick!==undefined) c._tinkerPick=ch[c.uid].tinkerPick;
       }
     });
     if(Array.isArray((state[r].choices||{})['__thaa'])) state[r].thaaDiscard=state[r].choices['__thaa'];   // Thaa: discard-instead-of-draw picks
   });
 
   // Store for result screen (before selectedCards are cleared)
+  state.p1.playedLastRound=state.p1.lastPlayed||[];   // carry the PREVIOUS round's plays first (Narlogg's Absurd Rage reads this)
+  state.p2.playedLastRound=state.p2.lastPlayed||[];
   state.p1.lastPlayed=[...p1c];
   state.p2.lastPlayed=[...p2c];
 
@@ -6380,6 +6490,21 @@ function spawnFloater(role,text,isHeal){
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),1500);
 }
+</script>
+<script>
+/* Menu video: only decode while the lobby is actually on screen. Pauses during a game (screen-lobby
+   gets .hidden) and when the tab is backgrounded, resumes when you return — saves CPU/battery. */
+(function(){
+  var lobby=document.getElementById('screen-lobby'); if(!lobby) return;
+  function sync(){
+    var v=document.querySelector('.menu-video'); if(!v) return;
+    var on = !lobby.classList.contains('hidden') && document.visibilityState!=='hidden';
+    if(on){ var p=v.play&&v.play(); if(p&&p.catch) p.catch(function(){}); } else if(v.pause){ v.pause(); }
+  }
+  try{ new MutationObserver(sync).observe(lobby,{attributes:true,attributeFilter:['class']}); }catch(e){}
+  document.addEventListener('visibilitychange', sync);
+  sync();
+})();
 </script>
 </body>
 </html>
