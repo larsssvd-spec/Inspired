@@ -1538,7 +1538,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T18:59:22';
+const APP_VERSION = '2026-07-16T19:12:11';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -4207,11 +4207,11 @@ async function joinGame(chosen){
   if(gs.status!=='waiting'){setStatus('Game already started.','err');return;}
   let deck=buildDeckFrom(chosen,'p2'); const qq=extractQuests(deck, chosen.linkedBlessing); deck=qq.deck;
   // Both decks are known now, so decide who reveals first (Finale/Quickplay points) and deal
-  // both opening hands: whoever goes FIRST opens with 4 cards, whoever goes SECOND with 6.
+  // both opening hands: whoever goes FIRST opens with 2 cards, whoever goes SECOND with 4.
   const p1deck=[...(gs.p1.deck||[])];
   const firstPlayer=decideFirstPlayer(p1deck, deck);
-  const p1hand=p1deck.splice(0, firstPlayer==='p1' ? 4 : 6);
-  const hand=deck.splice(0, firstPlayer==='p2' ? 4 : 6);
+  const p1hand=p1deck.splice(0, firstPlayer==='p1' ? 2 : 4);
+  const hand=deck.splice(0, firstPlayer==='p2' ? 2 : 4);
   await update(gRef,{
     'firstPlayer':firstPlayer,
     'p1/deck':p1deck,'p1/hand':p1hand,
@@ -4238,13 +4238,14 @@ function startSolo(chosen){
   const TEST_HAND = [];
   const testCards = TEST_HAND.map(id=>mkCard(CARDS_DATA.find(c=>c.id===id))).filter(Boolean);
   deck1 = [...testCards, ...deck1];
-  const hand1 = deck1.splice(0, Math.max(4, testCards.length));
   const graveSeed=[];
   let deck2=stampOwner(buildDeck(),'p2');   // CPU: random pool deck for now
   const q2=extractQuests(deck2); deck2=q2.deck;
   // Same rule as multiplayer: Finale/Quickplay points in both decks decide who reveals first.
   const soloFirst=decideFirstPlayer(deck1, deck2);
-  const hand2=deck2.splice(0, soloFirst==='p2' ? 4 : 6);
+  // whoever goes FIRST opens with 2 cards, whoever goes SECOND with 4.
+  const hand1 = deck1.splice(0, Math.max(soloFirst==='p1' ? 2 : 4, testCards.length));
+  const hand2=deck2.splice(0, soloFirst==='p2' ? 2 : 4);
   localGs={
     status:'active',round:1,phase:'select',firstPlayer:soloFirst,
     p1:{name:myName,hp:150,maxHp:150,deck:deck1,hand:hand1,graveyard:graveSeed,void:[],blessing:q1.blessing||null,rewards:[],quests:q1.quests,journeyEffects:[],journeyHistory:[],blocked:false,hindered:false,forcedType:null,forcedTypeNext:null,pendingHeals:[],shieldRounds:0,cakesPlayed:0,dmgDealtLastRound:0,extraDraw:0,noDraw:false,selectedCards:[],confirmed:false,lastPlayed:[]},
