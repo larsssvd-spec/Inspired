@@ -1528,7 +1528,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T10:11';
+const APP_VERSION = '2026-07-16T15:05:47';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1799,6 +1799,20 @@ const CARDS_DATA = [
   {id:'hatching_egg', collectible:true, name:'Hatching Egg', text:'Quest: both players have completed a quest. Reward: Mother\'s Firebreath (added to your hand).', rarity:'common', emoji:'🥚', quest:'hatching_egg', type:'quest', art:'art/hatching_egg.png'},
   {id:'mothers_firebreath', name:"Mother's Firebreath", text:'Deal 30 damage.', rarity:'common', emoji:'🔥', noDeck:true, dealsDamage:true, type:'normal', art:'art/mothers_firebreath.png'},
   {id:'best_friend_for_always', collectible:true, name:'Best Friend for Always', text:"When drawn: shuffle this into your opponent's deck. They can't play, discard or curse it. Steal it back and play it to Heal 100 (then it's spent).", rarity:'legendary', emoji:'💛', type:'normal', art:'art/best_friend_for_always.png'},
+  {id:'the_missruler', collectible:true, name:'The Missruler', text:"Choose: draw the bottom 2 cards of your deck, OR remove the bottom 2 cards of your opponent's deck.", rarity:'common', emoji:'👑', type:'normal', art:'art/the_missruler.png'},
+  {id:'thaa', collectible:true, name:'Thaa', text:'Permanently: at the start of each round, you may discard up to 2 cards instead of drawing 2.', rarity:'legendary', emoji:'🌀', type:'normal', art:'art/thaa.png'},
+  {id:'murozond', collectible:true, name:'Murozond', text:'Split 30. At the end of this round, any damage you dealt is also dealt to you, and any self-healing you did also heals your opponent by the same amount.', rarity:'common', emoji:'⏳', type:'normal', art:'art/murozond.png'},
+  {id:'under_pressure', collectible:true, name:'Under Pressure', text:'Split 0. Increase the Split by 5 for each card your opponent shuffled into their deck last round.', rarity:'common', emoji:'🎚️', type:'normal', art:'art/under_pressure.png'},
+  {id:'kazure', collectible:true, name:'Kazure', text:'Deal 25 damage, decreased by 5 for each ongoing Quest on the board.', rarity:'common', emoji:'🗿', dealsDamage:true, type:'normal', art:'art/kazure.png'},
+  {id:'the_5_annoying_siblings', collectible:true, name:'The 5 Annoying Siblings', text:'Deal 5 damage for each you meet vs your opponent: fewer cards in hand, higher health, fewer cards in deck, more damage dealt this round, healed more last round. If all 5: double the damage.', rarity:'common', emoji:'👨‍👩‍👧‍👦', dealsDamage:true, type:'normal', art:'art/the_5_annoying_siblings.png'},
+  {id:'seven_symphonies', collectible:true, name:'7 Symphonies of Java', text:'Quest: hold exactly 7 cards in your hand at the end of 7 rounds (cumulative). Reward: shuffle the 7 Symphonies into both decks — you become the Pianist, your opponent the Listener.', rarity:'legendary', emoji:'🎼', type:'quest', quest:'seven_symphonies', art:'art/seven_symphonies.png'},
+  {id:'symphony_1', name:'1st Symphony of Java', text:'When drawn: the Pianist steals 4 non-legendary cards from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_1.png'},
+  {id:'symphony_2', name:'2nd Symphony of Java', text:'When drawn: the Pianist heals 25 health.', rarity:'legendary', emoji:'🎹', noDeck:true, heals:true, type:'normal', art:'art/symphony_2.png'},
+  {id:'symphony_3', name:'3rd Symphony of Java', text:'When drawn: the Pianist steals 15 health from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, heals:true, type:'normal', art:'art/symphony_3.png'},
+  {id:'symphony_4', name:'4th Symphony of Java', text:"When drawn: the Pianist blocks this round and the Listener can't block this round.", rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_4.png'},
+  {id:'symphony_5', name:'5th Symphony of Java', text:'When drawn: the Pianist draws 4 extra cards.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_5.png'},
+  {id:'symphony_6', name:'6th Symphony of Java', text:'When drawn: the Listener has to discard 4 cards.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_6.png'},
+  {id:'symphony_7', name:'7th Symphony of Java', text:'When drawn: the Pianist deals 15 damage to the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, dealsDamage:true, type:'normal', art:'art/symphony_7.png'},
   {id:'deep_envy',  name:'Deep Envy',       text:"Sin. Set your health to your opponent's current health but 25 less.", rarity:'legendary', emoji:'🌑', sin:true, noDeck:true, type:'normal', art:'art/deep_envy.png'},
   {id:'deep_greed', name:'Deep Greed',      text:'Sin. Draw cards until your hand is full: Curse your entire hand afterwards.', rarity:'legendary', emoji:'🌒', sin:true, noDeck:true, type:'normal', art:'art/deep_greed.png'},
   {id:'deep_lust',  name:'Deep Lust',       text:'Sin. Discard your entire hand. You are Hindered next round.', rarity:'legendary', emoji:'🌓', sin:true, noDeck:true, type:'normal', art:'art/deep_lust.png'},
@@ -1818,10 +1832,15 @@ const CHOOSE_OPTIONS = {
   third_day:  [ {key:'no_extra_draw',  label:"Can't draw extra cards"},            {key:'draw_1',          label:'Draw 1 per round instead of 2'} ],
   fourth_day: [ {key:'opp_sees_draws', label:'Opponent sees the cards you draw'},  {key:'discard_bottom',  label:'Discard 1 from bottom of deck each round'} ],
   fifth_day:  [ {key:'dmg_5_start',    label:'Take 5 damage at each round start'}, {key:'max_1_card',      label:'Play max 1 card per round'} ],
+  the_missruler: [ {key:'draw', label:'Draw the bottom 2 of your deck'}, {key:'remove', label:"Remove the bottom 2 of your opponent's deck"} ],
 };
 
 // Cards with SPLIT X: player divides X between damage and heal
-const SPLIT_CARDS = {};   // cardId → total points to split between damage and heal
+const SPLIT_CARDS = {
+  murozond: 30,
+  under_pressure: (gs, r) => 5 * ((gs[opp(r)] && gs[opp(r)].shuffledInThisRound) || 0),   // dynamic: 5 per card the opponent shuffled into their deck last round (read at choice time, before the reset)
+};   // cardId → total points to split between damage and heal (a number, or a fn(gs,r) for a dynamic total)
+function splitTotal(cardId, gs, r){ const v=SPLIT_CARDS[cardId]; return (typeof v==='function' ? v(gs,r) : v) || 0; }
 
 // ══════════════════════════════════════════════════════════════════════════
 //  ENGINE CORE  (local only, never sent to Firebase)
@@ -2084,6 +2103,7 @@ const CARD_TOKENS = {
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
   dreaming_zephyrax:{ label:'Reward',      ids: ['unleashed_zephyrax'] },
   hatching_egg:     { label:'Reward',      ids: ['mothers_firebreath'] },
+  seven_symphonies: { label:'Symphony',    ids: ['symphony_1','symphony_2','symphony_3','symphony_4','symphony_5','symphony_6','symphony_7'] },
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
@@ -2819,6 +2839,184 @@ const CARD_LOGIC = {
       }
     }
   },
+  // The Missruler — a choice. 'draw': take the bottom 2 cards of YOUR deck into hand. 'remove':
+  // delete the bottom 2 cards of the OPPONENT's deck (gone for good — not milled to a graveyard).
+  // "Bottom" is the end of the deck array (the top is the front, where draws come from).
+  the_missruler: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const choice=(c.card && c.card._choice) || 'draw';
+    if(choice==='remove'){
+      const deck=st[o].deck||[];
+      const n=Math.min(2, deck.length);
+      const removed=deck.splice(deck.length-n, n);
+      st[o].deck=deck;
+      c.log(c.state[me].name+' plays The Missruler — removes '+removed.length+' card'+(removed.length===1?'':'s')+' from the bottom of '+st[o].name+"'s deck.",'effect');
+    } else {
+      const deck=st[me].deck||[];
+      const n=Math.min(2, deck.length);
+      const taken=deck.splice(deck.length-n, n);
+      st[me].deck=deck;
+      st[me].hand=[...(st[me].hand||[]), ...taken];
+      c.log(c.state[me].name+' plays The Missruler — draws '+taken.length+' card'+(taken.length===1?'':'s')+' from the bottom of your deck.','effect');
+    }
+  } },
+  // Thaa — permanent. Sets a flag; each round the select/reveal step offers a choice to discard
+  // up to 2 cards instead of drawing. The chosen uids arrive via choices['__thaa'] and are applied
+  // in the draw loop (discard those, skip the draw). The CPU never uses it for now (always draws).
+  thaa: { onPlay:(c)=>{
+    c.state[c.self].thaa=true;
+    c.log(c.state[c.self].name+' plays Thaa — from now on, you may discard up to 2 cards instead of drawing each round.','effect');
+  } },
+  // Under Pressure — a Split whose total is dynamic (5 per card the opponent shuffled into their
+  // deck last round, computed at choice time). onPlay just applies the chosen split, like Murozond.
+  under_pressure: { onPlay:(c)=>{
+    const sp=(c.card && c.card._split) || {dmg:0, heal:0};
+    if(sp.dmg>0)  c.dealDmgTo(c.opp, sp.dmg);
+    if(sp.heal>0) c.heal(sp.heal);
+    const total=(sp.dmg||0)+(sp.heal||0);
+    c.log(c.state[c.self].name+' plays Under Pressure — Split '+total+(total?' ('+sp.dmg+' damage / '+sp.heal+' heal)':' (nothing shuffled in last round)')+'.','effect');
+  } },
+  // Murozond — Split 30, then at the end of THIS round it mirrors your round: all the damage you
+  // dealt this round is dealt back to you (True, unavoidable), and all the HP you healed yourself
+  // this round is also given to your opponent. Reads dmgDealtThisRound / healAmtThisRound at
+  // onRoundEnd (after every card resolved), captured before the mirror so it never re-triggers.
+  murozond: {
+    onPlay:(c)=>{
+      const sp=(c.card && c.card._split) || {dmg:15, heal:15};
+      if(sp.dmg>0)  c.dealDmgTo(c.opp, sp.dmg);
+      if(sp.heal>0) c.heal(sp.heal);
+      c.addEffect({id:'murozond'});
+      c.log(c.state[c.self].name+' plays Murozond — Split 30 ('+sp.dmg+' damage / '+sp.heal+' heal). The reckoning comes at round end.','effect');
+    },
+    onRoundEnd:(c)=>{
+      const st=c.state, r=c.self, o=c.opp;
+      st[r].effects=(st[r].effects||[]).filter(e=>e.id!=='murozond');   // one-shot
+      const dmg=st[r].dmgDealtThisRound||0;
+      const healAmt=st[r].healAmtThisRound||0;
+      if(dmg>0){ c.dealDmgTo(r, dmg, true); c.log('  ⏳ '+st[r].name+' takes '+dmg+' — Murozond mirrors the damage you dealt back onto you.','damage'); }
+      if(healAmt>0){ heal(st, o, healAmt); c.log('  ⏳ '+st[o].name+' heals '+healAmt+' — Murozond mirrors your self-healing to your opponent.','heal'); }
+    }
+  },
+  // Kazure — 25 damage minus 5 for every ongoing (not-yet-completed) Quest on the board, counting
+  // BOTH players' quests. Floored at 0.
+  kazure: { onPlay:(c)=>{
+    const st=c.state;
+    const ongoing = ['p1','p2'].reduce((n,r)=> n + (st[r].quests||[]).filter(q=>q && !q.done).length, 0);
+    const dmg = Math.max(0, 25 - 5*ongoing);
+    c.dealDmgTo(c.opp, dmg);
+    c.log(c.state[c.self].name+' plays Kazure — '+ongoing+' ongoing quest'+(ongoing===1?'':'s')+' on the board → '+dmg+' damage.','damage');
+  } },
+  // The 5 Annoying Siblings — 5 damage for each comparison (you vs opponent) you win, doubled if
+  // you win all five. Ties don't count (strict comparisons). "This round" damage is what's been
+  // dealt so far when this resolves; "last round" healing uses the carried healAmtLastRound.
+  the_5_annoying_siblings: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const conds=[
+      (st[me].hand||[]).length < (st[o].hand||[]).length,               // fewer cards in hand
+      (st[me].hp||0) > (st[o].hp||0),                                    // higher health
+      (st[me].deck||[]).length < (st[o].deck||[]).length,               // fewer cards in deck
+      (st[me].dmgDealtThisRound||0) > (st[o].dmgDealtThisRound||0),      // more damage dealt this round
+      (st[me].healAmtLastRound||0) > (st[o].healAmtLastRound||0),        // healed more last round
+    ];
+    const met=conds.filter(Boolean).length;
+    let dmg=5*met;
+    if(met===5) dmg*=2;
+    c.dealDmgTo(o, dmg);
+    c.log(c.state[me].name+' plays The 5 Annoying Siblings — '+met+'/5 met'+(met===5?' (ALL → doubled)':'')+' → '+dmg+' damage.','damage');
+  } },
+  // 1st Symphony of Java — a Symphony token (shuffled into both decks by the 7 Symphonies reward).
+  // When ANYONE draws it, the Pianist steals up to 4 non-legendary cards from the Listener's hand
+  // (Immune skipped, hand limit respected, owner=Listener so it feeds the Pianist's Constellation).
+  // Consumed on draw. Roles are set by the quest reward; if unset, it simply fizzles.
+  symphony_1: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    const listener = opp(pianist);
+    const lhand = st[listener].hand||[];
+    const phand = st[pianist].hand||(st[pianist].hand=[]);
+    const pool = lhand.filter(x=>x && takeable(x) && x.rarity!=='legendary');
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    const stolen=[];
+    for(const cardObj of pool){
+      if(stolen.length>=4) break;
+      if(phand.length>=maxHandSize(st,pianist)) break;
+      const idx=lhand.indexOf(cardObj); if(idx<0) continue;
+      lhand.splice(idx,1);
+      if(cardObj.owner===undefined) cardObj.owner=listener;
+      cardObj.stolen=true;
+      phand.push(cardObj); stolen.push(cardObj);
+      emit(st,'onSteal','p1',{thief:pianist,victim:listener,card:cardObj}); emit(st,'onSteal','p2',{thief:pianist,victim:listener,card:cardObj});
+    }
+    st[listener].hand=lhand; st[pianist].hand=phand;
+    c.log('  🎹 1st Symphony of Java — the Pianist ('+st[pianist].name+') steals '+stolen.length+' non-legendary card'+(stolen.length===1?'':'s')+' from the Listener ('+st[listener].name+').','effect');
+    return true;   // consumed on draw
+  } },
+  // 2nd Symphony of Java — when anyone draws it, the Pianist heals 25. Consumed on draw.
+  symphony_2: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    heal(st, pianist, 25);
+    c.log('  🎹 2nd Symphony of Java — the Pianist ('+st[pianist].name+') heals 25.','heal');
+    return true;   // consumed on draw
+  } },
+  // 3rd Symphony of Java — when anyone draws it, the Pianist drains 15 health from the Listener
+  // (stealHealth steals from opp(pianist) = the Listener, and checks the death-gate). Consumed.
+  symphony_3: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    stealHealth(st, pianist, 15);
+    c.log('  🎹 3rd Symphony of Java — the Pianist ('+st[pianist].name+') steals 15 health from the Listener ('+st[opp(pianist)].name+').','effect');
+    return true;   // consumed on draw
+  } },
+  // 4th Symphony of Java — the Pianist blocks the coming round (Shield for 1 round) and the
+  // Listener can't block it (cantBlock overrides any block they'd get). Consumed on draw.
+  symphony_4: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    const listener = opp(pianist);
+    st[pianist].shieldRounds = Math.max(st[pianist].shieldRounds||0, 1);
+    st[listener].cantBlock = true;
+    c.log('  🎹 4th Symphony of Java — the Pianist ('+st[pianist].name+') blocks; the Listener ('+st[listener].name+") can't block this round.",'effect');
+    return true;   // consumed on draw
+  } },
+  // 5th Symphony of Java — the Pianist draws 4 extra cards. Those cards fire their own draw
+  // triggers (so a Symphony among them also triggers instead of sitting dead in hand). Consumed.
+  symphony_5: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    const before=(st[pianist].hand||[]).length;
+    drawCards(st, pianist, 4, false);
+    const drawn=(st[pianist].hand||[]).slice(before);
+    c.log('  🎹 5th Symphony of Java — the Pianist ('+st[pianist].name+') draws '+drawn.length+' extra card'+(drawn.length===1?'':'s')+'.','effect');
+    fireDrawTriggers(st, pianist, drawn);
+    return true;   // consumed on draw
+  } },
+  // 6th Symphony of Java — the Listener is forced to discard 4 random cards (Immune/Best Friend
+  // skipped, routes through the discard pipeline so onDiscard etc. still fire). Consumed.
+  symphony_6: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    const listener = opp(pianist);
+    discardCards(st, listener, 4);
+    c.log('  🎹 6th Symphony of Java — the Listener ('+st[listener].name+') has to discard 4 cards.','effect');
+    return true;   // consumed on draw
+  } },
+  // 7th Symphony of Java — the Pianist deals 15 damage to the Listener. Consumed on draw.
+  symphony_7: { onDraw:(c)=>{
+    const st=c.state;
+    const pianist = st.p1.symphonyRole==='pianist' ? 'p1' : (st.p2.symphonyRole==='pianist' ? 'p2' : null);
+    if(!pianist) return true;
+    const listener = opp(pianist);
+    dealDmg(st, listener, 15, false, pianist);
+    c.log('  🎹 7th Symphony of Java — the Pianist ('+st[pianist].name+') deals 15 damage to the Listener ('+st[listener].name+').','damage');
+    return true;   // consumed on draw
+  } },
   // Wish Dralivering — transforms (Pyrax-style, via toHand) into a random non-legendary
   // Celebration card placed in your hand. The pool is read live from the card data, so any
   // Celebration card added later is automatically eligible. Legendary Celebrations (Larry) are out.
@@ -3364,7 +3562,9 @@ function tryInterceptHeal(gs, healTarget, amt){
 function heal(gs,r,amt){
   if(!canHeal(gs,r)){ log('  → '+gs[r].name+" can't heal (Journey).",'system'); return; }  // First Day: no_heal
   if(tryInterceptHeal(gs,r,amt)) return;   // heal was stolen/redirected → r heals nothing
+  const _beforeHp=gs[r].hp;
   gs[r].hp=Math.min(gs[r].maxHp,gs[r].hp+amt);
+  gs[r].healAmtThisRound=(gs[r].healAmtThisRound||0)+(gs[r].hp-_beforeHp);   // total HP actually healed this round (Murozond reads this)
   gs[r].healedThisRound=(gs[r].healedThisRound||0)+1;
   gs[r]._healsThisCard=(gs[r]._healsThisCard||0)+1;
   spawnFloater(r,'+'+amt,true);
@@ -3596,6 +3796,7 @@ const QUEST_DEFS = {
   constellation_council_control: { name:'Constellation Council Control', goal:10, reward:'handsize_plus2' },
   dreaming_zephyrax: { name:'Dreaming Zephyrax', goal:1, reward:'unleash_zephyrax' },
   hatching_egg: { name:'Hatching Egg', goal:1, reward:'mothers_firebreath' },
+  seven_symphonies: { name:'7 Symphonies of Java', goal:7, reward:'seven_symphonies_system' },
 };
 
 // State/threshold quests complete on a game-state condition (not a counted event), so they are
@@ -3610,6 +3811,30 @@ function checkStateQuests(gs, r){
     if(q.done) return;
     const def=QUEST_DEFS[q.id];
     if(!def) return;
+    // 7 Symphonies of Java — cumulative: each round you END (before drawing) holding EXACTLY 7
+    // cards, +1. At 7 total the quest completes. Reward is set up separately once the Symphony
+    // cards + Pianist/Listener roles exist.
+    if(q.id==='seven_symphonies'){
+      if((gs[r].hand||[]).filter(Boolean).length === 7){
+        q.progress=(q.progress||0)+1;
+        log('  ♪ 7 Symphonies of Java — '+q.progress+'/'+def.goal+' rounds held at exactly 7 cards.','effect');
+      }
+      if((q.progress||0) >= def.goal){
+        q.done=true;
+        // Reward: the completer becomes the Pianist, the opponent the Listener, and one copy of
+        // each of the 7 Symphonies is shuffled into BOTH decks (so each Symphony can trigger twice).
+        gs[r].symphonyRole='pianist';
+        gs[opp(r)].symphonyRole='listener';
+        const SYMS=['symphony_1','symphony_2','symphony_3','symphony_4','symphony_5','symphony_6','symphony_7'];
+        ['p1','p2'].forEach(pl=>{
+          gs[pl].deck=gs[pl].deck||[];
+          SYMS.forEach(id=>{ const sd=CARDS_DATA.find(x=>x.id===id); if(sd) gs[pl].deck.push(mkCard(sd)); });
+          shuffleDeck(gs, pl);
+        });
+        log('  ♪★ 7 Symphonies of Java complete! '+gs[r].name+' becomes the Pianist and '+gs[opp(r)].name+' the Listener — the 7 Symphonies are shuffled into both decks.','effect');
+      }
+      return;
+    }
     let complete=false;
     if(q.id==='dreaming_zephyrax') complete = (gs[r].hp||0) <= 20;
     if(q.id==='hatching_egg'){
@@ -5020,7 +5245,7 @@ async function onRevealPhase(gs){
     if(c && CHOOSE_OPTIONS[c.id]){ choices[c.uid]={choice: await pickChoice(CHOOSE_OPTIONS[c.id], c.name)}; }
   }
   for(const c of myCards){
-    if(c && SPLIT_CARDS[c.id]){ choices[c.uid]=Object.assign(choices[c.uid]||{}, {split: await pickSplit(SPLIT_CARDS[c.id], c.name)}); }
+    if(c && SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, gs, myRole); choices[c.uid]=Object.assign(choices[c.uid]||{}, {split: t>0 ? await pickSplit(t, c.name) : {dmg:0,heal:0}}); }
   }
   // Enchanted: for each enchanted card played, if I still hold an Orb, ask whether to spend one.
   let orbsLeft=(me().hand||[]).filter(isOrb).length;
@@ -5053,6 +5278,19 @@ async function onRevealPhase(gs){
   if((gs[opp(myRole)].selectedCards||[]).some(c=>c && c.id==='whitefoot')){
     const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
     if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); choices['__whitefootGive']=ch[0]; }
+  }
+
+  // Thaa — if I have it active, each round I may discard up to 2 cards instead of drawing.
+  if(me().thaa){
+    const hand=(me().hand||[]);
+    const opts=[{key:'draw', label:'Draw 2 cards'}];
+    if(hand.length>=1) opts.push({key:'discard1', label:'Discard 1 card instead'});
+    if(hand.length>=2) opts.push({key:'discard2', label:'Discard 2 cards instead'});
+    if(opts.length>1){
+      const pick=await pickChoice(opts, 'Thaa — draw or discard?');
+      if(pick==='discard1'){ const ch=await pickDiscards(hand,1,'Thaa — choose a card to discard'); choices['__thaa']=ch; }
+      else if(pick==='discard2'){ const ch=await pickDiscards(hand,2,'Thaa — choose 2 cards to discard'); choices['__thaa']=ch; }
+    }
   }
 
   // Write my choices to Firebase
@@ -5297,7 +5535,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     p2played=p2played.concat(rest.slice(0, extra));
     p2played.forEach(c=>{
       if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
-      if(SPLIT_CARDS[c.id]){ const t=SPLIT_CARDS[c.id]; const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
+      if(SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, localGs, 'p2'); const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
     });
     // CPU: randomly spend held Orbs on its enchanted cards.
     let cpuOrbs=p2hand.filter(c=>!p2played.includes(c) && isOrb(c)).length;
@@ -5316,7 +5554,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
 
     setTimeout(async()=>{
       for(const c of played){ if(CHOOSE_OPTIONS[c.id]) c._choice=await pickChoice(CHOOSE_OPTIONS[c.id], c.name); }
-      for(const c of played){ if(SPLIT_CARDS[c.id]) c._split=await pickSplit(SPLIT_CARDS[c.id], c.name); }
+      for(const c of played){ if(SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, localGs, myRole); c._split = t>0 ? await pickSplit(t, c.name) : {dmg:0,heal:0}; } }
       let orbsLeft=(me().hand||[]).filter(isOrb).length;
       for(const c of played){ if(hasEnchanted(c) && orbsLeft>0){ const use=await pickChoice([{key:'yes',label:'Use Enchanted Orb'},{key:'no',label:'Save Orb'}], 'Enchant: '+c.name); if(use==='yes'){ c._useOrb=true; orbsLeft--; } } }
       for(const c of played){ if(c.peek){ const {top,gained}=larryGains(localGs, myRole, c.peek); c._peek=await pickPeek(top, c.name, gained); } }
@@ -5324,6 +5562,17 @@ document.getElementById('btn-confirm').onclick=async()=>{
       if((localGs.p2.selectedCards||[]).some(c=>c && c.id==='whitefoot')){
         const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
         if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__whitefootGive: ch[0]}); }
+      }
+      if(me().thaa){
+        const hand=(me().hand||[]);
+        const opts=[{key:'draw', label:'Draw 2 cards'}];
+        if(hand.length>=1) opts.push({key:'discard1', label:'Discard 1 card instead'});
+        if(hand.length>=2) opts.push({key:'discard2', label:'Discard 2 cards instead'});
+        if(opts.length>1){
+          const pick=await pickChoice(opts, 'Thaa — draw or discard?');
+          if(pick==='discard1'){ const ch=await pickDiscards(hand,1,'Thaa — choose a card to discard'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__thaa:ch}); }
+          else if(pick==='discard2'){ const ch=await pickDiscards(hand,2,'Thaa — choose 2 cards to discard'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__thaa:ch}); }
+        }
       }
       document.getElementById('action-info').innerHTML='<em>Resolving…</em>';
       setTimeout(()=>resolveRound(localGs),300);
@@ -5528,6 +5777,8 @@ function resolveRound(gs){
     state[r].shuffledInLastRound=state[r].shuffledInThisRound||0;   // Time and Space reads this
     state[r].shuffledInThisRound=0;
     state[r].healedThisRound=0;
+    state[r].healAmtLastRound=state[r].healAmtThisRound||0;
+    state[r].healAmtThisRound=0;
     state[r].discardedThisRound=0;
   });
 
@@ -5546,6 +5797,7 @@ function resolveRound(gs){
         if(ch[c.uid].swapGive!==undefined) c._swapGive=ch[c.uid].swapGive;
       }
     });
+    if(Array.isArray((state[r].choices||{})['__thaa'])) state[r].thaaDiscard=state[r].choices['__thaa'];   // Thaa: discard-instead-of-draw picks
   });
 
   // Store for result screen (before selectedCards are cleared)
@@ -5566,6 +5818,10 @@ function resolveRound(gs){
       state[r].shieldRounds = state[r].shieldRounds - 1;
     }
   });
+
+  // 4th Symphony of Java — a player marked "can't block this round" loses any block they'd have
+  // (from a card or a Shield), applied AFTER block is otherwise set. One round only.
+  ['p1','p2'].forEach(r=>{ if(state[r].cantBlock){ state[r].blocked=false; state[r].cantBlock=false; } });
 
   // Run one played card: onPlay hook → quest advance → graveyard OR (Endless) back to deck.
   function runCard(c,r){
@@ -5695,7 +5951,20 @@ function resolveRound(gs){
   ['p1','p2'].forEach(r=>{
     const wasHindered = !!state[r].hindered;
     const before=(state[r].hand||[]).length;
-    const n=drawCount(state,r);
+    // Thaa — this player chose to discard up to 2 cards instead of drawing this round.
+    let usedThaa=false;
+    const thaaUids=state[r].thaaDiscard;
+    if(state[r].thaa && Array.isArray(thaaUids) && thaaUids.length){
+      const hand=state[r].hand||[];
+      thaaUids.slice(0,2).forEach(uid=>{
+        const idx=hand.findIndex(c=>c && c.uid===uid);
+        if(idx>=0){ const dc=hand.splice(idx,1)[0]; discardTo(state, r, dc); }
+      });
+      state[r].hand=hand;
+      usedThaa=true;
+      log('  🌀 '+state[r].name+' uses Thaa — discards instead of drawing.','effect');
+    }
+    const n=usedThaa ? 0 : drawCount(state,r);
     drawCards(state,r,n,n<=0);
     const drawn=(state[r].hand||[]).slice(before);   // the cards newly drawn this round
     state[r].drewThisRound=(drawn.length>0);
@@ -5728,6 +5997,7 @@ function resolveRound(gs){
     if(wasHindered && v && vaultCards(v).length) state[r].vaultOffer = true;
   });
   state.p1.extraDraw=0; state.p2.extraDraw=0;
+  state.p1.thaaDiscard=null; state.p2.thaaDiscard=null;   // Thaa — one round only
   state.curseDrawsNext=false;   // Bad Landing — one round only
   state.p1.noDraw=false; state.p2.noDraw=false;
   state.p1.hindered=false; state.p2.hindered=false;
