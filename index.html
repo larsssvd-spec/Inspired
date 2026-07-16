@@ -129,6 +129,12 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 /* The scene itself: every layer is a group in one SVG, animated with transform/opacity
    only (no filters in the animation path), and shifted on mouse-move for parallax. */
 .lobby-scene { position:absolute; inset:0; z-index:0; width:100%; height:100%; display:block; }
+/* Menu background video (Video_menu.mp4) — the base layer; it replaces the old animated scenes,
+   while the dust and vignette stay on top for atmosphere. Falls back to dark if the file is missing. */
+.menu-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none; background:#04080f; }
+.menu-video-tint { position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%, rgba(2,6,12,0.08) 0%, rgba(2,6,12,0.34) 55%, rgba(2,6,12,0.66) 100%); }
+#screen-lobby .lobby-scene, #screen-lobby .bg-scene { display:none !important; }
 .pl { transition:transform 0.5s cubic-bezier(0.2,0.6,0.2,1); will-change:transform; }
 .ls-star { fill:#dff6ff; animation:lsTwinkle var(--d,4s) ease-in-out var(--dl,0s) infinite; }
 @keyframes lsTwinkle { 0%,100% { opacity:var(--o1,0.25); } 50% { opacity:var(--o2,0.95); } }
@@ -855,6 +861,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 
 <!-- LOBBY -->
 <div id="screen-lobby" class="gated">
+  <video class="menu-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+    <source src="Video_menu.mp4" type="video/mp4">
+  </video>
+  <div class="menu-video-tint" aria-hidden="true"></div>
   <svg class="lobby-scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
       <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
@@ -1528,7 +1538,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T15:05:47';
+const APP_VERSION = '2026-07-16T17:46:32';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1805,6 +1815,10 @@ const CARDS_DATA = [
   {id:'under_pressure', collectible:true, name:'Under Pressure', text:'Split 0. Increase the Split by 5 for each card your opponent shuffled into their deck last round.', rarity:'common', emoji:'🎚️', type:'normal', art:'art/under_pressure.png'},
   {id:'kazure', collectible:true, name:'Kazure', text:'Deal 25 damage, decreased by 5 for each ongoing Quest on the board.', rarity:'common', emoji:'🗿', dealsDamage:true, type:'normal', art:'art/kazure.png'},
   {id:'the_5_annoying_siblings', collectible:true, name:'The 5 Annoying Siblings', text:'Deal 5 damage for each you meet vs your opponent: fewer cards in hand, higher health, fewer cards in deck, more damage dealt this round, healed more last round. If all 5: double the damage.', rarity:'common', emoji:'👨‍👩‍👧‍👦', dealsDamage:true, type:'normal', art:'art/the_5_annoying_siblings.png'},
+  {id:'tall_kroog', collectible:true, name:'Tall Kroog', text:'Heal 10. If your opponent drew an extra card last round: Heal 20 instead.', rarity:'common', emoji:'🌵', heals:true, type:'normal', art:'art/tall_kroog.png'},
+  {id:'kaakan', collectible:true, name:'Kaakan', text:'Deal 5 damage to each player for every card in their hand.', rarity:'common', emoji:'💥', dealsDamage:true, type:'normal', art:'art/kaakan.png'},
+  {id:'geor_the_mountain_god', collectible:true, name:'Geor the Mountain God', text:'Deal 10 damage to yourself. But if your opponent dealt more than 10 damage to you this round: deal 25 damage to your opponent instead.', rarity:'common', emoji:'⛰️', dealsDamage:true, type:'normal', art:'art/geor_the_mountain_god.png'},
+  {id:'dragonhood', collectible:true, name:'Dragonhood', text:"Set both players' health to the average of your health and your opponent's. You skip your next round.", rarity:'legendary', emoji:'🐲', type:'normal', art:'art/dragonhood.png'},
   {id:'seven_symphonies', collectible:true, name:'7 Symphonies of Java', text:'Quest: hold exactly 7 cards in your hand at the end of 7 rounds (cumulative). Reward: shuffle the 7 Symphonies into both decks — you become the Pianist, your opponent the Listener.', rarity:'legendary', emoji:'🎼', type:'quest', quest:'seven_symphonies', art:'art/seven_symphonies.png'},
   {id:'symphony_1', name:'1st Symphony of Java', text:'When drawn: the Pianist steals 4 non-legendary cards from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_1.png'},
   {id:'symphony_2', name:'2nd Symphony of Java', text:'When drawn: the Pianist heals 25 health.', rarity:'legendary', emoji:'🎹', noDeck:true, heals:true, type:'normal', art:'art/symphony_2.png'},
@@ -2025,7 +2039,7 @@ function autoTrimHand(state, r){
     if((state[r].hand||[]).length>=before) break;   // safety: nothing removed
   }
 }
-function selectLimit(state, r){ return Math.max(0, foldValue(state, r, 'selectLimitMod', 2)); }
+function selectLimit(state, r){ if(state[r] && state[r].skipRound) return 0; return Math.max(0, foldValue(state, r, 'selectLimitMod', 2)); }
 function drawCount(state, r){
   if(state[r].hindered || state[r].noDraw) return 0;   // Hindered overrides draw modifiers — always 0 (design)
   return Math.max(0, foldValue(state, r, 'drawMod', 2 + (state[r].extraDraw||0)));
@@ -2923,6 +2937,55 @@ const CARD_LOGIC = {
     if(met===5) dmg*=2;
     c.dealDmgTo(o, dmg);
     c.log(c.state[me].name+' plays The 5 Annoying Siblings — '+met+'/5 met'+(met===5?' (ALL → doubled)':'')+' → '+dmg+' damage.','damage');
+  } },
+  // Tall Kroog — Heal 10, or 20 if the opponent drew an extra card last round (drewExtraLastRound,
+  // carried in the draw loop the round before this one resolves).
+  tall_kroog: { onPlay:(c)=>{
+    const extra = !!c.state[c.opp].drewExtraLastRound;
+    c.heal(extra ? 20 : 10);
+    c.log(c.state[c.self].name+' plays Tall Kroog — '+(extra ? c.state[c.opp].name+' drew an extra card last round → Heal 20' : 'Heal 10')+'.','heal');
+  } },
+  // Kaakan — each player takes 5 damage for every card in their OWN hand (normal, blockable).
+  // Dealt directly with attacker = the caster so the damage is credited correctly.
+  kaakan: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const oppDmg = 5 * (st[o].hand||[]).length;
+    const myDmg  = 5 * (st[me].hand||[]).length;
+    c.log(c.state[me].name+' plays Kaakan — 5 per card in hand: '+st[o].name+' takes '+oppDmg+', '+st[me].name+' takes '+myDmg+'.','damage');
+    if(oppDmg>0) dealDmg(st, o, oppDmg, false, me);
+    if(myDmg>0)  dealDmg(st, me, myDmg, false, me);
+  } },
+  // Geor the Mountain God — resolves at round end (when this round's damage is known). If the
+  // opponent dealt more than 10 damage to you this round, deal 25 to them instead of the 10
+  // self-damage. All damage here is normal (blockable).
+  geor_the_mountain_god: {
+    onPlay:(c)=>{
+      c.addEffect({id:'geor_the_mountain_god'});
+      c.log(c.state[c.self].name+' plays Geor the Mountain God — the mountain will judge at round end.','effect');
+    },
+    onRoundEnd:(c)=>{
+      const st=c.state, me=c.self, o=c.opp;
+      st[me].effects=(st[me].effects||[]).filter(e=>e.id!=='geor_the_mountain_god');   // one-shot
+      const oppDmg = st[o].dmgDealtThisRound||0;
+      if(oppDmg > 10){
+        c.dealDmgTo(o, 25);
+        c.log('  ⛰️ Geor the Mountain God — '+st[o].name+' dealt '+oppDmg+' (>10) → 25 damage to '+st[o].name+' instead!','damage');
+      } else {
+        dealDmg(st, me, 10, false, me);
+        c.log('  ⛰️ Geor the Mountain God — '+st[me].name+' takes 10 self-damage.','damage');
+      }
+    }
+  },
+  // Dragonhood — set both players' HP to the average (rounded) of the two current values, then the
+  // caster skips their next round (selectLimit 0 that round; they still draw). Setting HP directly
+  // can revive a near-dead opponent up to the midpoint — that's the gamble.
+  dragonhood: { onPlay:(c)=>{
+    const st=c.state, me=c.self, o=c.opp;
+    const avg = Math.round(((st[me].hp||0) + (st[o].hp||0)) / 2);
+    st[me].hp = Math.min(st[me].maxHp||avg, avg);
+    st[o].hp  = Math.min(st[o].maxHp||avg, avg);
+    st[me].skipRound = true;   // active for the caster's NEXT select phase, cleared next resolve
+    c.log(c.state[me].name+' plays Dragonhood — both players set to '+avg+' HP; '+st[me].name+' skips next round.','effect');
   } },
   // 1st Symphony of Java — a Symphony token (shuffled into both decks by the 7 Symphonies reward).
   // When ANYONE draws it, the Pianist steals up to 4 non-legendary cards from the Listener's hand
@@ -5772,6 +5835,7 @@ function resolveRound(gs){
   // FIRST — Hangover Hex needs it, and the tracker is wiped before any card resolves.
   ['p1','p2'].forEach(r=>{
     state[r].blocked=false;
+    state[r].skipRound=false;   // Dragonhood: the skipped round's select phase already used this
     state[r].dmgDealtLastRound=state[r].dmgDealtThisRound||0;
     state[r].dmgDealtThisRound=0;
     state[r].shuffledInLastRound=state[r].shuffledInThisRound||0;   // Time and Space reads this
@@ -5968,6 +6032,7 @@ function resolveRound(gs){
     drawCards(state,r,n,n<=0);
     const drawn=(state[r].hand||[]).slice(before);   // the cards newly drawn this round
     state[r].drewThisRound=(drawn.length>0);
+    state[r].drewExtraLastRound=state[r].drewExtraThisRound;   // carry the previous draw first (Tall Kroog reads last round)
     state[r].drewExtraThisRound=((state[r].extraDraw||0)>0);   // A Sweet Life reads this at the next round-end
     if(state.curseDrawsNext) drawn.forEach(dc=>curseCard(state, dc));   // Bad Landing — Curse everything drawn for next round (both players)
     // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
