@@ -573,6 +573,27 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .arena-lbl.top { top:0.4rem; left:1rem; }
 .arena-lbl.bot { bottom:0.4rem; left:1rem; }
 .card { width:80px; height:116px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); display:flex; flex-direction:column; cursor:pointer; transition:transform 0.15s,border-color 0.15s,box-shadow 0.15s; position:relative; overflow:hidden; user-select:none; flex-shrink:0; }
+/* ── Play history panel (left edge, vertically centred, slides out, scrollable, real cards) ── */
+.history-toggle { position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:61; width:34px; height:58px; border:1px solid var(--border2); border-left:none; border-radius:0 10px 10px 0; background:rgba(8,22,30,0.94); color:var(--text2); font-size:1.15rem; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:2px 0 12px rgba(0,0,0,0.45); transition:background 0.15s,color 0.15s; }
+.history-toggle:hover { background:rgba(14,34,44,0.98); color:var(--green); }
+.history-panel { position:fixed; left:0; top:50%; transform:translate(-104%,-50%); z-index:60; width:252px; max-height:74vh; display:flex; flex-direction:column; background:rgba(6,18,26,0.97); border:1px solid var(--border2); border-left:none; border-radius:0 12px 12px 0; box-shadow:5px 0 30px rgba(0,0,0,0.6); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+.history-panel.open { transform:translate(0,-50%); }
+.history-head { padding:0.6rem 0.85rem; font-family:'Playfair Display',serif; font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--green); border-bottom:1px solid var(--border); flex-shrink:0; }
+.history-scroll { overflow-y:auto; overflow-x:hidden; padding:0.5rem 0.6rem; display:flex; flex-direction:column; gap:0.55rem; }
+.history-round { border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.5rem; }
+.history-round:last-child { border-bottom:none; }
+.history-rlabel { font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); margin-bottom:0.3rem; }
+.history-side { display:flex; align-items:flex-start; gap:0.35rem; margin-bottom:0.25rem; }
+.history-side-lbl { font-size:0.56rem; width:32px; flex-shrink:0; padding-top:0.4rem; text-transform:uppercase; letter-spacing:0.05em; }
+.history-side.opp .history-side-lbl { color:var(--red2); }
+.history-side.you .history-side-lbl { color:var(--green2); }
+.history-cards { display:flex; flex-wrap:wrap; gap:0.25rem; min-height:12px; }
+.history-panel .card { width:46px; height:67px; cursor:help; }
+.history-panel .card:hover { transform:none; border-color:var(--gold); box-shadow:0 0 10px rgba(212,175,55,0.4); }
+.history-empty { font-size:0.6rem; color:var(--text3); font-style:italic; padding-top:0.3rem; }
+.history-preview { position:fixed; left:266px; top:50%; transform:translateY(-50%); z-index:100; pointer-events:none; display:none; }
+.history-preview.show { display:block; }
+.history-preview .card { width:190px; height:276px; box-shadow:0 10px 40px rgba(0,0,0,0.75); }
 .card:hover { transform:translateY(-6px); border-color:var(--green); box-shadow:0 0 18px rgba(126,200,50,0.3); z-index:10; }
 /* ── Framed cards: illustration + rarity frame + name/text drawn on top ──
    One system for every card. Zone positions are percentages so it scales at any size.
@@ -1318,6 +1339,12 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 
 <!-- GAME -->
 <div id="screen-game" class="hidden">
+  <button id="history-toggle" class="history-toggle" aria-label="Play history" title="Play history">📜</button>
+  <div id="history-panel" class="history-panel" aria-hidden="true">
+    <div class="history-head">Play history</div>
+    <div class="history-scroll" id="history-scroll"></div>
+  </div>
+  <div id="history-preview" class="history-preview" aria-hidden="true"></div>
   <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
   <div class="game-header">
     <div class="gh-title">Inspired</div>
@@ -1538,7 +1565,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T19:12:11';
+const APP_VERSION = '2026-07-16T20:04:14';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1827,6 +1854,8 @@ const CARDS_DATA = [
   {id:'punching_betrayal', collectible:true, name:'Punching Betrayal', text:'Curse your entire hand. Deal 5 damage for each card cursed.', rarity:'common', emoji:'👊', dealsDamage:true, dmg:5, type:'normal', art:'art/punching_betrayal.png'},
   {id:'tinker_leaf', collectible:true, name:'Tinker Leaf', text:"Your opponent reveals 4 random cards from their deck. Choose 1 to get a copy of.", rarity:'common', emoji:'🍃', type:'normal', art:'art/tinker_leaf.png'},
   {id:'inner_focus', collectible:true, name:'Inner Focus', text:'Blessing: Heal 5 after each round your opponent dealt damage to you. Your other healing cards heal 5 less.', rarity:'common', emoji:'🧘', type:'blessing', art:'art/inner_focus.png'},
+  {id:'big_red_dwarf', collectible:true, name:'The Big Red Dwarf', text:"If you dealt no damage last round, this round and next round: deal 40 damage at the end of next round.", rarity:'common', emoji:'🔴', dealsDamage:true, dmg:40, type:'normal', art:'art/big_red_dwarf.png'},
+  {id:'galactic_horror', collectible:true, name:'Galactic Horror', text:"While holding: block the first healing card your opponent plays and shuffle it into YOUR deck.", rarity:'common', emoji:'🌌', type:'normal', art:'art/galactic_horror.png'},
   {id:'seven_symphonies', collectible:true, name:'7 Symphonies of Java', text:'Quest: hold exactly 7 cards in your hand at the end of 7 rounds (cumulative). Reward: shuffle the 7 Symphonies into both decks — you become the Pianist, your opponent the Listener.', rarity:'legendary', emoji:'🎼', type:'quest', quest:'seven_symphonies', art:'art/seven_symphonies.png'},
   {id:'symphony_1', name:'1st Symphony of Java', text:'When drawn: the Pianist steals 4 non-legendary cards from the Listener.', rarity:'legendary', emoji:'🎹', noDeck:true, type:'normal', art:'art/symphony_1.png'},
   {id:'symphony_2', name:'2nd Symphony of Java', text:'When drawn: the Pianist heals 25 health.', rarity:'legendary', emoji:'🎹', noDeck:true, heals:true, type:'normal', art:'art/symphony_2.png'},
@@ -3085,6 +3114,38 @@ const CARD_LOGIC = {
       c.log('  🧘 '+st[me].name+"'s Inner Focus — you took damage this round, Heal 5.",'heal');
     }
   } },
+  // The Big Red Dwarf — a pacifist payoff. If you dealt no damage LAST round (checked on play),
+  // and then deal no damage THIS round and NEXT round, deal 40 at the end of next round. Any
+  // damage you deal in the window collapses it. Installs a two-beat effect (this round, next round).
+  big_red_dwarf: {
+    onPlay:(c)=>{
+      if((c.state[c.self].dmgDealtLastRound||0) > 0){
+        c.log(c.state[c.self].name+' plays The Big Red Dwarf — but you dealt damage last round, so it fizzles.','system');
+        return;
+      }
+      c.addEffect({id:'big_red_dwarf', playedRound:(c.state.round||1)});
+      c.log(c.state[c.self].name+' plays The Big Red Dwarf — deal no damage this and next round to erupt for 40.','effect');
+    },
+    onRoundEnd:(c)=>{
+      const e=c.effState, st=c.state, r=c.self, round=(st.round||1);
+      if(!e || e.done) return;
+      if((st[r].dmgDealtThisRound||0) > 0){   // you dealt damage in the window → collapse
+        e.done=true; st[r].effects=(st[r].effects||[]).filter(x=>x!==e);
+        c.log('  🔴 The Big Red Dwarf collapses — '+st[r].name+' dealt damage.','system');
+        return;
+      }
+      if(round > e.playedRound){   // survived this round AND next round clean → erupt
+        c.dealDmgTo(c.opp, 40);
+        e.done=true; st[r].effects=(st[r].effects||[]).filter(x=>x!==e);
+        c.log('  🔴 The Big Red Dwarf erupts — '+st[r].name+' deals 40 damage!','damage');
+      }
+      // else: end of the played round, clean so far → keep waiting for next round
+    }
+  },
+  // Galactic Horror — a while-holding trap. The actual block+steal is handled in runCard (it needs
+  // the opponent's played card, which the hold hooks don't provide); this empty hold marks it as a
+  // "while holding" card for recognition.
+  galactic_horror: { hold: {} },
   // 1st Symphony of Java — a Symphony token (shuffled into both decks by the 7 Symphonies reward).
   // When ANYONE draws it, the Pianist steals up to 4 non-legendary cards from the Listener's hand
   // (Immune skipped, hand limit respected, owner=Listener so it feeds the Pianist's Constellation).
@@ -5105,6 +5166,47 @@ function renderBoard(){
   renderBlessing('opp-blessing',th);
   renderHand(my.hand||[]);
   renderArena();
+  wireHistory();
+  const _hp=document.getElementById('history-panel');
+  if(_hp && _hp.classList.contains('open')) renderHistory();
+}
+
+// ── Play history panel (Hearthstone-style) ──
+function wireHistory(){
+  const btn=document.getElementById('history-toggle');
+  if(!btn || btn._wired) return;
+  btn._wired=true;
+  btn.addEventListener('click',()=>{
+    const panel=document.getElementById('history-panel');
+    const open=panel.classList.toggle('open');
+    if(open) renderHistory(); else hideHistPreview();
+  });
+}
+function showHistPreview(def){ const p=document.getElementById('history-preview'); if(!p) return; p.innerHTML=''; p.appendChild(makeCardEl(def)); p.classList.add('show'); }
+function hideHistPreview(){ const p=document.getElementById('history-preview'); if(p) p.classList.remove('show'); }
+function renderHistory(){
+  const scroll=document.getElementById('history-scroll');
+  if(!scroll) return;
+  const hist=(localGs && localGs.playHistory) || [];
+  scroll.innerHTML='';
+  if(!hist.length){ scroll.innerHTML='<div class="history-empty">No cards played yet.</div>'; return; }
+  const mine = myRole==='p2' ? 'p2' : 'p1';
+  const theirs = mine==='p1' ? 'p2' : 'p1';
+  [...hist].reverse().forEach(entry=>{               // newest round first
+    const round=document.createElement('div'); round.className='history-round';
+    const lbl=document.createElement('div'); lbl.className='history-rlabel'; lbl.textContent='Round '+entry.round;
+    round.appendChild(lbl);
+    [['opp',theirs,'Opp'],['you',mine,'You']].forEach(([cls,key,label])=>{
+      const ids=entry[key]||[];
+      const side=document.createElement('div'); side.className='history-side '+cls;
+      const sl=document.createElement('div'); sl.className='history-side-lbl'; sl.textContent=label; side.appendChild(sl);
+      const cards=document.createElement('div'); cards.className='history-cards';
+      if(!ids.length){ const e=document.createElement('span'); e.className='history-empty'; e.textContent='—'; cards.appendChild(e); }
+      else ids.forEach(id=>{ const def=CARDS_DATA.find(x=>x.id===id); if(def){ const el=makeCardEl(def); el.classList.add('history-card'); el.addEventListener('mouseenter',()=>showHistPreview(def)); el.addEventListener('mouseleave',hideHistPreview); cards.appendChild(el); } });
+      side.appendChild(cards); round.appendChild(side);
+    });
+    scroll.appendChild(round);
+  });
 }
 
 function renderTags(id,p){
@@ -5978,6 +6080,9 @@ function resolveRound(gs){
   state.p2.playedLastRound=state.p2.lastPlayed||[];
   state.p1.lastPlayed=[...p1c];
   state.p2.lastPlayed=[...p2c];
+  // Play history (for the Hearthstone-style history panel): record each round's plays by id.
+  { const h1=p1c.filter(Boolean).map(c=>c.id), h2=p2c.filter(Boolean).map(c=>c.id);
+    if(h1.length || h2.length) state.playHistory=[...(state.playHistory||[]), {round:(state.round||1), p1:h1, p2:h2}]; }
 
   // BLOCK-FIRST: any played card flagged block:true raises the shield before any
   // damage resolves. Data-driven now (card.block) — no hardcoded id list.
@@ -6018,6 +6123,22 @@ function resolveRound(gs){
     if(blocked){
       log(state[r].name+' cannot play '+c.name+' — '+blocked,'system');
       return;
+    }
+    // Galactic Horror — while the OPPONENT holds it, the first healing card you play is blocked
+    // (it never resolves, so no heal) and shuffled into their deck instead of your graveyard.
+    // owner stays with you (sacred deck-origin rule), so it feeds their Constellation.
+    if(c.heals){
+      const holderR=opp(r);
+      const gh=(state[holderR].hand||[]).find(x=>x && x.id==='galactic_horror');
+      if(gh){
+        state[holderR].hand=(state[holderR].hand||[]).filter(x=>x!==gh);
+        state[holderR].graveyard=[gh,...(state[holderR].graveyard||[])];   // the trap is spent
+        c.owner=r;
+        (state[holderR].deck||(state[holderR].deck=[])).push(c);
+        shuffleDeck(state, holderR);
+        log('  🌌 Galactic Horror — '+state[holderR].name+' blocks '+c.name+' and shuffles it into their deck!','effect');
+        return;
+      }
     }
     // Register what has been played this game (Krush needs Baby Krush, King needs Krush, …).
     if(!(state[r].playedIds||[]).includes(c.id)) state[r].playedIds=[...(state[r].playedIds||[]), c.id];
