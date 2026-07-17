@@ -616,7 +616,13 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .portal-burst { position:fixed; width:70px; height:70px; border-radius:50%; z-index:199; pointer-events:none; background:radial-gradient(circle, rgba(210,255,130,0.95), rgba(120,240,60,0.45) 40%, transparent 70%); transform:translate(-50%,-50%) scale(0.3); animation:burstPop 0.42s ease-out forwards; }
 @keyframes burstPop { 0% { transform:translate(-50%,-50%) scale(0.3); opacity:0.95; } 100% { transform:translate(-50%,-50%) scale(1.7); opacity:0; } }
 .fly-card { position:fixed; z-index:200; pointer-events:none; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.6), 0 0 22px rgba(120,240,50,0.55); will-change:transform,left,top,opacity; }
-.triggered-card { position:fixed; z-index:210; pointer-events:none; border-radius:8px; box-shadow:0 14px 55px rgba(0,0,0,0.75), 0 0 46px rgba(120,240,50,0.6); will-change:transform,left,top,opacity; }
+.triggered-card { position:fixed; z-index:210; pointer-events:none; will-change:transform,left,top,opacity; }
+.triggered-card.pv-card:not(.framed) { width:275px; height:400px; box-shadow:0 16px 55px rgba(0,0,0,0.85), 0 0 50px rgba(120,240,50,0.55); border-width:2px; border-radius:12px; }
+.triggered-card.pv-card:not(.framed) .card-art { font-size:5.3rem; height:160px; }
+.triggered-card.pv-card:not(.framed) .card-name { font-size:1.45rem; }
+.triggered-card.pv-card:not(.framed) .card-text { font-size:1.05rem; }
+.triggered-card.pv-card.framed { height:400px; filter:drop-shadow(0 0 40px rgba(120,240,50,0.5)); }
+.triggered-card.pv-card.legendary:not(.framed) { border-color:var(--gold); }
 .card:hover { transform:translateY(-6px); border-color:var(--green); box-shadow:0 0 18px rgba(126,200,50,0.3); z-index:10; }
 /* ── Framed cards: illustration + rarity frame + name/text drawn on top ──
    One system for every card. Zone positions are percentages so it scales at any size.
@@ -1589,7 +1595,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T10:52:56';
+const APP_VERSION = '2026-07-17T11:09:26';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5199,7 +5205,7 @@ function renderBoard(){
 
 // ── Draw portal animation: the portal pops in, cards fly out into the hand, then it pops out ──
 let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null, _animatingUids=new Set(), _triggeredAnimated=new Set();
-function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; _animatingUids.clear(); _triggeredAnimated.clear(); const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
+function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; _animatingUids.clear(); _triggeredAnimated.clear(); _triggerQueue.length=0; _triggerBusy=false; const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
 function openPortal(){ const p=document.getElementById('draw-portal'); if(!p) return; p.classList.remove('flash'); void p.offsetWidth; p.classList.add('open'); if(_portalTimer){ clearTimeout(_portalTimer); _portalTimer=null; } if(_flashTimer){ clearTimeout(_flashTimer); _flashTimer=null; } }
 function flashPortalAfter(delay){
   const p=document.getElementById('draw-portal'); if(!p) return;
@@ -5257,31 +5263,43 @@ function flyOppBack(idx){
     const b2=document.querySelectorAll('#opp-hand .card-back-sm'); if(b2[idx]) b2[idx].style.visibility='';
   });
 }
-// "When drawn" cards: burst out of the portal to the CENTRE, show large ~1s, then fly to the graveyard.
-function flyTriggeredCard(entry){
+// "When drawn" cards show ONE AT A TIME (queued): burst from the portal to the CENTRE, big and crisp
+// (rendered at hover-preview size, not a scaled thumbnail), held ~1s, then flown to the graveyard.
+let _triggerQueue=[], _triggerBusy=false;
+function processTriggerQueue(){
+  if(_triggerBusy) return;
+  if(!_triggerQueue.length){ flashPortalAfter(150); return; }   // queue drained → close the portal
+  _triggerBusy=true;
+  openPortal();                                                  // keep the portal open while cards emerge
+  const entry=_triggerQueue.shift();
+  const fast=_triggerQueue.length>=2;                            // long cascade → shorter hold
+  flyTriggeredCard(entry, fast, ()=>{ _triggerBusy=false; processTriggerQueue(); });
+}
+function flyTriggeredCard(entry, fast, done){
   const def=CARDS_DATA.find(x=>x.id===entry.id); const pc=portalCenter();
-  if(!def || !pc) return;
-  const card=makeCardEl(def); card.classList.add('triggered-card'); card.removeAttribute('id');
-  card.style.position='fixed'; card.style.margin='0';
+  if(!def || !pc){ if(done) done(); return; }
+  const card=makeCardEl(def); card.classList.add('pv-card','triggered-card'); card.removeAttribute('id');
+  card.style.position='fixed'; card.style.margin='0'; card.style.transformOrigin='center center';
   card.style.left=pc.cx+'px'; card.style.top=pc.cy+'px';
-  card.style.transform='translate(-50%,-50%) scale(0) rotate(-120deg)'; card.style.opacity='0';
+  card.style.transform='translate(-50%,-50%) scale(0.05) rotate(-90deg)'; card.style.opacity='0';
   document.body.appendChild(card);
   spawnBurst(pc.cx, pc.cy);
-  const scx=window.innerWidth/2, scy=window.innerHeight*0.42;
-  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{   // emerge to centre, big
-    card.style.transition='left 0.55s cubic-bezier(0.2,0.9,0.3,1), top 0.55s cubic-bezier(0.2,0.9,0.3,1), transform 0.55s cubic-bezier(0.2,0.9,0.3,1), opacity 0.25s ease';
+  const scx=window.innerWidth/2, scy=window.innerHeight*0.44;
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{        // emerge to centre at native (crisp) size
+    card.style.transition='left 0.45s cubic-bezier(0.2,0.9,0.3,1), top 0.45s cubic-bezier(0.2,0.9,0.3,1), transform 0.45s cubic-bezier(0.2,0.9,0.3,1), opacity 0.22s ease';
     card.style.left=scx+'px'; card.style.top=scy+'px';
-    card.style.transform='translate(-50%,-50%) scale(2.6) rotate(0deg)'; card.style.opacity='1';
+    card.style.transform='translate(-50%,-50%) scale(1) rotate(0deg)'; card.style.opacity='1';
   }); });
-  setTimeout(()=>{                                          // ~1s hold, then to the graveyard
+  const hold=fast?600:950;
+  setTimeout(()=>{                                               // hold, then fly to the graveyard
     let gx, gy;
     if(entry.r===myRole){ const g=document.getElementById('btn-grave'); if(g){ const gr=g.getBoundingClientRect(); gx=gr.left+gr.width/2; gy=gr.top+gr.height/2; } else { gx=window.innerWidth-40; gy=window.innerHeight-40; } }
-    else { gx=window.innerWidth/2; gy=-70; }                // opponent's: exit toward the top
-    card.style.transition='left 0.55s ease-in, top 0.55s ease-in, transform 0.55s ease-in, opacity 0.55s ease-in';
+    else { gx=window.innerWidth/2; gy=-90; }                     // opponent's: exit toward the top
+    card.style.transition='left 0.45s ease-in, top 0.45s ease-in, transform 0.45s ease-in, opacity 0.45s ease-in';
     card.style.left=gx+'px'; card.style.top=gy+'px';
-    card.style.transform='translate(-50%,-50%) scale(0.35) rotate(15deg)'; card.style.opacity='0';
-  }, 1550);
-  setTimeout(()=>card.remove(), 2200);
+    card.style.transform='translate(-50%,-50%) scale(0.18) rotate(15deg)'; card.style.opacity='0';
+  }, 450+hold);
+  setTimeout(()=>{ card.remove(); if(done) done(); }, 450+hold+470);
 }
 function animateDraws(){
   if(!localGs || !localGs.p1 || !localGs.p2) return;
@@ -5299,14 +5317,18 @@ function animateDraws(){
   const newOpp=[]; if(oppCount > _prevOppCount){ for(let i=_prevOppCount; i<oppCount; i++) newOpp.push(i); }
   const newTriggered=[];
   ((localGs.drawTriggered)||[]).forEach(e=>{ if(e && !_triggeredAnimated.has(e.uid)){ _triggeredAnimated.add(e.uid); newTriggered.push(e); } });
-  const total=newYours.length+newOpp.length+newTriggered.length;
-  if(total>0){
+  const normalTotal=newYours.length+newOpp.length;
+  if(normalTotal>0 || newTriggered.length>0){
     openPortal();
     let k=0;
     newYours.forEach(uid=>{ const d=360+(k++)*150; setTimeout(()=>flyYourCard(uid), d); });
     newOpp.forEach(idx=>{ const d=360+(k++)*150; setTimeout(()=>flyOppBack(idx), d); });
-    newTriggered.forEach(e=>{ const d=360+(k++)*150; setTimeout(()=>flyTriggeredCard(e), d); });
-    flashPortalAfter(360 + (total-1)*150 + 800);   // portal flashes out once all cards have emerged
+    if(newTriggered.length){
+      newTriggered.forEach(e=> _triggerQueue.push(e));           // shown one-at-a-time in the centre
+      setTimeout(processTriggerQueue, 360 + normalTotal*60);     // the queue manages the portal + flash
+    } else {
+      flashPortalAfter(360 + (normalTotal-1)*150 + 800);         // no triggers → flash after the normal cards
+    }
   }
   _prevHandUids=new Set(curUids); _prevOppCount=oppCount;
 }
