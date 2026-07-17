@@ -1597,7 +1597,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T11:50:10';
+const APP_VERSION = '2026-07-17T12:15:11';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -6656,7 +6656,7 @@ document.getElementById('btn-grave').onclick=()=>{
   grid.innerHTML='';
   const g=asArr(localGs?.[myRole]?.graveyard);
   if(!g.length) grid.innerHTML='<p style="color:var(--text3);font-style:italic;grid-column:1/-1;text-align:center">No cards yet.</p>';
-  else g.forEach(c=>{const el=makeCardEl(c);el.style.cursor='default';grid.appendChild(el);});
+  else g.forEach(c=>{const el=makeCardEl(c);el.style.cursor='help';el.addEventListener('mouseenter',()=>showCardPreview(c, el, 'over'));el.addEventListener('mouseleave',hideCardPreview);grid.appendChild(el);});
   document.getElementById('ov-grave').classList.remove('hidden');
 };
 
