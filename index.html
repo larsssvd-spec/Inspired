@@ -623,6 +623,8 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .triggered-card.pv-card:not(.framed) .card-text { font-size:1.05rem; }
 .triggered-card.pv-card.framed { height:400px; filter:drop-shadow(0 0 40px rgba(120,240,50,0.5)); }
 .triggered-card.pv-card.legendary:not(.framed) { border-color:var(--gold); }
+#btn-grave.grave-pulse { animation:gravePulse 0.5s ease-out; }
+@keyframes gravePulse { 0% { transform:scale(1); box-shadow:0 0 0 rgba(120,240,50,0); } 40% { transform:scale(1.28); box-shadow:0 0 18px 4px rgba(120,240,50,0.7); } 100% { transform:scale(1); box-shadow:0 0 0 rgba(120,240,50,0); } }
 .card:hover { transform:translateY(-6px); border-color:var(--green); box-shadow:0 0 18px rgba(126,200,50,0.3); z-index:10; }
 /* ── Framed cards: illustration + rarity frame + name/text drawn on top ──
    One system for every card. Zone positions are percentages so it scales at any size.
@@ -1595,7 +1597,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T11:09:26';
+const APP_VERSION = '2026-07-17T11:36:03';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -3674,6 +3676,7 @@ const TIMER=60;
 function opp(r){return r==='p1'?'p2':'p1';}
 function me(){return localGs[myRole];}
 function them(){return localGs[opp(myRole)];}
+function asArr(x){ return Array.isArray(x) ? x : (x && typeof x==='object' ? Object.values(x) : []); }   // Firebase can return arrays as objects
 
 function mkCard(c){
   // Copy every DEFINED data field from the card definition (id, name, text, rarity, emoji,
@@ -5181,7 +5184,7 @@ function renderBoard(){
   document.getElementById('opp-maxhp').textContent=th.maxHp;
   document.getElementById('opp-hp-bar').style.width=Math.max(0,th.hp/th.maxHp*100)+'%';
   document.getElementById('deck-count').textContent=(my.deck||[]).length;
-  document.getElementById('grave-count').textContent=(my.graveyard||[]).length;
+  document.getElementById('grave-count').textContent=asArr(my.graveyard).length;
   document.getElementById('hdr-round').textContent=localGs.round||1;
   document.getElementById('hdr-phase').textContent=localGs.phase==='select'?'Choose cards':localGs.phase==='resolve'?'Resolving…':localGs.phase;
   // Opp hand
@@ -5292,14 +5295,15 @@ function flyTriggeredCard(entry, fast, done){
   }); });
   const hold=fast?600:950;
   setTimeout(()=>{                                               // hold, then fly to the graveyard
-    let gx, gy;
-    if(entry.r===myRole){ const g=document.getElementById('btn-grave'); if(g){ const gr=g.getBoundingClientRect(); gx=gr.left+gr.width/2; gy=gr.top+gr.height/2; } else { gx=window.innerWidth-40; gy=window.innerHeight-40; } }
+    let gx, gy, pulseGrave=false;
+    if(entry.r===myRole){ const g=document.getElementById('btn-grave'); if(g){ const gr=g.getBoundingClientRect(); gx=gr.left+gr.width/2; gy=gr.top+gr.height/2; pulseGrave=true; } else { gx=window.innerWidth-40; gy=window.innerHeight-40; } }
     else { gx=window.innerWidth/2; gy=-90; }                     // opponent's: exit toward the top
-    card.style.transition='left 0.45s ease-in, top 0.45s ease-in, transform 0.45s ease-in, opacity 0.45s ease-in';
+    card.style.transition='left 0.5s cubic-bezier(0.5,0,0.75,0), top 0.5s cubic-bezier(0.5,0,0.75,0), transform 0.5s cubic-bezier(0.5,0,0.75,0), opacity 0.18s ease-in 0.34s';
     card.style.left=gx+'px'; card.style.top=gy+'px';
-    card.style.transform='translate(-50%,-50%) scale(0.18) rotate(15deg)'; card.style.opacity='0';
+    card.style.transform='translate(-50%,-50%) scale(0.12) rotate(15deg)'; card.style.opacity='0';
+    if(pulseGrave) setTimeout(()=>{ const g=document.getElementById('btn-grave'); if(g){ g.classList.remove('grave-pulse'); void g.offsetWidth; g.classList.add('grave-pulse'); setTimeout(()=>g.classList.remove('grave-pulse'), 520); } }, 470);  // pile bumps as the card lands
   }, 450+hold);
-  setTimeout(()=>{ card.remove(); if(done) done(); }, 450+hold+470);
+  setTimeout(()=>{ card.remove(); if(done) done(); }, 450+hold+560);
 }
 function animateDraws(){
   if(!localGs || !localGs.p1 || !localGs.p2) return;
@@ -6491,7 +6495,7 @@ function resolveRound(gs){
     localGs=state;
     showResult(state,oldGs);
   } else {
-    update(gRef,{p1:state.p1,p2:state.p2,round:state.round,phase:'result'}).then(()=>{
+    update(gRef,{p1:state.p1,p2:state.p2,round:state.round,phase:'result',drawTriggered:state.drawTriggered||[]}).then(()=>{
       showResult(state,gs);
     });
   }
@@ -6647,7 +6651,7 @@ function showGameOver(iWon){
 document.getElementById('btn-grave').onclick=()=>{
   const grid=document.getElementById('grave-grid');
   grid.innerHTML='';
-  const g=(localGs?.[myRole]?.graveyard)||[];
+  const g=asArr(localGs?.[myRole]?.graveyard);
   if(!g.length) grid.innerHTML='<p style="color:var(--text3);font-style:italic;grid-column:1/-1;text-align:center">No cards yet.</p>';
   else g.forEach(c=>{const el=makeCardEl(c);el.style.cursor='default';grid.appendChild(el);});
   document.getElementById('ov-grave').classList.remove('hidden');
