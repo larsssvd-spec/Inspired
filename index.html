@@ -594,6 +594,16 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .history-preview { position:fixed; left:266px; top:50%; transform:translateY(-50%); z-index:100; pointer-events:none; display:none; }
 .history-preview.show { display:block; }
 .history-preview .card { width:190px; height:276px; box-shadow:0 10px 40px rgba(0,0,0,0.75); }
+/* ── Draw portal (right, vertically centred) + flying-card animation ── */
+#draw-portal { position:fixed; right:6px; top:50%; transform:translateY(-50%); width:70px; height:70px; z-index:40; pointer-events:none; }
+.portal-glow { position:absolute; inset:-18px; border-radius:50%; background:radial-gradient(circle, rgba(240,160,40,0.35) 0%, rgba(200,80,20,0.12) 45%, transparent 70%); animation:portalGlow 3s ease-in-out infinite; }
+.portal-core { position:absolute; inset:11px; border-radius:50%; background:radial-gradient(circle at 50% 42%, #ffe89a 0%, #f5a828 26%, #d0500f 58%, #5a1604 100%); box-shadow:0 0 22px 5px rgba(240,160,40,0.55), inset 0 0 16px rgba(70,16,0,0.75); animation:portalPulse 2.6s ease-in-out infinite; }
+.portal-swirl { position:absolute; inset:7px; border-radius:50%; background:conic-gradient(from 0deg, transparent, rgba(255,220,140,0.55), transparent 40%, rgba(255,180,80,0.4), transparent 75%); animation:portalSpin 4.5s linear infinite; opacity:0.8; }
+.portal-ring { position:absolute; inset:0; border-radius:50%; border:3px solid rgba(212,168,50,0.75); box-shadow:0 0 0 2px rgba(60,40,10,0.8), 0 0 14px rgba(212,168,50,0.5), inset 0 0 10px rgba(0,0,0,0.6); }
+@keyframes portalPulse { 0%,100% { transform:scale(1); filter:brightness(1); } 50% { transform:scale(1.06); filter:brightness(1.18); } }
+@keyframes portalGlow { 0%,100% { opacity:0.7; } 50% { opacity:1; } }
+@keyframes portalSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.fly-card { position:fixed; z-index:200; pointer-events:none; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.6), 0 0 18px rgba(240,160,40,0.4); will-change:transform,left,top,opacity; }
 .card:hover { transform:translateY(-6px); border-color:var(--green); box-shadow:0 0 18px rgba(126,200,50,0.3); z-index:10; }
 /* ── Framed cards: illustration + rarity frame + name/text drawn on top ──
    One system for every card. Zone positions are percentages so it scales at any size.
@@ -1339,6 +1349,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 
 <!-- GAME -->
 <div id="screen-game" class="hidden">
+  <div id="draw-portal" aria-hidden="true"><div class="portal-swirl"></div><div class="portal-core"></div><div class="portal-ring"></div><div class="portal-glow"></div></div>
   <button id="history-toggle" class="history-toggle" aria-label="Play history" title="Play history">📜</button>
   <div id="history-panel" class="history-panel" aria-hidden="true">
     <div class="history-head">Play history</div>
@@ -1565,7 +1576,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-16T20:04:14';
+const APP_VERSION = '2026-07-17T09:19:01';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5134,6 +5145,7 @@ function showGameScreen(){
   gameStarted=true;
   document.getElementById('screen-lobby').classList.add('hidden');
   document.getElementById('screen-game').classList.remove('hidden');
+  resetDrawAnim();
   if(!soloMode) renderBoard();
 }
 
@@ -5169,6 +5181,52 @@ function renderBoard(){
   wireHistory();
   const _hp=document.getElementById('history-panel');
   if(_hp && _hp.classList.contains('open')) renderHistory();
+  animateDraws();
+}
+
+// ── Draw portal animation: cards fly out of the portal into the hand when drawn ──
+let _prevHandUids=null, _prevOppCount=0;
+function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; }
+function flyFromPortal(targetEl, isBack){
+  const portal=document.getElementById('draw-portal');
+  if(!portal || !targetEl || !targetEl.getBoundingClientRect) return;
+  const pr=portal.getBoundingClientRect(), tr=targetEl.getBoundingClientRect();
+  if(tr.width===0) return;                          // not laid out (hidden) → skip
+  const clone=targetEl.cloneNode(true);
+  clone.classList.add('fly-card'); clone.removeAttribute('id');
+  clone.style.position='fixed'; clone.style.margin='0';
+  clone.style.width=tr.width+'px'; clone.style.height=tr.height+'px';
+  clone.style.left=(pr.left+pr.width/2)+'px'; clone.style.top=(pr.top+pr.height/2)+'px';
+  clone.style.transform='translate(-50%,-50%) scale(0.18) rotate(-35deg)'; clone.style.opacity='0';
+  document.body.appendChild(clone);
+  const vis=targetEl.style.visibility; targetEl.style.visibility='hidden';
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+    clone.style.transition='left 0.5s cubic-bezier(0.2,0.85,0.3,1), top 0.5s cubic-bezier(0.2,0.85,0.3,1), transform 0.5s cubic-bezier(0.2,0.85,0.3,1), opacity 0.28s ease';
+    clone.style.left=(tr.left+tr.width/2)+'px'; clone.style.top=(tr.top+tr.height/2)+'px';
+    clone.style.transform='translate(-50%,-50%) scale(1) rotate(0deg)'; clone.style.opacity='1';
+  }); });
+  setTimeout(()=>{ if(targetEl.isConnected) targetEl.style.visibility=vis||''; clone.remove(); }, 540);
+}
+function animateDraws(){
+  if(!localGs || !localGs.p1 || !localGs.p2) return;
+  const my=me(), th=them();
+  const curUids=(my.hand||[]).map(c=>c&&c.uid).filter(Boolean);
+  const oppCount=Math.min((th.hand||[]).length, 8);
+  if(_prevHandUids===null){ _prevHandUids=new Set(curUids); _prevOppCount=oppCount; return; }  // first paint: no animation
+  // your newly-drawn cards fly in from the portal
+  const handArea=document.getElementById('hand');
+  (my.hand||[]).forEach(c=>{
+    if(c && !_prevHandUids.has(c.uid) && !selected.includes(c.uid)){
+      const el=handArea && handArea.querySelector('[data-uid="'+c.uid+'"]');
+      if(el) flyFromPortal(el, false);
+    }
+  });
+  // opponent's newly-drawn cards (backs) fly in when their count grows
+  if(oppCount > _prevOppCount){
+    const backs=document.querySelectorAll('#opp-hand .card-back-sm');
+    for(let i=_prevOppCount; i<oppCount; i++){ if(backs[i]) flyFromPortal(backs[i], true); }
+  }
+  _prevHandUids=new Set(curUids); _prevOppCount=oppCount;
 }
 
 // ── Play history panel (Hearthstone-style) ──
@@ -5291,6 +5349,7 @@ function renderHand(hand){
     if(!c) return;
     if(selected.includes(c.uid)) return;   // selected cards are on the field, not in hand
     const el=makeCardEl(c);
+    el.dataset.uid=c.uid;
     const ft=me().forcedType;
     if(ft && matchesForced(c, ft)) el.classList.add('forced');   // Skywalker: highlight forced cards
     // A card whose play requirement isn't met (Critical Bite above 20 HP) is dimmed with a
