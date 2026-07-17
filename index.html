@@ -1597,7 +1597,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T11:36:03';
+const APP_VERSION = '2026-07-17T11:50:10';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -6510,6 +6510,7 @@ function fireDrawTriggers(state, r, drawn){
   drawn.forEach(dc=>{
     const L=CARD_LOGIC[dc&&dc.id];
     if(L&&L.onDraw){
+      log('🌀 '+state[r].name+' drew '+dc.name+' — its "when drawn" effect triggers.','effect');
       const consumed=L.onDraw(buildCtx(state,r,{card:dc}));
       if(consumed===true){
         const h=state[r].hand||[]; const i=h.indexOf(dc);
@@ -6544,7 +6545,9 @@ function drawCards(state,r,n,skip){
   let drawn=0;
   for(let i=0;i<n;i++){
     if(deck.length===0){log(state[r].name+'\'s deck is empty!','system');break;}
-    if(hand.length>=max){log(state[r].name+'\'s hand is full!','system');deck.shift();continue;}
+    const top=deck[0];
+    const whenDrawn = top && CARD_LOGIC[top.id] && CARD_LOGIC[top.id].onDraw;   // fires + consumes, never occupies a hand slot
+    if(hand.length>=max && !whenDrawn){log(state[r].name+'\'s hand is full!','system');deck.shift();continue;}
     hand.push(deck.shift()); drawn++;
   }
   state[r].deck=deck; state[r].hand=hand;
