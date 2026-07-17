@@ -1588,7 +1588,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T10:33:02';
+const APP_VERSION = '2026-07-17T10:45:15';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5197,14 +5197,14 @@ function renderBoard(){
 }
 
 // ── Draw portal animation: the portal pops in, cards fly out into the hand, then it pops out ──
-let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null;
-function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
+let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null, _animatingUids=new Set();
+function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; _animatingUids.clear(); const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
 function openPortal(){ const p=document.getElementById('draw-portal'); if(!p) return; p.classList.remove('flash'); void p.offsetWidth; p.classList.add('open'); if(_portalTimer){ clearTimeout(_portalTimer); _portalTimer=null; } if(_flashTimer){ clearTimeout(_flashTimer); _flashTimer=null; } }
 function flashPortalAfter(delay){
   const p=document.getElementById('draw-portal'); if(!p) return;
   if(_portalTimer) clearTimeout(_portalTimer);
   _portalTimer=setTimeout(()=>{
-    p.classList.remove('open'); void p.offsetWidth; p.classList.add('flash');   // one bright flash out
+    p.classList.remove('open'); void p.offsetWidth; p.classList.add('flash');
     if(_flashTimer) clearTimeout(_flashTimer);
     _flashTimer=setTimeout(()=>p.classList.remove('flash'), 340);
   }, delay);
@@ -5212,36 +5212,49 @@ function flashPortalAfter(delay){
 function spawnBurst(cx, cy){
   const b=document.createElement('div'); b.className='portal-burst';
   b.style.left=cx+'px'; b.style.top=cy+'px';
-  document.body.appendChild(b);
-  setTimeout(()=>b.remove(), 430);
+  document.body.appendChild(b); setTimeout(()=>b.remove(), 430);
 }
-function flyFromPortal(targetEl, isBack){
-  const portal=document.getElementById('draw-portal');
-  if(!portal || !targetEl || !targetEl.isConnected) return;
-  const pr=portal.getBoundingClientRect(), tr=targetEl.getBoundingClientRect();
-  if(tr.width===0) { targetEl.style.visibility=''; return; }
-  const cx=pr.left+pr.width/2, cy=pr.top+pr.height/2;
-  const tx=tr.left+tr.width/2, ty=tr.top+tr.height/2;
-  const clone=targetEl.cloneNode(true);
+function portalCenter(){ const p=document.getElementById('draw-portal'); if(!p) return null; const r=p.getBoundingClientRect(); return {cx:r.left+r.width/2, cy:r.top+r.height/2}; }
+// core fly: a clone bursts out of the portal centre, then flies to (tx,ty)
+function flyClone(sourceEl, tx, ty, tw, th, done){
+  const pc=portalCenter();
+  if(!pc || !sourceEl){ if(done) done(); return; }
+  const clone=sourceEl.cloneNode(true);
   clone.classList.add('fly-card'); clone.removeAttribute('id');
-  clone.style.position='fixed'; clone.style.margin='0';
-  clone.style.width=tr.width+'px'; clone.style.height=tr.height+'px';
-  clone.style.left=cx+'px'; clone.style.top=cy+'px';
+  clone.style.position='fixed'; clone.style.margin='0'; clone.style.visibility='visible';
+  clone.style.width=tw+'px'; clone.style.height=th+'px';
+  clone.style.left=pc.cx+'px'; clone.style.top=pc.cy+'px';
   clone.style.transform='translate(-50%,-50%) scale(0) rotate(-120deg)'; clone.style.opacity='0';
   document.body.appendChild(clone);
-  spawnBurst(cx, cy);
-  // phase 1: burst OUT from a point in the portal centre
+  spawnBurst(pc.cx, pc.cy);
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
     clone.style.transition='transform 0.26s cubic-bezier(0.2,1.5,0.5,1), opacity 0.14s ease';
     clone.style.transform='translate(-50%,-50%) scale(1.18) rotate(10deg)'; clone.style.opacity='1';
   }); });
-  // phase 2: fly to the hand
   setTimeout(()=>{
     clone.style.transition='left 0.5s cubic-bezier(0.3,0.7,0.25,1), top 0.5s cubic-bezier(0.3,0.7,0.25,1), transform 0.5s cubic-bezier(0.3,0.7,0.25,1)';
     clone.style.left=tx+'px'; clone.style.top=ty+'px';
     clone.style.transform='translate(-50%,-50%) scale(1) rotate(0deg)';
   }, 260);
-  setTimeout(()=>{ if(targetEl.isConnected) targetEl.style.visibility=''; clone.remove(); }, 820);
+  setTimeout(()=>{ clone.remove(); if(done) done(); }, 820);
+}
+function flyYourCard(uid){
+  const el=document.querySelector('#hand [data-uid="'+CSS.escape(uid)+'"]');
+  if(!el){ _animatingUids.delete(uid); return; }
+  const tr=el.getBoundingClientRect();
+  if(tr.width===0){ _animatingUids.delete(uid); el.style.visibility=''; return; }
+  flyClone(el, tr.left+tr.width/2, tr.top+tr.height/2, tr.width, tr.height, ()=>{
+    _animatingUids.delete(uid);
+    const cur=document.querySelector('#hand [data-uid="'+CSS.escape(uid)+'"]'); if(cur) cur.style.visibility='';
+  });
+}
+function flyOppBack(idx){
+  const backs=document.querySelectorAll('#opp-hand .card-back-sm'); const el=backs[idx]; if(!el) return;
+  const tr=el.getBoundingClientRect(); if(tr.width===0) return;
+  el.style.visibility='hidden';
+  flyClone(el, tr.left+tr.width/2, tr.top+tr.height/2, tr.width, tr.height, ()=>{
+    const b2=document.querySelectorAll('#opp-hand .card-back-sm'); if(b2[idx]) b2[idx].style.visibility='';
+  });
 }
 function animateDraws(){
   if(!localGs || !localGs.p1 || !localGs.p2) return;
@@ -5249,22 +5262,21 @@ function animateDraws(){
   const curUids=(my.hand||[]).map(c=>c&&c.uid).filter(Boolean);
   const oppCount=Math.min((th.hand||[]).length, 8);
   if(_prevHandUids===null){ _prevHandUids=new Set(curUids); _prevOppCount=oppCount; return; }  // first paint: no animation
-  const targets=[];
-  const handArea=document.getElementById('hand');
+  const newYours=[];
   (my.hand||[]).forEach(c=>{
-    if(c && !_prevHandUids.has(c.uid) && !selected.includes(c.uid)){
-      const el=handArea && handArea.querySelector('[data-uid="'+c.uid+'"]');
-      if(el){ el.style.visibility='hidden'; targets.push({el, isBack:false}); }   // hide up front (no flicker)
+    if(c && !_prevHandUids.has(c.uid) && !selected.includes(c.uid) && !_animatingUids.has(c.uid)){
+      _animatingUids.add(c.uid);   // stays hidden in renderHand until it lands, animates exactly once
+      newYours.push(c.uid);
     }
   });
-  if(oppCount > _prevOppCount){
-    const backs=document.querySelectorAll('#opp-hand .card-back-sm');
-    for(let i=_prevOppCount; i<oppCount; i++){ if(backs[i]){ backs[i].style.visibility='hidden'; targets.push({el:backs[i], isBack:true}); } }
-  }
-  if(targets.length){
-    openPortal();                                            // portal grows in from tiny
-    targets.forEach((t,i)=> setTimeout(()=> flyFromPortal(t.el, t.isBack), 360 + i*150));   // cards burst out, one by one
-    flashPortalAfter(360 + (targets.length-1)*150 + 800);    // then one flash-out after the last card
+  const newOpp=[]; if(oppCount > _prevOppCount){ for(let i=_prevOppCount; i<oppCount; i++) newOpp.push(i); }
+  const total=newYours.length+newOpp.length;
+  if(total>0){
+    openPortal();
+    let k=0;
+    newYours.forEach(uid=>{ const d=360+(k++)*150; setTimeout(()=>flyYourCard(uid), d); });
+    newOpp.forEach(idx=>{ const d=360+(k++)*150; setTimeout(()=>flyOppBack(idx), d); });
+    flashPortalAfter(360 + (total-1)*150 + 800);
   }
   _prevHandUids=new Set(curUids); _prevOppCount=oppCount;
 }
@@ -5390,6 +5402,7 @@ function renderHand(hand){
     if(selected.includes(c.uid)) return;   // selected cards are on the field, not in hand
     const el=makeCardEl(c);
     el.dataset.uid=c.uid;
+    if(_animatingUids && _animatingUids.has(c.uid)) el.style.visibility='hidden';   // still flying out of the portal
     const ft=me().forcedType;
     if(ft && matchesForced(c, ft)) el.classList.add('forced');   // Skywalker: highlight forced cards
     // A card whose play requirement isn't met (Critical Bite above 20 HP) is dimmed with a
