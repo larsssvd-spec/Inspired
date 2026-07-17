@@ -595,8 +595,11 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .history-preview.show { display:block; }
 .history-preview .card { width:190px; height:276px; box-shadow:0 10px 40px rgba(0,0,0,0.75); }
 /* ── Draw portal (right, vertically centred) — your portal.png that pops in on a draw ── */
-#draw-portal { position:fixed; right:2px; top:50%; transform:translateY(-50%) scale(0); opacity:0; width:104px; height:155px; z-index:40; pointer-events:none; transition:transform 0.32s cubic-bezier(0.34,1.56,0.64,1), opacity 0.22s ease; }
-#draw-portal.open { transform:translateY(-50%) scale(1); opacity:1; }
+#draw-portal { position:fixed; right:2px; top:50%; transform:translateY(-50%) scale(0); opacity:0; width:104px; height:155px; z-index:40; pointer-events:none; }
+#draw-portal.open { animation:portalGrow 0.6s cubic-bezier(0.18,0.7,0.32,1) forwards; }
+#draw-portal.flash { animation:portalFlash 0.3s ease-in forwards; }
+@keyframes portalGrow { 0% { transform:translateY(-50%) scale(0.06); opacity:0; } 20% { opacity:1; } 100% { transform:translateY(-50%) scale(1); opacity:1; } }
+@keyframes portalFlash { 0% { transform:translateY(-50%) scale(1); opacity:1; filter:brightness(1); } 35% { transform:translateY(-50%) scale(1.32); opacity:1; filter:brightness(2.5) drop-shadow(0 0 26px rgba(160,255,80,0.9)); } 100% { transform:translateY(-50%) scale(1.6); opacity:0; filter:brightness(3.4); } }
 .portal-img { width:100%; height:100%; object-fit:contain; display:block; animation:portalBreathe 2.8s ease-in-out infinite; }
 @keyframes portalBreathe { 0%,100% { transform:scale(1); filter:drop-shadow(0 0 12px rgba(120,240,50,0.5)) brightness(1); } 50% { transform:scale(1.045); filter:drop-shadow(0 0 22px rgba(140,255,70,0.75)) brightness(1.14); } }
 .portal-particles { position:absolute; inset:0; overflow:visible; }
@@ -1575,7 +1578,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T09:53:10';
+const APP_VERSION = '2026-07-17T10:03:24';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5184,10 +5187,18 @@ function renderBoard(){
 }
 
 // ── Draw portal animation: the portal pops in, cards fly out into the hand, then it pops out ──
-let _prevHandUids=null, _prevOppCount=0, _portalTimer=null;
-function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; const p=document.getElementById('draw-portal'); if(p) p.classList.remove('open'); }
-function openPortal(){ const p=document.getElementById('draw-portal'); if(p){ p.classList.add('open'); if(_portalTimer){ clearTimeout(_portalTimer); _portalTimer=null; } } }
-function closePortalSoon(delay){ const p=document.getElementById('draw-portal'); if(!p) return; if(_portalTimer) clearTimeout(_portalTimer); _portalTimer=setTimeout(()=>p.classList.remove('open'), delay); }
+let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null;
+function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
+function openPortal(){ const p=document.getElementById('draw-portal'); if(!p) return; p.classList.remove('flash'); void p.offsetWidth; p.classList.add('open'); if(_portalTimer){ clearTimeout(_portalTimer); _portalTimer=null; } if(_flashTimer){ clearTimeout(_flashTimer); _flashTimer=null; } }
+function flashPortalAfter(delay){
+  const p=document.getElementById('draw-portal'); if(!p) return;
+  if(_portalTimer) clearTimeout(_portalTimer);
+  _portalTimer=setTimeout(()=>{
+    p.classList.remove('open'); void p.offsetWidth; p.classList.add('flash');   // one bright flash out
+    if(_flashTimer) clearTimeout(_flashTimer);
+    _flashTimer=setTimeout(()=>p.classList.remove('flash'), 340);
+  }, delay);
+}
 function flyFromPortal(targetEl, isBack){
   const portal=document.getElementById('draw-portal');
   if(!portal || !targetEl || !targetEl.isConnected) return;
@@ -5226,9 +5237,9 @@ function animateDraws(){
     for(let i=_prevOppCount; i<oppCount; i++){ if(backs[i]){ backs[i].style.visibility='hidden'; targets.push({el:backs[i], isBack:true}); } }
   }
   if(targets.length){
-    openPortal();                                            // portal pops in first
-    targets.forEach((t,i)=> setTimeout(()=> flyFromPortal(t.el, t.isBack), 200 + i*120));   // then cards emerge, staggered
-    closePortalSoon(200 + targets.length*120 + 560);         // portal pops out after the last card
+    openPortal();                                            // portal grows in from tiny
+    targets.forEach((t,i)=> setTimeout(()=> flyFromPortal(t.el, t.isBack), 260 + i*120));   // cards emerge as it grows
+    flashPortalAfter(260 + (targets.length-1)*120 + 600);    // then one flash-out after the last card
   }
   _prevHandUids=new Set(curUids); _prevOppCount=oppCount;
 }
