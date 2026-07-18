@@ -623,6 +623,18 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .triggered-card.pv-card:not(.framed) .card-text { font-size:1.05rem; }
 .triggered-card.pv-card.framed { height:400px; filter:drop-shadow(0 0 40px rgba(120,240,50,0.5)); }
 .triggered-card.pv-card.legendary:not(.framed) { border-color:var(--gold); }
+/* Revealed cards: shown centre-screen for a moment, then they fade away (nothing moves) */
+.reveal-show { position:fixed; left:50%; top:46%; transform:translate(-50%,-50%) scale(0.72); opacity:0; z-index:214; pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:0.9rem; max-width:94vw; transition:transform 0.36s cubic-bezier(0.2,0.9,0.3,1), opacity 0.3s ease; }
+.reveal-show.in { transform:translate(-50%,-50%) scale(1); opacity:1; }
+.reveal-label { font-family:'Playfair Display',serif; font-size:1.1rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold2); text-shadow:0 2px 12px rgba(0,0,0,0.9); }
+.reveal-row { display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center; justify-content:center; }
+.reveal-show .card { box-shadow:0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(120,240,50,0.4); }
+.reveal-show .card.pv-card:not(.framed) { width:186px; height:270px; border-width:2px; border-radius:11px; }
+.reveal-show .card.pv-card:not(.framed) .card-art { font-size:3.5rem; height:108px; }
+.reveal-show .card.pv-card:not(.framed) .card-name { font-size:1rem; }
+.reveal-show .card.pv-card:not(.framed) .card-text { font-size:0.74rem; }
+.reveal-show .card.pv-card.framed { height:270px; width:auto; }
+.reveal-show .card.pv-card.legendary:not(.framed) { border-color:var(--gold); }
 #btn-grave.grave-pulse { animation:gravePulse 0.5s ease-out; }
 @keyframes gravePulse { 0% { transform:scale(1); box-shadow:0 0 0 rgba(120,240,50,0); } 40% { transform:scale(1.28); box-shadow:0 0 18px 4px rgba(120,240,50,0.7); } 100% { transform:scale(1); box-shadow:0 0 0 rgba(120,240,50,0); } }
 .card:hover { transform:translateY(-6px); border-color:var(--green); box-shadow:0 0 18px rgba(126,200,50,0.3); z-index:10; }
@@ -1597,7 +1609,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-17T12:15:11';
+const APP_VERSION = '2026-07-18T17:39:34';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1863,6 +1875,7 @@ const CARDS_DATA = [
   {id:'bad_landing', collectible:true, name:'Bad Landing', text:'Curse all cards that both players draw next round.', rarity:'common', emoji:'💥', type:'normal', art:'art/bad_landing.png'},
   {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'While holding: the first round your opponent discards a card, you gain all cards they discard that round. Then discard this card.', rarity:'common', emoji:'🌑', hold:true, type:'normal', art:'art/bloodmoon_princess.png'},
   {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'Steal 2 Cursed cards from your opponent. Enchanted: steal any 2 random cards instead.', rarity:'common', emoji:'👀', enchanted:true, type:'normal', art:'art/peek_a_boo.png'},
+  {id:'purrsy', collectible:true, name:'Purrsy', text:'Heal 10. Enchanted: Heal 5 for each card in your hand.', rarity:'common', emoji:'🐱', heals:true, enchanted:true, type:'normal', art:'art/purrsy.png'},
   {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'Quest: reach 20 health or less. Reward: Unleashed Zephyrax (added to your hand).', rarity:'legendary', emoji:'🌀', type:'quest', quest:'dreaming_zephyrax', art:'art/dreaming_zephyrax.png'},
   {id:'unleashed_zephyrax', name:'Unleashed Zephyrax', text:"You can't die for the next 3 rounds (this round and the next 2).", rarity:'legendary', emoji:'🌪️', noDeck:true, type:'normal', art:'art/unleashed_zephyrax.png'},
   {id:'hatching_egg', collectible:true, name:'Hatching Egg', text:'Quest: both players have completed a quest. Reward: Mother\'s Firebreath (added to your hand).', rarity:'common', emoji:'🥚', quest:'hatching_egg', type:'quest', art:'art/hatching_egg.png'},
@@ -2020,6 +2033,7 @@ function krushSearch(c, n, findId, label){
   const st=c.state, r=c.self;
   const deck=st[r].deck||[];
   const top=deck.slice(0, n);
+  markRevealed(st, r, top);
   if(r===myRole) c.log('  🔎 Reveals: '+(top.map(x=>x&&x.name).filter(Boolean).join(', ')||'nothing')+'.','system');
   else           c.log('  🔎 '+st[r].name+' searches the top '+n+' cards of their deck.','system');
   const idx=top.findIndex(x=>x && x.id===findId);
@@ -2490,6 +2504,7 @@ const CARD_LOGIC = {
     onDraw:(c)=>{
       if(c.card._variant!==2) return false;
       const shown=(c.state[c.self].hand||[]).filter(x=>x && x!==c.card && takeable(x));   // immune cards are never revealed
+      markRevealed(c.state, c.opp, shown);
       c.log('  👁 '+c.state[c.self].name+"'s hand is revealed: "+(shown.length?shown.map(x=>x.name).join(', '):'(nothing)'),'system');
       return true;   // consume: Scavenger goes straight to the graveyard
     }
@@ -2819,6 +2834,7 @@ const CARD_LOGIC = {
       }
     });
     st[o].deck=deck;
+    markRevealed(st, c.self, top2);
     const revealed=top2.length?top2.map(x=>x.name).join(' & '):'an empty deck';
     c.log(c.state[c.self].name+' plays Chompzilla — reveals '+revealed+' from '+st[o].name+"'s deck"+(discarded.length?', discarding '+discarded.map(x=>x.name).join(' & '):' (no damage cards to discard)')+'.','effect');
   } },
@@ -2838,6 +2854,7 @@ const CARD_LOGIC = {
     if(pool.length===0){ c.log(c.state[c.self].name+' plays Enlightened — but '+st[o].name+' has no cards to reveal.','system'); return; }
     for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
     const shown=pool.slice(0,2);
+    markRevealed(st, c.self, shown);
     c.log('  💡 '+c.state[c.self].name+' plays Enlightened — '+st[o].name+' reveals: '+shown.map(x=>x.name).join(', ')+'.','effect');
   } },
   // Peek A Boo — steal 2 Cursed cards from the opponent's hand; Enchanted (Orb spent) → steal any
@@ -3015,6 +3032,19 @@ const CARD_LOGIC = {
   } },
   // Tall Kroog — Heal 10, or 20 if the opponent drew an extra card last round (drewExtraLastRound,
   // carried in the draw loop the round before this one resolves).
+  // Purrsy — a plain Heal 10, unless you spend an Orb: then it heals 5 for every card still
+  // in your hand when it resolves (the cards you played this round are already out of hand).
+  purrsy: { onPlay:(c)=>{
+    const hand=(c.state[c.self].hand||[]).filter(Boolean);
+    if(c.useOrb){
+      const amt=hand.length*5;
+      c.heal(amt);
+      c.log(c.state[c.self].name+' plays Purrsy (Enchanted) — '+hand.length+' card'+(hand.length===1?'':'s')+' in hand → Heal '+amt+'.','heal');
+    } else {
+      c.heal(10);
+      c.log(c.state[c.self].name+' plays Purrsy — Heal 10.','heal');
+    }
+  } },
   tall_kroog: { onPlay:(c)=>{
     const extra = !!c.state[c.opp].drewExtraLastRound;
     c.heal(extra ? 20 : 10);
@@ -5207,13 +5237,14 @@ function renderBoard(){
 }
 
 // ── Draw portal animation: the portal pops in, cards fly out into the hand, then it pops out ──
-let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null, _animatingUids=new Set(), _triggeredAnimated=new Set();
-function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; _animatingUids.clear(); _triggeredAnimated.clear(); _triggerQueue.length=0; _triggerBusy=false; const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
+let _prevHandUids=null, _prevOppCount=0, _portalTimer=null, _flashTimer=null, _animatingUids=new Set(), _triggeredAnimated=new Set(), _revealedAnimated=new Set();
+function resetDrawAnim(){ _prevHandUids=null; _prevOppCount=0; _animatingUids.clear(); _triggeredAnimated.clear(); _revealedAnimated.clear(); _triggerQueue.length=0; _triggerBusy=false; const p=document.getElementById('draw-portal'); if(p){ p.classList.remove('open','flash'); } }
 function openPortal(){ const p=document.getElementById('draw-portal'); if(!p) return; p.classList.remove('flash'); void p.offsetWidth; p.classList.add('open'); if(_portalTimer){ clearTimeout(_portalTimer); _portalTimer=null; } if(_flashTimer){ clearTimeout(_flashTimer); _flashTimer=null; } }
 function flashPortalAfter(delay){
   const p=document.getElementById('draw-portal'); if(!p) return;
   if(_portalTimer) clearTimeout(_portalTimer);
   _portalTimer=setTimeout(()=>{
+    if(!p.classList.contains('open')) return;                    // portal never opened (e.g. reveal-only) → nothing to flash
     p.classList.remove('open'); void p.offsetWidth; p.classList.add('flash');
     if(_flashTimer) clearTimeout(_flashTimer);
     _flashTimer=setTimeout(()=>p.classList.remove('flash'), 340);
@@ -5273,10 +5304,27 @@ function processTriggerQueue(){
   if(_triggerBusy) return;
   if(!_triggerQueue.length){ flashPortalAfter(150); return; }   // queue drained → close the portal
   _triggerBusy=true;
+  const item=_triggerQueue.shift();
+  const next=()=>{ _triggerBusy=false; processTriggerQueue(); };
+  if(item && item.kind==='reveal'){ showRevealedCards(item.entries, next); return; }   // reveals: no portal, just centre-screen
   openPortal();                                                  // keep the portal open while cards emerge
-  const entry=_triggerQueue.shift();
-  const fast=_triggerQueue.length>=2;                            // long cascade → shorter hold
-  flyTriggeredCard(entry, fast, ()=>{ _triggerBusy=false; processTriggerQueue(); });
+  const fast=_triggerQueue.filter(x=>x && x.kind!=='reveal').length>=2;   // long cascade → shorter hold
+  flyTriggeredCard(item, fast, next);
+}
+// Revealed cards appear centre-screen, big and crisp, then fade away (they don't move zones).
+function showRevealedCards(entries, done){
+  const defs=(entries||[]).map(e=>CARDS_DATA.find(x=>x.id===e.id)).filter(Boolean);
+  if(!defs.length){ if(done) done(); return; }
+  const wrap=document.createElement('div'); wrap.className='reveal-show';
+  const lbl=document.createElement('div'); lbl.className='reveal-label'; lbl.textContent='👁 Revealed';
+  const row=document.createElement('div'); row.className='reveal-row';
+  defs.slice(0,6).forEach(def=>{ const el=makeCardEl(def); el.classList.add('pv-card'); el.removeAttribute('id'); row.appendChild(el); });
+  wrap.appendChild(lbl); wrap.appendChild(row);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>wrap.classList.add('in')); });
+  const hold=1100 + Math.min(defs.length,6)*260;                 // more cards → a little longer to read
+  setTimeout(()=>wrap.classList.remove('in'), hold);
+  setTimeout(()=>{ wrap.remove(); if(done) done(); }, hold+400);
 }
 function flyTriggeredCard(entry, fast, done){
   const def=CARDS_DATA.find(x=>x.id===entry.id); const pc=portalCenter();
@@ -5310,7 +5358,7 @@ function animateDraws(){
   const my=me(), th=them();
   const curUids=(my.hand||[]).map(c=>c&&c.uid).filter(Boolean);
   const oppCount=Math.min((th.hand||[]).length, 8);
-  if(_prevHandUids===null){ _prevHandUids=new Set(curUids); _prevOppCount=oppCount; ((localGs.drawTriggered)||[]).forEach(e=>e&&_triggeredAnimated.add(e.uid)); return; }  // first paint: no animation
+  if(_prevHandUids===null){ _prevHandUids=new Set(curUids); _prevOppCount=oppCount; ((localGs.drawTriggered)||[]).forEach(e=>e&&_triggeredAnimated.add(e.uid)); asArr(localGs.revealed).forEach(e=>e&&_revealedAnimated.add(e.uid)); return; }  // first paint: no animation
   const newYours=[];
   (my.hand||[]).forEach(c=>{
     if(c && !_prevHandUids.has(c.uid) && !selected.includes(c.uid) && !_animatingUids.has(c.uid)){
@@ -5321,14 +5369,17 @@ function animateDraws(){
   const newOpp=[]; if(oppCount > _prevOppCount){ for(let i=_prevOppCount; i<oppCount; i++) newOpp.push(i); }
   const newTriggered=[];
   ((localGs.drawTriggered)||[]).forEach(e=>{ if(e && !_triggeredAnimated.has(e.uid)){ _triggeredAnimated.add(e.uid); newTriggered.push(e); } });
+  const newRevealed=[];
+  asArr(localGs.revealed).forEach(e=>{ if(e && e.r===myRole && !_revealedAnimated.has(e.uid)){ _revealedAnimated.add(e.uid); newRevealed.push(e); } });
   const normalTotal=newYours.length+newOpp.length;
-  if(normalTotal>0 || newTriggered.length>0){
-    openPortal();
+  if(normalTotal>0 || newTriggered.length>0 || newRevealed.length>0){
+    if(normalTotal>0 || newTriggered.length>0) openPortal();
     let k=0;
     newYours.forEach(uid=>{ const d=360+(k++)*150; setTimeout(()=>flyYourCard(uid), d); });
     newOpp.forEach(idx=>{ const d=360+(k++)*150; setTimeout(()=>flyOppBack(idx), d); });
-    if(newTriggered.length){
-      newTriggered.forEach(e=> _triggerQueue.push(e));           // shown one-at-a-time in the centre
+    if(newTriggered.length || newRevealed.length){
+      newTriggered.forEach(e=> _triggerQueue.push({...e, kind:'trigger'}));   // shown one-at-a-time in the centre
+      if(newRevealed.length) _triggerQueue.push({kind:'reveal', entries:newRevealed});
       setTimeout(processTriggerQueue, 360 + normalTotal*60);     // the queue manages the portal + flash
     } else {
       flashPortalAfter(360 + (normalTotal-1)*150 + 800);         // no triggers → flash after the normal cards
@@ -6207,6 +6258,7 @@ function resolveRound(gs){
   logs=[];
   const state=JSON.parse(JSON.stringify(gs));
   state._dead=null; state._winner=null;
+  state.revealed=[]; state.drawTriggered=[];      // per-round reveal/trigger animation feeds
   log('⚔ Round '+state.round+' — cards revealed','system');
 
   // Reset block + per-round trackers. Carry this round's damage over to dmgDealtLastRound
@@ -6495,7 +6547,7 @@ function resolveRound(gs){
     localGs=state;
     showResult(state,oldGs);
   } else {
-    update(gRef,{p1:state.p1,p2:state.p2,round:state.round,phase:'result',drawTriggered:state.drawTriggered||[]}).then(()=>{
+    update(gRef,{p1:state.p1,p2:state.p2,round:state.round,phase:'result',drawTriggered:state.drawTriggered||[],revealed:state.revealed||[]}).then(()=>{
       showResult(state,gs);
     });
   }
@@ -6505,6 +6557,13 @@ function resolveRound(gs){
 // step and by cards that draw mid-resolution (Deep Greed), so a card-draw is always a real
 // draw: "when drawn" triggers fire, Journey cursed-draws applies, and the Fourth Day reveal
 // still shows them to the opponent. A card whose onDraw returns true consumes itself.
+// Records cards that were revealed to a player, so the UI can actually SHOW them
+// (centre-screen, like a "when drawn" trigger) instead of only naming them in the log.
+function markRevealed(state, viewer, cards){
+  const list=(Array.isArray(cards)?cards:[cards]).filter(Boolean);
+  if(!list.length) return;
+  state.revealed=[...(state.revealed||[]), ...list.map(c=>({id:c.id, uid:c.uid||('rv_'+Math.random().toString(36).slice(2,9)), r:viewer}))];
+}
 function fireDrawTriggers(state, r, drawn){
   if(!drawn || !drawn.length) return;
   drawn.forEach(dc=>{
@@ -6534,6 +6593,7 @@ function fireDrawTriggers(state, r, drawn){
   // Fourth Day (opp_sees_draws): reveal the drawn cards to the opponent (info only).
   if(hasJourney(state,r,'opp_sees_draws')){
     const shown=drawn.filter(takeable);   // immune cards are not revealed
+    markRevealed(state, opp(r), shown);
     if(shown.length) log('  👁 '+state[opp(r)].name+' sees '+state[r].name+" draw: "+shown.map(c=>c.name).join(', '),'system');
   }
 }
