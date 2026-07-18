@@ -624,7 +624,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .triggered-card.pv-card.framed { height:400px; filter:drop-shadow(0 0 40px rgba(120,240,50,0.5)); }
 .triggered-card.pv-card.legendary:not(.framed) { border-color:var(--gold); }
 /* Revealed cards: shown centre-screen for a moment, then they fade away (nothing moves) */
-.reveal-show { position:fixed; left:50%; top:46%; transform:translate(-50%,-50%) scale(0.72); opacity:0; z-index:214; pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:0.9rem; max-width:94vw; transition:transform 0.36s cubic-bezier(0.2,0.9,0.3,1), opacity 0.3s ease; }
+.reveal-backdrop { position:fixed; inset:0; z-index:213; background:rgba(3,10,6,0.72); opacity:0; transition:opacity 0.3s ease; cursor:pointer; }
+.reveal-backdrop.in { opacity:1; }
+.reveal-show { position:fixed; left:50%; top:46%; transform:translate(-50%,-50%) scale(0.72); opacity:0; z-index:214; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:0.9rem; max-width:94vw; transition:transform 0.36s cubic-bezier(0.2,0.9,0.3,1), opacity 0.3s ease; }
+.reveal-hint { font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text2); opacity:0.85; }
 .reveal-show.in { transform:translate(-50%,-50%) scale(1); opacity:1; }
 .reveal-label { font-family:'Playfair Display',serif; font-size:1.1rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold2); text-shadow:0 2px 12px rgba(0,0,0,0.9); }
 .reveal-row { display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center; justify-content:center; }
@@ -1609,7 +1612,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-18T17:39:34';
+const APP_VERSION = '2026-07-18T17:46:35';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5311,20 +5314,30 @@ function processTriggerQueue(){
   const fast=_triggerQueue.filter(x=>x && x.kind!=='reveal').length>=2;   // long cascade → shorter hold
   flyTriggeredCard(item, fast, next);
 }
-// Revealed cards appear centre-screen, big and crisp, then fade away (they don't move zones).
+// Revealed cards appear centre-screen, big and crisp, and STAY until you click them away.
 function showRevealedCards(entries, done){
   const defs=(entries||[]).map(e=>CARDS_DATA.find(x=>x.id===e.id)).filter(Boolean);
   if(!defs.length){ if(done) done(); return; }
+  const back=document.createElement('div'); back.className='reveal-backdrop';
   const wrap=document.createElement('div'); wrap.className='reveal-show';
   const lbl=document.createElement('div'); lbl.className='reveal-label'; lbl.textContent='👁 Revealed';
   const row=document.createElement('div'); row.className='reveal-row';
   defs.slice(0,6).forEach(def=>{ const el=makeCardEl(def); el.classList.add('pv-card'); el.removeAttribute('id'); row.appendChild(el); });
-  wrap.appendChild(lbl); wrap.appendChild(row);
-  document.body.appendChild(wrap);
-  requestAnimationFrame(()=>{ requestAnimationFrame(()=>wrap.classList.add('in')); });
-  const hold=1100 + Math.min(defs.length,6)*260;                 // more cards → a little longer to read
-  setTimeout(()=>wrap.classList.remove('in'), hold);
-  setTimeout(()=>{ wrap.remove(); if(done) done(); }, hold+400);
+  const hint=document.createElement('div'); hint.className='reveal-hint'; hint.textContent='Click anywhere to close';
+  wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(hint);
+  document.body.appendChild(back); document.body.appendChild(wrap);
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ back.classList.add('in'); wrap.classList.add('in'); }); });
+  let closed=false;
+  const close=()=>{
+    if(closed) return; closed=true;
+    back.classList.remove('in'); wrap.classList.remove('in');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(()=>{ back.remove(); wrap.remove(); if(done) done(); }, 340);
+  };
+  const onKey=(ev)=>{ if(ev.key==='Escape'||ev.key==='Enter'||ev.key===' ') close(); };
+  back.addEventListener('click', close);
+  wrap.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
 }
 function flyTriggeredCard(entry, fast, done){
   const def=CARDS_DATA.find(x=>x.id===entry.id); const pc=portalCenter();
