@@ -282,13 +282,14 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 
 /* ADVENTURE — level select. The art is one piece (frame + parchment), so the panel keeps the
    image's 2:1 ratio and the content is inset with percentages to land on the parchment. */
-#screen-adventure { flex:1; display:flex; align-items:center; justify-content:center;
-  min-height:0; padding:2vh 2vw; background:#0b0805; overflow:auto; }
+#screen-adventure { flex:1; display:flex; align-items:stretch; justify-content:center;
+  min-height:0; padding:0; background:#0b0805; overflow:hidden; }
+/* The frame art fills the whole screen. `cover` keeps its proportions and crops the outer edge
+   rather than stretching the gems and gold; the parchment stays centred at any window shape. */
 .adv-frame {
-  position:relative; width:min(1400px, 96vw); aspect-ratio:1774/887; max-height:96vh;
-  background:url('art/menu_adventure.png') center center / 100% 100% no-repeat;
-  padding:9% 15% 8% 15%; display:flex; flex-direction:column; align-items:center;
-  filter:drop-shadow(0 30px 70px rgba(0,0,0,0.85));
+  position:relative; width:100%; height:100%; min-height:100vh;
+  background:url('art/menu_adventure.png') center center / cover no-repeat;
+  padding:9% 15% 8% 15%; display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
 .adv-back { position:absolute; top:6.5%; left:16%; color:#6b5227; font-family:'Lora',serif; z-index:2; }
 .adv-back:hover { color:#3a2a10; }
@@ -1708,7 +1709,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T14:08:22';
+const APP_VERSION = '2026-07-20T14:14:50';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
