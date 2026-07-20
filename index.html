@@ -1612,7 +1612,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-18T17:46:35';
+const APP_VERSION = '2026-07-20T09:43:13';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1879,7 +1879,33 @@ const CARDS_DATA = [
   {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'While holding: the first round your opponent discards a card, you gain all cards they discard that round. Then discard this card.', rarity:'common', emoji:'🌑', hold:true, type:'normal', art:'art/bloodmoon_princess.png'},
   {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'Steal 2 Cursed cards from your opponent. Enchanted: steal any 2 random cards instead.', rarity:'common', emoji:'👀', enchanted:true, type:'normal', art:'art/peek_a_boo.png'},
   {id:'purrsy', collectible:true, name:'Purrsy', text:'Heal 10. Enchanted: Heal 5 for each card in your hand.', rarity:'common', emoji:'🐱', heals:true, enchanted:true, type:'normal', art:'art/purrsy.png'},
+  {id:'zoom', collectible:true, name:'ZOOM', text:'Look at the bottom 2 cards of your deck. You may place any on top of your deck.', rarity:'common', emoji:'🔍', type:'normal', art:'art/zoom.png'},
+  {id:'mixed_energies', collectible:true, name:'Mixed Energies', text:"Shuffle Dream Warp into your deck and Nightmare Warp into your opponent's. When the first one is drawn: Discard the other one.", rarity:'legendary', emoji:'🌗', type:'normal', art:'art/mixed_energies.png'},
+  {id:'dream_warp', name:'Dream Warp', text:'When drawn: Shuffle the last 10 cards you played back into your deck.', rarity:'legendary', emoji:'💫', noDeck:true, type:'normal', art:'art/dream_warp.png'},
+  {id:'nightmare_warp', name:'Nightmare Warp', text:'When drawn: Remove the top 6 cards of your deck.', rarity:'legendary', emoji:'🌑', noDeck:true, type:'normal', art:'art/nightmare_warp.png'},
+  {id:'awakening_burst', collectible:true, name:'Awakening Burst', text:'Deal 25 damage. Discard 4 cards afterwards.', rarity:'common', emoji:'💥', dealsDamage:true, dmg:25, type:'normal', art:'art/awakening_burst.png'},
+  {id:'rogg_the_giant', collectible:true, name:'Rogg the Giant', text:'Deal 10 damage. If your opponent has more cards in their hand than you: Deal 20 damage instead.', rarity:'common', emoji:'🗿', dealsDamage:true, dmg:10, type:'normal', art:'art/rogg_the_giant.png'},
+  {id:'marcels_kitchen', collectible:true, name:"Marcel's Kitchen", text:'Your opponent has to Reveal all cards with the healing effect. Deal 10 damage for each card Revealed.', rarity:'common', emoji:'🍳', dealsDamage:true, dmg:10, type:'normal', art:'art/marcels_kitchen.png'},
+  {id:'mindys_playtime', collectible:true, name:"Mindy's Playtime", text:"Blessing: Instead of your normal draw, you may draw 1 card from your opponent's deck. Discard 1 card from your hand when you do.", rarity:'legendary', emoji:'🧸', type:'blessing', art:'art/mindys_playtime.png'},
+  {id:'misses_jen', collectible:true, name:'Misses Jen', text:'Heal 10. If your opponent has at least 100 more Health: Heal 35 instead. Enchanted: 70 more.', rarity:'common', emoji:'👵', heals:true, enchanted:true, type:'normal', art:'art/misses_jen.png'},
+  {id:'blind_murloc', collectible:true, name:'Blind Murloc', text:'Your opponent has to Reveal the bottom 6 cards of their deck. Enchanted: Remove 2 cards from the game (your opponent chooses).', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/blind_murloc.png'},
+  {id:'orobas', collectible:true, name:'Orobas', text:'Blessing: Discard the bottom card of your deck after each round.', rarity:'common', emoji:'🐴', type:'blessing', art:'art/orobas.png'},
+  {id:'marble_craft', collectible:true, name:'Marble Craft', text:'Endless. Steal 1 card from your opponent randomly.', rarity:'common', emoji:'🏺', endless:true, type:'normal', art:'art/marble_craft.png'},
+  {id:'curious_luza', collectible:true, name:'Curious Luza', text:"Remove your own Blessing to heal 30. Enchanted: Don't remove your Blessing.", rarity:'common', emoji:'🔮', heals:true, enchanted:true, type:'normal', art:'art/curious_luza.png'},
+  {id:'rankor', collectible:true, name:'Rankor', text:"Deal 10 damage for each card in your opponent's hand that deals damage.", rarity:'legendary', emoji:'🦂', dealsDamage:true, dmg:10, type:'normal', art:'art/rankor.png'},
+  {id:'dirfty_trogg', collectible:true, name:'Dirfty Trogg', text:'Deal 10 damage. If your opponent has the exact same amount of health as you: deal 25 damage instead.', rarity:'common', emoji:'👹', dealsDamage:true, dmg:10, type:'normal', art:'art/dirfty_trogg.png'},
+  {id:'nightmare_rush', collectible:true, name:'Nightmare Rush', text:"When drawn: Deal 15 damage to both players. Your opponent can't heal this and next round.", rarity:'common', emoji:'😱', dealsDamage:true, dmg:15, type:'normal', art:'art/nightmare_rush.png'},
+  {id:'electric_boogie_man', collectible:true, name:'Electric Boogie Man', text:'Deal 10 damage. If your opponent has a card from your deck in their hand: Deal 20 damage instead.', rarity:'common', emoji:'⚡', dealsDamage:true, dmg:10, type:'normal', art:'art/electric_boogie_man.png'},
+  {id:'baallspawn', collectible:true, name:'Baallspawn', text:"Deal 5 damage for each card in a player's hand that originated from the opposing player's deck.", rarity:'common', emoji:'😈', dealsDamage:true, dmg:5, type:'normal', art:'art/baallspawn.png'},
+  {id:'distortion', collectible:true, name:'Distortion', text:"Steal back every card from your deck currently in your opponent's hand.", rarity:'common', emoji:'🌀', type:'normal', art:'art/distortion.png'},
+  {id:'electoad', collectible:true, name:'Electoad', text:'Draw 2 extra cards.', rarity:'common', emoji:'🐸', type:'normal', art:'art/electoad.png'},
+  {id:'harmless_beetle', collectible:true, name:'Harmless Beetle', text:'Reveal all cards that deal damage from both hands. Shuffle them into YOUR deck afterwards. This card can only be played if you are Hindered and have less health.', rarity:'legendary', emoji:'🪲', requiresHindered:true, requiresLowerHp:true, type:'normal', art:'art/harmless_beetle.png'},
+  {id:'second_chapter', collectible:true, name:'Second Chapter', text:'Both players shuffle 2 cards from their hand back into their deck.', rarity:'common', emoji:'📖', type:'normal', art:'art/second_chapter.png'},
+  {id:'linn_the_elf_leader', collectible:true, name:'Linn the Elf Leader', text:'Block. If your opponent Blocked last round: get this card back into your hand.', rarity:'common', emoji:'🧝', block:true, type:'normal', art:'art/linn_the_elf_leader.png'},
+  {id:'croock_the_brave', collectible:true, name:'Croock the Brave', text:'Block. If you drew an extra card last round: Also block the next round.', rarity:'common', emoji:'🛡️', block:true, type:'normal', art:'art/croock_the_brave.png'},
   {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'Quest: reach 20 health or less. Reward: Unleashed Zephyrax (added to your hand).', rarity:'legendary', emoji:'🌀', type:'quest', quest:'dreaming_zephyrax', art:'art/dreaming_zephyrax.png'},
+  {id:'sheera_the_dragon_tamer', collectible:true, name:'Sheera the Dragon Tamer', text:'Quest: Your deck has 10 or less cards left. Reward: Fimm the Guardian of Dreams (added to your hand).', rarity:'legendary', emoji:'🐉', type:'quest', quest:'sheera_the_dragon_tamer', art:'art/sheera_the_dragon_tamer.png'},
+  {id:'fimm_the_guardian_of_dreams', name:'Fimm the Guardian of Dreams', text:'Both decks are shuffled into one deck and split into two separate decks afterwards.', rarity:'legendary', emoji:'🌙', noDeck:true, type:'normal', art:'art/fimm_the_guardian_of_dreams.png'},
   {id:'unleashed_zephyrax', name:'Unleashed Zephyrax', text:"You can't die for the next 3 rounds (this round and the next 2).", rarity:'legendary', emoji:'🌪️', noDeck:true, type:'normal', art:'art/unleashed_zephyrax.png'},
   {id:'hatching_egg', collectible:true, name:'Hatching Egg', text:'Quest: both players have completed a quest. Reward: Mother\'s Firebreath (added to your hand).', rarity:'common', emoji:'🥚', quest:'hatching_egg', type:'quest', art:'art/hatching_egg.png'},
   {id:'mothers_firebreath', name:"Mother's Firebreath", text:'Deal 30 damage.', rarity:'common', emoji:'🔥', noDeck:true, dealsDamage:true, dmg:30, type:'normal', art:'art/mothers_firebreath.png'},
@@ -2078,6 +2104,12 @@ function playBlockedReason(state, r, card){
   if(card.playIfHpBelow && (state[r].hp||0) >= card.playIfHpBelow){
     return 'Only playable below '+card.playIfHpBelow+' health (you have '+state[r].hp+').';
   }
+  if(card.requiresHindered && !state[r].hindered){
+    return 'Only playable while you are Hindered.';
+  }
+  if(card.requiresLowerHp && (state[r].hp||0) >= (state[opp(r)].hp||0)){
+    return 'Only playable while you have less health than your opponent ('+(state[r].hp||0)+' vs '+(state[opp(r)].hp||0)+').';
+  }
   if(card.requiresPlayed && !((state[r].playedIds||[]).includes(card.requiresPlayed))){
     const def=CARDS_DATA.find(x=>x.id===card.requiresPlayed);
     return 'You must play '+(def?def.name:card.requiresPlayed)+' first.';
@@ -2132,6 +2164,7 @@ function autoTrimHand(state, r){
   }
 }
 function selectLimit(state, r){ if(state[r] && state[r].skipRound) return 0; return Math.max(0, foldValue(state, r, 'selectLimitMod', 2)); }
+function hasMindy(state, r){ const b=state[r] && state[r].blessing; return !!(b && b.id==='mindys_playtime'); }
 function drawCount(state, r){
   if(state[r].hindered || state[r].noDraw) return 0;   // Hindered overrides draw modifiers — always 0 (design)
   return Math.max(0, foldValue(state, r, 'drawMod', 2 + (state[r].extraDraw||0)));
@@ -2208,6 +2241,7 @@ const CARD_TOKENS = {
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
   dreaming_zephyrax:{ label:'Reward',      ids: ['unleashed_zephyrax'] },
+  sheera_the_dragon_tamer:{ label:'Reward', ids: ['fimm_the_guardian_of_dreams'] },
   hatching_egg:     { label:'Reward',      ids: ['mothers_firebreath'] },
   seven_symphonies: { label:'Symphony',    ids: ['symphony_1','symphony_2','symphony_3','symphony_4','symphony_5','symphony_6','symphony_7'] },
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
@@ -3048,6 +3082,373 @@ const CARD_LOGIC = {
       c.log(c.state[c.self].name+' plays Purrsy — Heal 10.','heal');
     }
   } },
+  // Fimm the Guardian of Dreams — both decks are merged into one pile, shuffled, and dealt back out
+  // into two equal decks (the caster keeps the extra card on an odd total). Every card keeps its
+  // permanent deck-of-origin owner stamp, so cards landing in the other deck still count for the
+  // Constellation quest of whoever they originally belonged to.
+  fimm_the_guardian_of_dreams: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const mineDeck=(st[meR].deck||[]).filter(Boolean), theirDeck=(st[oR].deck||[]).filter(Boolean);
+    mineDeck.forEach(cd=>{ if(cd.owner===undefined) cd.owner=meR; });     // stamp origin before merging
+    theirDeck.forEach(cd=>{ if(cd.owner===undefined) cd.owner=oR; });
+    const pile=[...mineDeck, ...theirDeck];
+    if(!pile.length){ c.log(st[meR].name+' plays Fimm the Guardian of Dreams — both decks are empty.','system'); return; }
+    for(let i=pile.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pile[i],pile[j]]=[pile[j],pile[i]]; }
+    const half=Math.ceil(pile.length/2);                                  // odd total → the caster gets the extra
+    st[meR].deck=pile.slice(0, half);
+    st[oR].deck=pile.slice(half);
+    c.log(st[meR].name+' plays Fimm the Guardian of Dreams — both decks are shuffled together and split: '+st[meR].deck.length+' / '+st[oR].deck.length+'.','effect');
+  } },
+  // ZOOM — peek at the bottom two of your own deck and optionally move them to the top, in the
+  // order you picked (__zoom holds the uids, first = topmost). Anything you leave stays put.
+  zoom: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const deck=st[R].deck||(st[R].deck=[]);
+    const bottom=deck.slice(-2);
+    if(!bottom.length){ c.log(st[R].name+' plays ZOOM — their deck is empty.','system'); return; }
+    markRevealed(st, R, bottom);
+    const picks=((st[R].choices||{})['__zoom'])||[];
+    const move=[];
+    picks.forEach(uid=>{ const cd=bottom.find(x=>x.uid===uid && !move.includes(x)); if(cd) move.push(cd); });
+    if(!move.length){
+      c.log(st[R].name+' plays ZOOM — looks at '+bottom.map(x=>x.name).join(' and ')+', and leaves them at the bottom.','effect');
+      return;
+    }
+    move.forEach(cd=>{ const i=deck.indexOf(cd); if(i>=0) deck.splice(i,1); });
+    for(let i=move.length-1;i>=0;i--) deck.unshift(move[i]);      // first pick ends up on top
+    c.log(st[R].name+' plays ZOOM — puts '+move.map(x=>x.name).join(', then ')+' on top of their deck.','effect');
+  } },
+  // Mixed Energies — plants a Warp in each deck. Whichever is drawn first fires and sends its twin
+  // to the graveyard, so exactly one of the two effects ever happens: a race between the decks.
+  mixed_energies: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const dreamDef=CARDS_DATA.find(x=>x.id==='dream_warp');
+    const nightDef=CARDS_DATA.find(x=>x.id==='nightmare_warp');
+    if(dreamDef) shuffleIntoDeck(st, meR, mkCard(dreamDef));
+    if(nightDef){                                        // pushed directly: shuffling into the ENEMY
+      const nd=mkCard(nightDef);                         // deck must not credit them a shuffle-in
+      st[oR].deck=[...(st[oR].deck||[]), nd];
+      shuffleDeck(st, oR);
+    }
+    c.log(st[meR].name+' plays Mixed Energies — Dream Warp goes into their own deck, Nightmare Warp into '+st[oR].name+"'s.",'effect');
+  } },
+  dream_warp: { onDraw:(c)=>{
+    const st=c.state, R=c.self;
+    const grave=st[R].graveyard||[];
+    const back=grave.slice(0,10);                        // newest first: the last 10 that hit the graveyard
+    if(back.length){
+      st[R].graveyard=grave.slice(back.length);
+      back.forEach(cd=>{ const o=cd.owner; shuffleIntoDeck(st, R, cd); if(o!==undefined) cd.owner=o; });
+      c.log('  💫 Dream Warp — '+st[R].name+' shuffles '+back.length+' card'+(back.length===1?'':'s')+' back into their deck.','effect');
+    } else {
+      c.log('  💫 Dream Warp — nothing in the graveyard to bring back.','system');
+    }
+    warpSiblingGone(st, 'nightmare_warp');
+    return true;                                         // consumed → graveyard
+  } },
+  nightmare_warp: { onDraw:(c)=>{
+    const st=c.state, R=c.self;
+    const deck=st[R].deck||[];
+    const gone=deck.splice(0,6);
+    if(gone.length){
+      st[R].graveyard=[...gone.reverse(), ...(st[R].graveyard||[])];
+      c.log('  🌑 Nightmare Warp — '+st[R].name+' loses the top '+gone.length+' card'+(gone.length===1?'':'s')+' of their deck.','effect');
+    } else {
+      c.log('  🌑 Nightmare Warp — their deck is already empty.','system');
+    }
+    warpSiblingGone(st, 'dream_warp');
+    return true;                                         // consumed → graveyard
+  } },
+  // Awakening Burst — a big hit with a real cost: 25 normal damage, then YOU discard 4 of your own
+  // cards. You pick them yourself (key __awakeningBurst); anything missing falls back to random.
+  // Self-discards ignore immunity, same as Thaa, and they run through discardTo so Blaargh and
+  // World Splitter still trigger.
+  awakening_burst: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    c.dealDmgTo(oR, 25, false);
+    const hand=st[meR].hand||(st[meR].hand=[]);
+    const picks=((st[meR].choices||{})['__awakeningBurst'])||[];
+    const chosen=[];
+    picks.forEach(uid=>{ if(chosen.length>=4) return; const cd=hand.find(x=>x && x.uid===uid && !chosen.includes(x)); if(cd) chosen.push(cd); });
+    if(chosen.length<4){
+      const pool=hand.filter(x=>x && !chosen.includes(x));
+      for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+      while(chosen.length<4 && pool.length) chosen.push(pool.shift());
+    }
+    chosen.forEach(cd=>{ const i=hand.indexOf(cd); if(i>=0){ hand.splice(i,1); discardTo(st, meR, cd); } });
+    c.log(st[meR].name+' plays Awakening Burst — 25 damage, then discards '+chosen.length+' card'+(chosen.length===1?'':'s')+'.','damage');
+  } },
+  // Rogg the Giant — 10 normal damage, doubled to 20 while the opponent is holding more cards than
+  // you. Hands are compared as they stand when Rogg resolves (Rogg itself is already out of hand).
+  rogg_the_giant: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const mine=(st[meR].hand||[]).length, theirs=(st[oR].hand||[]).length;
+    const big=theirs>mine;
+    c.dealDmgTo(oR, big?20:10, false);
+    c.log(st[meR].name+' plays Rogg the Giant — '+(big
+      ? st[oR].name+' holds more cards ('+theirs+' vs '+mine+') → 20 damage'
+      : 'hands are '+theirs+' vs '+mine+' → 10 damage')+'.','damage');
+  } },
+  // Marcel's Kitchen — every healing card in the opponent's HAND is revealed (to both players) and
+  // each one costs them 10 normal damage. Cards are only shown, never moved, so immune ones count.
+  marcels_kitchen: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const heals=(st[oR].hand||[]).filter(x=>x && x.heals);
+    if(!heals.length){ c.log(st[meR].name+" plays Marcel's Kitchen — no healing cards in "+st[oR].name+"'s hand.",'system'); return; }
+    markRevealed(st, meR, heals); markRevealed(st, oR, heals);
+    const amt=heals.length*10;
+    c.dealDmgTo(oR, amt, false);
+    c.log(st[meR].name+" plays Marcel's Kitchen — "+heals.length+' healing card'+(heals.length===1?'':'s')+' revealed ('+heals.map(x=>x.name).join(', ')+') → '+amt+' damage.','damage');
+  } },
+  // Misses Jen — a comeback heal: 35 while you are far enough behind on health, otherwise 10.
+  // Spending an Orb lowers the gap you need from 100 to 70, it does not change the heal itself.
+  misses_jen: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const need=c.useOrb?70:100;
+    const gap=(st[oR].hp||0)-(st[meR].hp||0);
+    const big=gap>=need;
+    c.heal(big?35:10);
+    c.log(st[meR].name+' plays Misses Jen'+(c.useOrb?' (Enchanted)':'')+' — '+(big
+      ? 'behind by '+gap+' health (needed '+need+') → Heal 35'
+      : 'only '+gap+' health behind (needed '+need+') → Heal 10')+'.','heal');
+  } },
+  // Blind Murloc — reveals the bottom 6 of the opponent's deck to you. Enchanted, the OPPONENT picks
+  // 2 of those to be removed from the game entirely (not the graveyard) — gathered under the fixed
+  // key __blindMurloc, like Whitefoot; a missing pick (CPU) falls back to random. Immune cards stay.
+  blind_murloc: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const deck=st[oR].deck||[];
+    const bottom=deck.slice(-6);
+    if(!bottom.length){ c.log(st[meR].name+' plays Blind Murloc — '+st[oR].name+' has an empty deck.','system'); return; }
+    markRevealed(st, meR, bottom);
+    c.log(st[meR].name+' plays Blind Murloc — reveals the bottom '+bottom.length+' card'+(bottom.length===1?'':'s')+' of '+st[oR].name+"'s deck: "+bottom.map(x=>x.name).join(', ')+'.','effect');
+    if(!c.useOrb) return;
+    const pool=bottom.filter(x=>x && takeable(x));
+    const picks=((st[oR].choices||{})['__blindMurloc'])||[];
+    const chosen=[];
+    picks.forEach(uid=>{ if(chosen.length>=2) return; const cd=pool.find(x=>x.uid===uid && !chosen.includes(x)); if(cd) chosen.push(cd); });
+    if(chosen.length<2){                                   // CPU or too few picks → random from the revealed pool
+      const rest=pool.filter(x=>!chosen.includes(x));
+      for(let i=rest.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+      while(chosen.length<2 && rest.length) chosen.push(rest.shift());
+    }
+    if(!chosen.length){ c.log('  🐟 Nothing could be removed.','system'); return; }
+    chosen.forEach(cd=>{ const i=deck.indexOf(cd); if(i>=0) deck.splice(i,1); });   // gone for good, no graveyard
+    c.log('  🐟 Enchanted — '+st[oR].name+' removes '+chosen.map(x=>x.name).join(' and ')+' from the game.','effect');
+  } },
+  // Orobas — a Blessing that mills you: after every round the bottom card of your own deck goes
+  // to the graveyard. With an empty deck nothing happens.
+  orobas: { onRoundEnd:(c)=>{
+    const st=c.state, R=c.self;
+    const deck=st[R].deck||[];
+    if(!deck.length) return;
+    const bottom=deck.pop();
+    st[R].graveyard=[bottom, ...(st[R].graveyard||[])];
+    c.log('  🐴 '+st[R].name+"'s Orobas — "+bottom.name+' is discarded from the bottom of their deck.','effect');
+  } },
+  // Marble Craft — steals one random card (immune cards are never in the pool, and it stops at a
+  // full hand). Endless is a data flag: after resolving it goes back into your deck, not the
+  // graveyard. Stolen cards keep their original owner, so they count for your Constellation quest.
+  marble_craft: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const got=stealCard(st, meR, 1);
+    if(got>0) c.log(st[meR].name+' plays Marble Craft — steals a card from '+st[oR].name+'.','effect');
+    else c.log(st[meR].name+' plays Marble Craft — nothing to steal.','system');
+  } },
+  // Curious Luza — trades your Blessing for a 30 heal; the Blessing goes to the graveyard. Spend an
+  // Orb and you keep it. With no Blessing at all the card simply does nothing.
+  curious_luza: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const bl=st[R].blessing;
+    if(!bl){ c.log(st[R].name+' plays Curious Luza — no Blessing to give up, so nothing happens.','system'); return; }
+    const blName=bl.name||'their Blessing';
+    if(c.useOrb){
+      c.heal(30);
+      c.log(st[R].name+' plays Curious Luza (Enchanted) — Heal 30 and keeps '+blName+'.','heal');
+      return;
+    }
+    st[R].blessing=null;
+    const bdef=CARDS_DATA.find(x=>x.id===bl.id);
+    if(bdef) st[R].graveyard=[mkCard(bdef), ...(st[R].graveyard||[])];
+    c.heal(30);
+    c.log(st[R].name+' plays Curious Luza — gives up '+blName+' to Heal 30.','heal');
+  } },
+  // Rankor — 10 normal damage per damage card sitting in the opponent's hand, uncapped. Cards are
+  // only counted, never moved, so immune ones count too.
+  rankor: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const n=(st[oR].hand||[]).filter(x=>x && x.dealsDamage).length;
+    const amt=n*10;
+    if(amt<=0){ c.log(st[meR].name+' plays Rankor — no damage cards in '+st[oR].name+"'s hand, no damage.",'system'); return; }
+    c.dealDmgTo(oR, amt, false);
+    c.log(st[meR].name+' plays Rankor — '+n+' damage card'+(n===1?'':'s')+' in '+st[oR].name+"'s hand → "+amt+' damage.','damage');
+  } },
+  // Dirfty Trogg — 10 normal damage, or 25 when both players are on exactly the same health.
+  // Health is compared before the damage lands.
+  dirfty_trogg: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const tied=(st[meR].hp||0)===(st[oR].hp||0);
+    const amt=tied?25:10;
+    c.dealDmgTo(oR, amt, false);
+    c.log(st[meR].name+' plays Dirfty Trogg — '+(tied ? 'health is level at '+(st[meR].hp||0)+' → 25 damage' : '10 damage')+'.','damage');
+  } },
+  // Nightmare Rush — a when-drawn card: 15 normal damage to BOTH players (the drawer's share is
+  // credited to themselves), plus a no-heal lock on the opponent for this round and the next.
+  // The lock stores the last round it covers, so it works the same whether the card is drawn in
+  // the end-of-round draw or mid-round (Electoad, Symphony 5).
+  nightmare_rush: {
+    onDraw:(c)=>{
+      const st=c.state, meR=c.self, oR=c.opp;
+      c.dealDmgTo(oR, 15, false);
+      dealDmg(st, meR, 15, false, meR);
+      const until=(st.round||1)+1;
+      const eff=(st[oR].effects||[]).find(e=>e && e.id==='nightmare_rush');
+      if(eff) eff.untilRound=Math.max(eff.untilRound||0, until);
+      else st[oR].effects=[...(st[oR].effects||[]), {id:'nightmare_rush', untilRound:until}];
+      c.log('  😱 Nightmare Rush — 15 damage to both players, and '+st[oR].name+" can't heal this round or the next.",'damage');
+      return true;                                   // consumed → graveyard
+    },
+    canHeal:(c)=> !(((c.state.round||1) <= ((c.effState && c.effState.untilRound)||0))),
+    onRoundEnd:(c)=>{
+      const st=c.state, R=c.self;
+      if((st.round||1) > ((c.effState && c.effState.untilRound)||0)){
+        st[R].effects=(st[R].effects||[]).filter(e=>e!==c.effState);
+      }
+    }
+  },
+  // Electric Boogie Man — 10 normal damage, doubled to 20 while the opponent is holding any card
+  // that originally came from YOUR deck (the permanent owner stamp). Immune cards still count:
+  // they are only checked, never moved.
+  electric_boogie_man: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const holdsMine=(st[oR].hand||[]).some(x=>x && x.owner===meR);
+    const amt=holdsMine?20:10;
+    c.dealDmgTo(oR, amt, false);
+    c.log(st[meR].name+' plays Electric Boogie Man — '+(holdsMine ? st[oR].name+' is holding a card from their deck → 20 damage' : '10 damage')+'.','damage');
+  } },
+  // Baallspawn — counts displaced cards on BOTH sides (their cards sitting in your hand plus your
+  // cards sitting in theirs, via the permanent owner stamp) and hits the opponent for 5 per card.
+  // Normal, blockable damage. Immune cards still count: nothing is moved, they're only counted.
+  baallspawn: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const inMine=(st[meR].hand||[]).filter(x=>x && x.owner===oR).length;      // their cards in my hand
+    const inTheirs=(st[oR].hand||[]).filter(x=>x && x.owner===meR).length;    // my cards in their hand
+    const total=inMine+inTheirs, amt=total*5;
+    if(amt<=0){ c.log(st[meR].name+' plays Baallspawn — no displaced cards, no damage.','system'); return; }
+    c.dealDmgTo(oR, amt, false);
+    c.log(st[meR].name+' plays Baallspawn — '+total+' displaced card'+(total===1?'':'s')+' ('+inMine+' in their own hand, '+inTheirs+' in '+st[oR].name+"'s) → "+amt+' damage.','damage');
+  } },
+  // Distortion — pulls back every card in the opponent's hand that originally came from YOUR deck
+  // (owner === you, the permanent deck-of-origin stamp). Immune cards stay put, and once your hand
+  // is full the rest simply stays with the opponent.
+  distortion: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const ohand=st[oR].hand||(st[oR].hand=[]);
+    const myhand=st[meR].hand||(st[meR].hand=[]);
+    const max=maxHandSize(st, meR);
+    const mine=ohand.filter(x=>x && x.owner===meR && takeable(x));
+    if(!mine.length){ c.log(st[meR].name+' plays Distortion — nothing of theirs to reclaim.','system'); return; }
+    const taken=[]; let leftBehind=0;
+    mine.forEach(cd=>{
+      if(myhand.length>=max){ leftBehind++; return; }        // hand full → the rest stays with the opponent
+      const i=ohand.indexOf(cd); if(i<0) return;
+      ohand.splice(i,1);
+      cd.stolen=true;
+      myhand.push(cd);                                        // owner stays meR: it came from my deck
+      taken.push(cd);
+    });
+    c.log(st[meR].name+' plays Distortion — reclaims '+taken.length+' card'+(taken.length===1?'':'s')+' from '+st[oR].name+"'s hand"+(leftBehind?' ('+leftBehind+' left behind — hand full)':'')+'.','effect');
+  } },
+  // Electoad — draws 2 right away (same path as a round draw, so "when drawn" cards fire and the
+  // cards fly out of the portal). drewExtraNow makes it count as an extra draw for the cards that
+  // care (Tall Kroog, Croock the Brave, A Sweet Life) — the draw loop folds it in at round end.
+  electoad: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const before=(st[R].hand||[]).length;
+    drawCards(st, R, 2, false);
+    const drawn=(st[R].hand||[]).slice(before);
+    if(drawn.length){
+      st[R].drewExtraNow=true;
+      fireDrawTriggers(st, R, drawn);
+    }
+    c.log(st[R].name+' plays Electoad — draws '+drawn.length+' extra card'+(drawn.length===1?'':'s')+'.','effect');
+  } },
+  // Harmless Beetle — every damage card in BOTH hands is revealed (to both players) and then
+  // shuffled into YOUR deck. Immune cards are never taken. Sacred rule: each card keeps the deck
+  // it originally came from as its owner, so opponent cards stay theirs even inside your deck.
+  harmless_beetle: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const grab=[];
+    [meR,oR].forEach(R=>{
+      (st[R].hand||[]).forEach(x=>{ if(x && x.dealsDamage && takeable(x)) grab.push({R, card:x}); });
+    });
+    if(!grab.length){ c.log(st[meR].name+' plays Harmless Beetle — no damage cards in either hand.','system'); return; }
+    const cards=grab.map(g=>g.card);
+    markRevealed(st, meR, cards); markRevealed(st, oR, cards);      // a public reveal: both players see them
+    grab.forEach(g=>{
+      const hand=st[g.R].hand||[];
+      const i=hand.indexOf(g.card); if(i>=0) hand.splice(i,1);
+      const origOwner = g.card.owner!==undefined ? g.card.owner : g.R;   // deck of origin
+      shuffleIntoDeck(st, meR, g.card);
+      g.card.owner = origOwner;                                     // shuffleIntoDeck overwrites it — restore
+    });
+    const mineCount=grab.filter(g=>g.R===meR).length, theirCount=grab.length-mineCount;
+    c.log(st[meR].name+' plays Harmless Beetle — reveals '+grab.length+' damage card'+(grab.length>1?'s':'')+' ('+mineCount+' of theirs own, '+theirCount+' from '+st[oR].name+') and shuffles them all into their own deck.','effect');
+  } },
+  // Second Chapter — BOTH players shuffle 2 of their own cards back into their own deck.
+  // Each player picks their own 2 (gathered under the fixed key __secondChapter, like Whitefoot);
+  // anything missing (e.g. the CPU) is filled randomly. Immune cards are never moved, and a card
+  // that originally came from the other deck keeps its original owner (shuffleIntoDeck overwrites it).
+  second_chapter: { onPlay:(c)=>{
+    const st=c.state;
+    [c.self, c.opp].forEach(R=>{
+      const hand=st[R].hand||(st[R].hand=[]);
+      const picks=((st[R].choices||{})['__secondChapter'])||[];
+      const chosen=[];
+      picks.forEach(uid=>{
+        if(chosen.length>=2) return;
+        const cd=hand.find(x=>x && x.uid===uid && takeable(x) && !chosen.includes(x));
+        if(cd) chosen.push(cd);
+      });
+      if(chosen.length<2){                                        // fill up at random (CPU, or too few picks)
+        const pool=hand.filter(x=>x && takeable(x) && !chosen.includes(x));
+        for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+        while(chosen.length<2 && pool.length) chosen.push(pool.shift());
+      }
+      if(!chosen.length){ c.log('  📖 '+st[R].name+' has nothing to shuffle back.','system'); return; }
+      chosen.forEach(cd=>{
+        const i=hand.indexOf(cd); if(i>=0) hand.splice(i,1);
+        const origOwner=cd.owner;
+        shuffleIntoDeck(st, R, cd);
+        if(origOwner!==undefined) cd.owner=origOwner;              // sacred: deck of origin stays the owner
+      });
+      c.log('  📖 '+st[R].name+' shuffles '+chosen.length+' card'+(chosen.length>1?'s':'')+' back into their deck.','effect');
+    });
+  } },
+  // Linn the Elf Leader — Block comes from the data flag (block:true). If the opponent blocked
+  // with a Block CARD last round (Shield/Symphony don't count), she returns to your hand instead
+  // of the graveyard; with a full hand she goes to the graveyard after all.
+  linn_the_elf_leader: { onPlay:(c)=>{
+    const self=c.state[c.self];
+    if(c.state[c.opp].blockedByCardLastRound){
+      c.card._returnToHand=true;
+      c.log(self.name+' plays Linn the Elf Leader — Block, and '+c.state[c.opp].name+' blocked last round → she returns to hand.','effect');
+    } else {
+      c.log(self.name+' plays Linn the Elf Leader — Block.','effect');
+    }
+  } },
+  // Croock the Brave — Block this round comes from the data flag (block:true, applied in the
+  // block-first pass before any damage). If you drew an extra card last round, he also grants a
+  // 1-round Shield, which by design starts NEXT round. An existing longer Shield is never shortened.
+  croock_the_brave: { onPlay:(c)=>{
+    const self=c.state[c.self];
+    if(self.drewExtraLastRound){
+      self.shieldRounds = Math.max(self.shieldRounds||0, 1);
+      c.log(self.name+' plays Croock the Brave — Block, and an extra card drawn last round → blocks next round too.','effect');
+    } else {
+      c.log(self.name+' plays Croock the Brave — Block.','effect');
+    }
+  } },
   tall_kroog: { onPlay:(c)=>{
     const extra = !!c.state[c.opp].drewExtraLastRound;
     c.heal(extra ? 20 : 10);
@@ -3848,7 +4249,7 @@ function tryInterceptHeal(gs, healTarget, amt){
 }
 
 function heal(gs,r,amt,raw){
-  if(!canHeal(gs,r)){ log('  → '+gs[r].name+" can't heal (Journey).",'system'); return; }  // First Day: no_heal
+  if(!canHeal(gs,r)){ log('  → '+gs[r].name+" can't heal right now.",'system'); return; }  // First Day: no_heal, Nightmare Rush, ...
   if(!raw && gs[r].blessing && gs[r].blessing.id==='inner_focus') amt=Math.max(0, amt-5);   // Inner Focus: your OTHER heals are reduced by 5
   if(amt<=0) return;
   if(tryInterceptHeal(gs,r,amt)) return;   // heal was stolen/redirected → r heals nothing
@@ -4006,6 +4407,9 @@ function stealCard(gs,r,n){
     stolen++;
   }
   gs[o].hand=ohand; gs[r].hand=myhand;
+  // Sacred rule: a stolen card keeps the deck it came from as its permanent owner, so it still
+  // counts for the Constellation quest of whoever plays it. Only stamp when it isn't stamped yet.
+  taken.forEach(card=>{ if(card && card.owner===undefined) card.owner=o; });
   // A steal is now a real EVENT. It fires for BOTH players' sources, because a card can care
   // about theft no matter who committed it (Hearth of our Galaxy). Once per stolen card.
   taken.forEach(card=>{
@@ -4085,6 +4489,7 @@ const QUEST_DEFS = {
   zorya:            { name:'Zorya — the Four Sins', goal:4, reward:'zorya_arm' },
   constellation_council_control: { name:'Constellation Council Control', goal:10, reward:'handsize_plus2' },
   dreaming_zephyrax: { name:'Dreaming Zephyrax', goal:1, reward:'unleash_zephyrax' },
+  sheera_the_dragon_tamer: { name:'Sheera the Dragon Tamer', goal:1, reward:'fimm' },
   hatching_egg: { name:'Hatching Egg', goal:1, reward:'mothers_firebreath' },
   seven_symphonies: { name:'7 Symphonies of Java', goal:7, reward:'seven_symphonies_system' },
 };
@@ -4095,7 +4500,7 @@ const QUEST_DEFS = {
 //   • Hatching Egg — both players have completed a quest (yours must be a quest OTHER than the
 //     Egg itself, so pair it with a second quest in your deck).
 // Both reward cards are handed to you; you play them when you like.
-const QUEST_REWARD_CARDS = { unleash_zephyrax:'unleashed_zephyrax', mothers_firebreath:'mothers_firebreath' };
+const QUEST_REWARD_CARDS = { fimm:'fimm_the_guardian_of_dreams', unleash_zephyrax:'unleashed_zephyrax', mothers_firebreath:'mothers_firebreath' };
 function checkStateQuests(gs, r){
   (gs[r].quests||[]).forEach(q=>{
     if(q.done) return;
@@ -4127,6 +4532,7 @@ function checkStateQuests(gs, r){
     }
     let complete=false;
     if(q.id==='dreaming_zephyrax') complete = (gs[r].hp||0) <= 20;
+    if(q.id==='sheera_the_dragon_tamer') complete = ((gs[r].deck||[]).length) <= 10;
     if(q.id==='hatching_egg'){
       const ownerHasOther = (gs[r].quests||[]).some(x=>x.done && x.id!=='hatching_egg');
       const oppHasDone    = (gs[opp(r)].quests||[]).some(x=>x.done);
@@ -5783,7 +6189,62 @@ async function onRevealPhase(gs){
     if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); choices['__whitefootGive']=ch[0]; }
   }
 
+  // ZOOM — look at my own bottom two and decide what goes on top.
+  if((gs[myRole].selectedCards||[]).some(c=>c && c.id==='zoom')){
+    const b=((me().deck||[]).slice(-2));
+    if(b.length){
+      const opts=[{key:'none', label:'Leave them at the bottom'}];
+      b.forEach((cd,i)=> opts.push({key:'only'+i, label:'Put '+cd.name+' on top'}));
+      if(b.length===2){
+        opts.push({key:'ab', label:'Both — '+b[0].name+' on top'});
+        opts.push({key:'ba', label:'Both — '+b[1].name+' on top'});
+      }
+      const pick=await pickChoice(opts, 'ZOOM — the bottom of your deck');
+      const order = pick==='only0' ? [b[0].uid]
+                  : pick==='only1' ? [b[1].uid]
+                  : pick==='ab'    ? [b[0].uid, b[1].uid]
+                  : pick==='ba'    ? [b[1].uid, b[0].uid] : [];
+      choices['__zoom']=order;
+    }
+  }
+
+  // Awakening Burst — I pick which 4 of my own cards to discard.
+  if((gs[myRole].selectedCards||[]).some(c=>c && c.id==='awakening_burst')){
+    const hand=(me().hand||[]);
+    const n=Math.min(4, hand.length);
+    if(n>0){ const ch=await pickDiscards(hand, n, 'Awakening Burst', 'discard'); choices['__awakeningBurst']=ch; }
+  }
+
+  // Blind Murloc — if the OPPONENT played it enchanted, I choose which 2 of my bottom cards go.
+  if((gs[opp(myRole)].selectedCards||[]).some(c=>c && c.id==='blind_murloc' && c._useOrb)){
+    const bottom=((me().deck||[]).slice(-6)).filter(x=>x && takeable(x));
+    if(bottom.length){ const ch=await pickDiscards(bottom, Math.min(2,bottom.length), 'Blind Murloc', 'remove from the game'); choices['__blindMurloc']=ch; }
+  }
+
+  // Second Chapter — played by EITHER side: both players pick 2 of their own cards to shuffle back.
+  if([...(gs[myRole].selectedCards||[]), ...(gs[opp(myRole)].selectedCards||[])].some(c=>c && c.id==='second_chapter')){
+    const pool=(me().hand||[]).filter(x=>x && takeable(x));
+    if(pool.length){ const ch=await pickDiscards(pool, Math.min(2,pool.length), 'Second Chapter', 'shuffle back into your deck'); choices['__secondChapter']=ch; }
+  }
+
   // Thaa — if I have it active, each round I may discard up to 2 cards instead of drawing.
+  // Mindy's Playtime — offer the swap: take this round's draw from the opponent's deck instead,
+  // paying the same number of cards out of hand.
+  if(me().blessing && me().blessing.id==='mindys_playtime'){
+    const hand=(me().hand||[]);
+    const can=(them().deck||[]).length>0 && hand.length>0;
+    if(can){
+      const pick=await pickChoice([
+        {key:'own',   label:'Draw '+drawCount(localGs, myRole)+' from your own deck'},
+        {key:'mindy', label:'Draw 1 from their deck (discard 1)'}
+      ], "Mindy's Playtime — whose deck?");
+      if(pick==='mindy'){
+        const ch=await pickDiscards(hand, 1, "Mindy's Playtime", 'discard');
+        choices['__mindy']=ch;
+      }
+    }
+  }
+
   if(me().thaa){
     const hand=(me().hand||[]);
     const opts=[{key:'draw', label:'Draw 2 cards'}];
@@ -6068,6 +6529,50 @@ document.getElementById('btn-confirm').onclick=async()=>{
         const pool=(me().hand||[]).filter(x=>x && takeable(x) && x.rarity!=='legendary');
         if(pool.length){ const ch=await pickDiscards(pool,1,'Whitefoot — choose a non-legendary card to give'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__whitefootGive: ch[0]}); }
       }
+      if((localGs.p1.selectedCards||[]).some(c=>c && c.id==='zoom')){
+        const b=((me().deck||[]).slice(-2));
+        if(b.length){
+          const opts=[{key:'none', label:'Leave them at the bottom'}];
+          b.forEach((cd,i)=> opts.push({key:'only'+i, label:'Put '+cd.name+' on top'}));
+          if(b.length===2){
+            opts.push({key:'ab', label:'Both — '+b[0].name+' on top'});
+            opts.push({key:'ba', label:'Both — '+b[1].name+' on top'});
+          }
+          const pick=await pickChoice(opts, 'ZOOM — the bottom of your deck');
+          const order = pick==='only0' ? [b[0].uid]
+                      : pick==='only1' ? [b[1].uid]
+                      : pick==='ab'    ? [b[0].uid, b[1].uid]
+                      : pick==='ba'    ? [b[1].uid, b[0].uid] : [];
+          localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__zoom: order});
+        }
+      }
+      if((localGs.p1.selectedCards||[]).some(c=>c && c.id==='awakening_burst')){
+        const hand=(me().hand||[]);
+        const n=Math.min(4, hand.length);
+        if(n>0){ const ch=await pickDiscards(hand, n, 'Awakening Burst', 'discard'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__awakeningBurst: ch}); }
+      }
+      if(localGs.p1.blessing && localGs.p1.blessing.id==='mindys_playtime'){
+        const hand=(me().hand||[]);
+        const can=(localGs.p2.deck||[]).length>0 && hand.length>0;
+        if(can){
+          const pick=await pickChoice([
+            {key:'own',   label:'Draw '+drawCount(localGs,'p1')+' from your own deck'},
+            {key:'mindy', label:'Draw 1 from their deck (discard 1)'}
+          ], "Mindy's Playtime — whose deck?");
+          if(pick==='mindy'){
+            const ch=await pickDiscards(hand, 1, "Mindy's Playtime", 'discard');
+            localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__mindy: ch});
+          }
+        }
+      }
+      if((localGs.p2.selectedCards||[]).some(c=>c && c.id==='blind_murloc' && c._useOrb)){
+        const bottom=((me().deck||[]).slice(-6)).filter(x=>x && takeable(x));
+        if(bottom.length){ const ch=await pickDiscards(bottom, Math.min(2,bottom.length), 'Blind Murloc', 'remove from the game'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__blindMurloc: ch}); }
+      }
+      if([...(localGs.p1.selectedCards||[]), ...(localGs.p2.selectedCards||[])].some(c=>c && c.id==='second_chapter')){
+        const pool=(me().hand||[]).filter(x=>x && takeable(x));
+        if(pool.length){ const ch=await pickDiscards(pool, Math.min(2,pool.length), 'Second Chapter', 'shuffle back into your deck'); localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__secondChapter: ch}); }
+      }
       if(me().thaa){
         const hand=(me().hand||[]);
         const opts=[{key:'draw', label:'Draw 2 cards'}];
@@ -6277,6 +6782,8 @@ function resolveRound(gs){
   // Reset block + per-round trackers. Carry this round's damage over to dmgDealtLastRound
   // FIRST — Hangover Hex needs it, and the tracker is wiped before any card resolves.
   ['p1','p2'].forEach(r=>{
+    state[r].blockedByCardLastRound=!!state[r].blockedByCardThisRound;   // only a Block CARD counts (not Shield/Symphony)
+    state[r].blockedByCardThisRound=false;
     state[r].blocked=false;
     state[r].skipRound=false;   // Dragonhood: the skipped round's select phase already used this
     state[r].dmgDealtLastRound=state[r].dmgDealtThisRound||0;
@@ -6306,6 +6813,7 @@ function resolveRound(gs){
       }
     });
     if(Array.isArray((state[r].choices||{})['__thaa'])) state[r].thaaDiscard=state[r].choices['__thaa'];   // Thaa: discard-instead-of-draw picks
+    if(Array.isArray((state[r].choices||{})['__mindy'])) state[r].mindyDiscard=state[r].choices['__mindy'];  // Mindy's Playtime: draw-from-their-deck picks
   });
 
   // Store for result screen (before selectedCards are cleared)
@@ -6319,7 +6827,7 @@ function resolveRound(gs){
 
   // BLOCK-FIRST: any played card flagged block:true raises the shield before any
   // damage resolves. Data-driven now (card.block) — no hardcoded id list.
-  [['p1',p1c],['p2',p2c]].forEach(([r,cards])=>cards.forEach(c=>{ if(c&&c.block) state[r].blocked=true; }));
+  [['p1',p1c],['p2',p2c]].forEach(([r,cards])=>cards.forEach(c=>{ if(c&&c.block){ state[r].blocked=true; state[r].blockedByCardThisRound=true; } }));
 
   // SHIELD (Larry's Lover): a multi-round Block. Consumed here, BEFORE cards resolve, so a
   // Shield granted by a card played THIS round doesn't protect this round — it starts next
@@ -6377,7 +6885,12 @@ function resolveRound(gs){
     if(!(state[r].playedIds||[]).includes(c.id)) state[r].playedIds=[...(state[r].playedIds||[]), c.id];
     if(L&&L.onPlay) L.onPlay(buildCtx(state,r,{card:c}));
     advanceQuestsFor(state,r,c);
-    if(c.endless){
+    if(c._returnToHand){
+      delete c._returnToHand;
+      const rhand=state[r].hand||(state[r].hand=[]);
+      if(rhand.length < maxHandSize(state,r)){ rhand.push(c); log('  ↩ '+c.name+' returns to '+state[r].name+"'s hand.",'effect'); }
+      else { state[r].graveyard=[c,...(state[r].graveyard||[])]; log('  ↩ '+c.name+' would return, but the hand is full — it goes to the graveyard.','system'); }
+    } else if(c.endless){
       // Endless: return to deck (through the shuffle-in choke-point) instead of graveyard.
       // A source like Devour Hope may intercept it (destroy + damage) so it never returns.
       const added=shuffleIntoDeck(state,r,c);
@@ -6493,12 +7006,35 @@ function resolveRound(gs){
       usedThaa=true;
       log('  🌀 '+state[r].name+' uses Thaa — discards instead of drawing.','effect');
     }
-    const n=usedThaa ? 0 : drawCount(state,r);
+    // Mindy's Playtime — this player chose to take their draw from the OPPONENT's deck instead,
+    // paying the same number of cards out of their own hand. Cards keep the opponent as their
+    // permanent owner, so they count toward the Constellation quest when played.
+    let usedMindy=false, mindyDrawn=[];
+    const mindyUids=state[r].mindyDiscard; state[r].mindyDiscard=null;
+    if(!usedThaa && !wasHindered && hasMindy(state,r) && Array.isArray(mindyUids) && mindyUids.length){
+      const o=opp(r), oDeck=state[o].deck||[], hand=state[r].hand||(state[r].hand=[]), max=maxHandSize(state,r);
+      const want=Math.min(1, oDeck.length, mindyUids.length);   // exactly one card from their deck
+      for(let i=0;i<want && hand.length<max;i++){
+        const cd=oDeck.shift(); if(!cd) break;
+        if(cd.owner===undefined) cd.owner=o;
+        hand.push(cd); mindyDrawn.push(cd);
+      }
+      if(mindyDrawn.length){
+        mindyUids.slice(0,mindyDrawn.length).forEach(uid=>{
+          const idx=hand.findIndex(c=>c && c.uid===uid);
+          if(idx>=0){ const dc=hand.splice(idx,1)[0]; discardTo(state, r, dc); }
+        });
+        usedMindy=true;
+        log("  🧸 "+state[r].name+" uses Mindy's Playtime — draws "+mindyDrawn.length+" card"+(mindyDrawn.length===1?'':'s')+" from "+state[o].name+"'s deck and discards the same number.",'effect');
+      }
+    }
+    const n=(usedThaa||usedMindy) ? 0 : drawCount(state,r);
     drawCards(state,r,n,n<=0);
-    const drawn=(state[r].hand||[]).slice(before);   // the cards newly drawn this round
+    const drawn=usedMindy ? mindyDrawn : (state[r].hand||[]).slice(before);   // the cards newly drawn this round
     state[r].drewThisRound=(drawn.length>0);
     state[r].drewExtraLastRound=state[r].drewExtraThisRound;   // carry the previous draw first (Tall Kroog reads last round)
-    state[r].drewExtraThisRound=((state[r].extraDraw||0)>0);   // A Sweet Life reads this at the next round-end
+    state[r].drewExtraThisRound=((state[r].extraDraw||0)>0) || !!state[r].drewExtraNow;   // A Sweet Life reads this at the next round-end; drewExtraNow = an immediate extra draw (Electoad)
+    state[r].drewExtraNow=false;
     if(state.curseDrawsNext) drawn.forEach(dc=>curseCard(state, dc));   // Bad Landing — Curse everything drawn for next round (both players)
     // "When drawn" triggers + Journey draw effects — same path as a card-driven draw.
     fireDrawTriggers(state, r, drawn);
@@ -6572,6 +7108,21 @@ function resolveRound(gs){
 // still shows them to the opponent. A card whose onDraw returns true consumes itself.
 // Records cards that were revealed to a player, so the UI can actually SHOW them
 // (centre-screen, like a "when drawn" trigger) instead of only naming them in the log.
+// Mixed Energies: once one Warp fires, its twin is discarded from whatever deck or hand it sits in.
+function warpSiblingGone(state, id){
+  ['p1','p2'].forEach(r=>{
+    ['deck','hand'].forEach(zone=>{
+      const arr=state[r][zone]||[];
+      for(let i=arr.length-1;i>=0;i--){
+        if(arr[i] && arr[i].id===id){
+          const cd=arr.splice(i,1)[0];
+          state[r].graveyard=[cd, ...(state[r].graveyard||[])];
+          log('  ⤫ '+cd.name+' is discarded — its twin fired first.','system');
+        }
+      }
+    });
+  });
+}
 function markRevealed(state, viewer, cards){
   const list=(Array.isArray(cards)?cards:[cards]).filter(Boolean);
   if(!list.length) return;
