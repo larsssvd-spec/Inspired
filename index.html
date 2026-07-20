@@ -298,9 +298,28 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
   text-shadow:0 1px 0 rgba(255,255,255,0.45); }
 .adv-sub { font-family:'Lora',serif; font-style:italic; color:#6b5227; margin:0.3rem 0 1.2rem;
   font-size:clamp(0.72rem, 1vw, 1rem); text-shadow:0 1px 0 rgba(255,255,255,0.35); }
-.adv-levels { flex:1; width:100%; display:flex; flex-wrap:wrap; gap:0.9rem;
-  align-items:center; align-content:center; justify-content:center; overflow:auto; }
-.adv-empty { font-family:'Lora',serif; font-style:italic; color:#7a6238; text-shadow:0 1px 0 rgba(255,255,255,0.3); }
+/* One level fills the parchment; the arrows sit against the inner edges, vertically centred. */
+.adv-stage { flex:1; width:100%; display:flex; align-items:center; justify-content:center; gap:2vw; min-height:0; }
+.adv-level { display:flex; flex-direction:column; align-items:center; gap:0.9rem; min-width:0; flex:1; max-width:56vw; }
+.adv-level-title { font-family:'Playfair Display',serif; font-weight:600; color:#3a2a10;
+  font-size:clamp(0.95rem,1.7vw,1.6rem); letter-spacing:0.06em; text-align:center;
+  text-shadow:0 1px 0 rgba(255,255,255,0.45); }
+.adv-art-wrap { position:relative; width:100%; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
+  background:#2a1d10; border:2px solid rgba(90,60,25,0.55);
+  box-shadow:0 10px 30px rgba(40,25,10,0.45), inset 0 0 40px rgba(0,0,0,0.35); }
+.adv-art { width:100%; height:100%; object-fit:cover; display:block; }
+.adv-art-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'Lora',serif; font-style:italic; color:rgba(255,235,200,0.4); font-size:0.9rem; }
+.adv-lock { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(12,8,4,0.72); color:#e8dcc0; font-family:'Playfair Display',serif;
+  letter-spacing:0.18em; text-transform:uppercase; font-size:clamp(0.75rem,1.2vw,1rem); }
+.adv-progress { font-family:'Lora',serif; font-style:italic; color:#6b5227; font-size:clamp(0.7rem,1vw,0.9rem);
+  text-shadow:0 1px 0 rgba(255,255,255,0.35); }
+.adv-arrow { flex:0 0 auto; background:none; border:0; cursor:pointer; padding:0 0.4rem;
+  font-family:'Playfair Display',serif; font-size:clamp(2rem,4vw,3.4rem); line-height:1; color:#5a3f18;
+  text-shadow:0 1px 0 rgba(255,255,255,0.4); transition:color 0.18s, transform 0.18s, opacity 0.18s; }
+.adv-arrow:hover:not(:disabled) { color:#8a5f1e; transform:scale(1.15); }
+.adv-arrow:disabled { opacity:0.22; cursor:not-allowed; }
 
 /* Submenu "Back" — same type, set apart and quieter so it never competes with the real options. */
 .menu-btn.menu-back { margin-top:1.1rem; font-size:clamp(0.9rem,1.6vw,1.05rem); letter-spacing:0.24em; color:rgba(232,228,216,0.38); }
@@ -1400,8 +1419,18 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
     <button class="btn-back-link adv-back" id="adv-back">← Back</button>
     <div class="adv-title">Adventure</div>
     <div class="adv-sub">Beat a level to unlock the next one</div>
-    <div class="adv-levels" id="adv-levels">
-      <p class="adv-empty">Levels coming soon.</p>
+    <div class="adv-stage">
+      <button class="adv-arrow adv-prev" id="adv-prev" title="Previous level">‹</button>
+      <div class="adv-level">
+        <div class="adv-level-title" id="adv-level-title">Level 1 — The Beginning</div>
+        <div class="adv-art-wrap">
+          <img class="adv-art" id="adv-level-art" alt="" />
+          <div class="adv-art-fallback" id="adv-art-fallback">No image yet</div>
+          <div class="adv-lock" id="adv-lock">🔒 Locked</div>
+        </div>
+        <div class="adv-progress" id="adv-progress"></div>
+      </div>
+      <button class="adv-arrow adv-next" id="adv-next" title="Next level">›</button>
     </div>
   </div>
 </div>
@@ -1709,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T14:14:50';
+const APP_VERSION = '2026-07-20T14:24:48';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5650,7 +5679,45 @@ function renderCollection(){
     $('mode-back').dataset.from=fromMenu;
     hide('screen-lobby'); show('screen-mode');
   };
-  $('sp-adventure').onclick=()=>{ hide('screen-lobby'); show('screen-adventure'); };
+  // ── Adventure: one level per screen, unlocked in order ──────────────────────────────
+  // Titles are placeholders — replace them freely. Art goes in art/level_<n>.png (16:9);
+  // a level without art shows a plain panel instead of a broken image.
+  const ADV_LEVELS = [
+    'The Beginning', 'First Light', 'The Quiet Road', 'Broken Bridge', 'The Hollow Wood',
+    'Ashen Fields', 'The Sunken Gate', 'Stormwatch', 'The Long Night', 'Emberfall',
+    'Glass Desert', 'The Whispering Deep', 'Frostmarch', 'The Gilded Ruin', 'Duskspire',
+    'The Shattered Crown', 'Wyrmrest', 'The Last Harbour', 'Nightfall', 'The Final Dream'
+  ];
+  let advIndex = 0;                                   // level currently on screen (0-based)
+  const advBeaten = ()=> Math.max(0, ((myProfile && myProfile.adventure && myProfile.adventure.beaten) || 0));
+  const advUnlocked = ()=> Math.min(ADV_LEVELS.length, advBeaten() + 1);   // level 1 is always open
+
+  function renderAdventure(){
+    const n = advIndex + 1;
+    const locked = n > advUnlocked();
+    $('adv-level-title').textContent = 'Level ' + n + ' — ' + ADV_LEVELS[advIndex];
+
+    const img = $('adv-level-art'), fb = $('adv-art-fallback');
+    img.style.display = 'none'; fb.style.display = 'flex';
+    img.onload  = ()=>{ img.style.display='block'; fb.style.display='none'; };
+    img.onerror = ()=>{ img.style.display='none';  fb.style.display='flex'; };
+    img.src = 'art/level_' + n + '.png';
+
+    $('adv-lock').style.display = locked ? 'flex' : 'none';
+    $('adv-progress').textContent = locked
+      ? 'Beat level ' + advUnlocked() + ' to unlock this one'
+      : 'Level ' + n + ' of ' + ADV_LEVELS.length;
+
+    $('adv-prev').disabled = advIndex <= 0;
+    $('adv-next').disabled = (advIndex + 1) >= ADV_LEVELS.length || (n + 1) > advUnlocked();
+  }
+  $('adv-prev').onclick=()=>{ if(advIndex>0){ advIndex--; renderAdventure(); } };
+  $('adv-next').onclick=()=>{ if(advIndex+1 < ADV_LEVELS.length && (advIndex+2) <= advUnlocked()){ advIndex++; renderAdventure(); } };
+
+  $('sp-adventure').onclick=()=>{
+    advIndex = Math.max(0, advUnlocked() - 1);        // open on the level you're up to
+    hide('screen-lobby'); show('screen-adventure'); renderAdventure();
+  };
   $('adv-back').onclick=()=>{ hide('screen-adventure'); show('screen-lobby'); };
   $('sp-arena').onclick=()=> openDeckPicker('solo');          // Arena = play against the AI (the old Singleplayer)
   $('sp-puzzle').onclick=()=> openMode('Puzzle Mode','menu-box-single');
