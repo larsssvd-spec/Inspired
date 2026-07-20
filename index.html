@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T15:40:26';
+const APP_VERSION = '2026-07-20T16:42:01';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -4337,7 +4337,16 @@ function extractQuests(deck, linked){
   return {deck:remaining, quests, blessing};
 }
 
-function log(msg,type='log'){logs.push({msg,type});}
+// ── AI simulation ────────────────────────────────────────────────────────────────────
+// simMode is on while the AI plays a round out "in its head": resolveRound then works purely
+// on the state it was handed, writing nothing to Firebase, the screen, or the round log.
+let simMode=false;
+function log(msg,type='log'){ if(simMode) return; logs.push({msg,type}); }
+// Deep copy of a game state. Cards are plain objects, so a structural clone is enough; any
+// function-valued field (there are none in state) would be dropped, which is what we want.
+function cloneGs(gs){
+  try { return structuredClone(gs); } catch(e){ return JSON.parse(JSON.stringify(gs)); }
+}
 
 // attacker is passed explicitly (defaults to opp(target)) so damage-source is unambiguous.
 function dealDmg(gs,target,amt,trueDmg,attacker){
@@ -5724,7 +5733,18 @@ function renderCollection(){
     hide('screen-lobby'); show('screen-adventure'); renderAdventure();
   };
   $('adv-back').onclick=()=>{ hide('screen-adventure'); show('screen-lobby'); };
-  $('sp-arena').onclick=()=> openDeckPicker('solo');          // Arena = play against the AI (the old Singleplayer)
+  // Arena = play against the AI. Pick how hard it thinks before choosing a deck; the choice is
+  // remembered for the next visit.
+  $('sp-arena').onclick=async ()=>{
+    const pick=await pickChoice([
+      {key:'easy',   label:'Easy — plays casually'},
+      {key:'normal', label:'Normal — thinks before it plays'},
+      {key:'hard',   label:'Hard — thinks hard'}
+    ], 'Arena — how strong should your opponent be?');
+    if(pick) aiLevel=pick;
+    try{ localStorage.setItem('inspiredAiLevel', aiLevel); }catch(e){}
+    openDeckPicker('solo');
+  };
   $('sp-puzzle').onclick=()=> openMode('Puzzle Mode','menu-box-single');
   $('mp-adventure').onclick=()=> openMode('Adventure (2 vs 1)','menu-box-multi');
   $('mode-back').onclick=()=>{ hide('screen-mode'); show('screen-lobby'); };
@@ -6685,11 +6705,24 @@ document.getElementById('btn-confirm').onclick=async()=>{
       const eligible=p2hand.filter(c=>matchesForced(c, p2ft));
       p2played=eligible.slice(0, Math.min(p2lim, eligible.length));
     }
-    // Fill remaining slots with a random number of other cards (CPU plays casually).
+    // Fill the remaining slots. On Easy that stays a casual random pick; otherwise the AI plays
+    // each option out on a copy of the game and keeps the one that leaves it best off.
     const rest=p2hand.filter(c=>!p2played.includes(c));
     const freeSlots=p2lim-p2played.length;
-    const extra=Math.min(freeSlots, Math.floor(Math.random()*(freeSlots+1)), rest.length);
-    p2played=p2played.concat(rest.slice(0, extra));
+    if(aiLevel==='easy' || freeSlots<=0 || !rest.length){
+      const extra=Math.min(freeSlots, Math.floor(Math.random()*(freeSlots+1)), rest.length);
+      p2played=p2played.concat(rest.slice(0, extra));
+    } else {
+      let think=[];
+      try { think=aiChoose(localGs,'p2')||[]; } catch(e){ think=[]; }
+      const chosen=[];
+      think.forEach(pk=>{
+        if(chosen.length>=freeSlots) return;
+        const c=rest.find(x=>x.uid===pk.card.uid && !chosen.includes(x));
+        if(c){ if(pk.orb) c._useOrb=true; chosen.push(c); }
+      });
+      p2played=p2played.concat(chosen);
+    }
     p2played.forEach(c=>{
       if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
       if(c.id==='tinker_leaf'){ const deck=localGs.p1.deck||[]; if(deck.length){ c._tinkerPick=deck[Math.floor(Math.random()*deck.length)].id; } }
@@ -6962,6 +6995,136 @@ function updateTimer(){
 
 // ── Resolve round ──
 // Only p1 (or solo) runs this — one authoritative resolver, so multiplayer never desyncs.
+
+// ── AI ───────────────────────────────────────────────────────────────────────────────
+// The CPU picks its cards by actually playing each option out on a copy of the game and
+// scoring the result. It never inspects the human's hand, so it can't cheat: it only sees
+// what a player in its seat would see. Because it judges outcomes rather than card text,
+// every card — including any card added later — is handled without special-casing.
+const AI_LEVELS = { easy:{ rollouts:0 }, normal:{ rollouts:4 }, hard:{ rollouts:10 } };
+let aiLevel = 'normal';
+try { const saved=localStorage.getItem('inspiredAiLevel'); if(saved && AI_LEVELS[saved]) aiLevel=saved; } catch(e){}
+
+// How good does this state look for role r? Positive is good. Health is the spine of it;
+// the rest are the things that reliably turn into health later.
+function aiScore(state, r){
+  const o = opp(r);
+  const me = state[r], them = state[o];
+  if((me.hp||0) <= 0 && (them.hp||0) <= 0) return 0;          // double KO: a draw
+  if((me.hp||0) <= 0)  return -100000;
+  if((them.hp||0) <= 0) return  100000;
+  let sc = (me.hp||0) - (them.hp||0);                          // the core: the health race
+  const handValue = h => (h||[]).reduce((t,c)=> t + 6 + Math.min((c && c.dmg)||0, 25)*0.25, 0);
+  sc += handValue(me.hand) - handValue(them.hand);              // cards in hand are future damage
+  sc += Math.min((me.deck||[]).length, 12) * 0.8;              // running out of deck is bad
+  sc -= Math.min((them.deck||[]).length, 12) * 0.4;
+  if(me.blocked)   sc += 4;
+  if(them.blocked) sc -= 4;
+  sc += (me.shieldRounds||0) * 5;
+  sc -= (them.shieldRounds||0) * 5;
+  if(me.hindered)   sc -= 6;
+  if(them.hindered) sc += 6;
+  (me.quests||[]).forEach(q=>{ sc += q && q.done ? 25 : (q && q.progress||0) * 4; });
+  (them.quests||[]).forEach(q=>{ sc -= q && q.done ? 25 : (q && q.progress||0) * 4; });
+  if(me.blessing)   sc += 8;
+  if(them.blessing) sc -= 8;
+  return sc;
+}
+
+// Every legal set of cards this player could put down, including the Orb variants.
+function aiCandidates(state, r){
+  const hand = (state[r].hand||[]).filter(c=> c && !playBlockedReason(state, r, c));
+  const limit = Math.min(selectLimit(state, r), hand.length);
+  const sets = [[]];
+  hand.forEach((c,i)=>{
+    sets.push([c]);
+    if(limit >= 2) for(let j=i+1;j<hand.length;j++) sets.push([c, hand[j]]);
+  });
+  const out = [];
+  sets.forEach(set=>{
+    if(set.length > limit) return;
+    out.push(set.map(c=>({ card:c, orb:false })));
+    const ench = set.filter(c=>c.enchanted);
+    if(ench.length && (state[r].orbs||0) > 0){                 // one Orb-on variant per set
+      out.push(set.map(c=>({ card:c, orb:!!c.enchanted })));
+    }
+  });
+  return out;
+}
+
+// A stand-in for the opponent's turn: cards any deck could hold, never their actual hand.
+let _aiThreatPool = null;
+let aiThreatModel = 'none';                 // 'none' | 'fixed' | 'random' — measured, not guessed
+const AI_FIXED_THREAT = 'blaargh';          // a plain mid-size attack used as the stand-in
+function aiGuessOpponentPlay(state, r){
+  if(!_aiThreatPool){
+    _aiThreatPool = CARDS_DATA.filter(c=> c.collectible && c.type==='normal' && !c.noDeck &&
+                                          (c.dealsDamage || c.heals || c.block));
+  }
+  if(aiThreatModel === 'none') return [];                       // assume an idle opponent
+  if(aiThreatModel === 'fixed'){                                // one steady, average attack
+    const def = CARDS_DATA.find(c=>c.id===AI_FIXED_THREAT);
+    if(!def) return [];
+    const c = mkCard(def);
+    return playBlockedReason(state, r, c) ? [] : [c];
+  }
+  if(!_aiThreatPool.length) return [];
+  const n = Math.random() < 0.75 ? 1 : 2;                        // 'random': sample the pool
+  const out = [];
+  for(let i=0;i<n;i++){
+    const def = _aiThreatPool[Math.floor(Math.random()*_aiThreatPool.length)];
+    const c = mkCard(def);
+    if(!playBlockedReason(state, r, c)) out.push(c);
+  }
+  return out;
+}
+
+// Play one candidate out on a copy and report the resulting score.
+function aiTrial(state, r, pick){
+  const copy = cloneGs(state);
+  const pickUids = pick.map(p=>p.card.uid);
+  copy[r].selectedCards = (copy[r].hand||[]).filter(c=> pickUids.includes(c.uid)).map(c=>{
+    const chosen = pick.find(p=>p.card.uid===c.uid);
+    if(chosen && chosen.orb) c._useOrb = true;
+    return c;
+  });
+  copy[r].hand = (copy[r].hand||[]).filter(c=> !pickUids.includes(c.uid));
+  // It cannot see the other hand, so it assumes a plausible threat instead of an empty board:
+  // one or two ordinary cards drawn from the general pool. Without this, blocking and healing
+  // would always look worthless in simulation, because nothing ever hit back.
+  copy[opp(r)].selectedCards = aiGuessOpponentPlay(copy, opp(r));
+  copy[r].confirmed = true; copy[opp(r)].confirmed = true;
+  const before = simMode; simMode = true;
+  let after;
+  try { after = resolveRound(copy) || copy; }
+  catch(e){
+    // HALT means somebody died mid-resolution — that IS the outcome, and often the winning
+    // one, so the mutated copy gets scored. Anything else is a genuine fault: never pick it.
+    if(e && e.halt) after = copy;
+    else { simMode = before; return -Infinity; }
+  }
+  simMode = before;
+  return aiScore(after, r);
+}
+
+// Pick the best set of cards for role r.
+function aiChoose(state, r){
+  const cands = aiCandidates(state, r);
+  if(!cands.length) return [];
+  const cfg = AI_LEVELS[aiLevel] || AI_LEVELS.normal;
+  if(!cfg.rollouts){                                           // easy: the old random behaviour
+    return cands[Math.floor(Math.random()*cands.length)];
+  }
+  let best = null, bestScore = -Infinity;
+  cands.forEach(pick=>{
+    let total = 0;
+    for(let i=0;i<cfg.rollouts;i++) total += aiTrial(state, r, pick);
+    const avg = total / cfg.rollouts;
+    if(avg > bestScore){ bestScore = avg; best = pick; }
+  });
+  return best || [];
+}
+
 function resolveRound(gs){
   clearInterval(timerInt);
   if(!soloMode&&myRole!=='p1') return;   // p2 receives the computed result via Firebase
@@ -7295,6 +7458,7 @@ function resolveRound(gs){
 
   state.round=(state.round||1)+1;
 
+  if(simMode) return state;          // simulation: hand the resulting state back, touch nothing else
   if(soloMode){
     const oldGs=localGs;
     state.phase='result';
