@@ -276,6 +276,16 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .status.err { color:var(--red2); } .status.ok { color:var(--green2); }
 
 /* MAIN MENU */
+/* Simple content pages (Settings, Credits) — same header as the collection, room to fill later. */
+.page-body { max-width:720px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+.page-empty { color:var(--text2); font-style:italic; text-align:center; padding:3rem 0; letter-spacing:0.04em; }
+
+/* Submenu "Back" — same type, set apart and quieter so it never competes with the real options. */
+.menu-btn.menu-back { margin-top:1.1rem; font-size:clamp(0.9rem,1.6vw,1.05rem); letter-spacing:0.24em; color:rgba(232,228,216,0.38); }
+.menu-btn.menu-back:hover, .menu-btn.menu-back:focus-visible { color:rgba(255,255,255,0.85); letter-spacing:0.27em; }
+.menu-btn.menu-back::after { background:linear-gradient(90deg, rgba(232,228,216,0.5), rgba(232,228,216,0)); }
+.menu-btn.menu-back:hover::after, .menu-btn.menu-back:focus-visible::after { width:120px; }
+
 /* Main menu — no panels, just text over the art (Horizon-style): the entries sit left, muted
    until you touch them, then they brighten, spread and grow a thin gold rule underneath. */
 .menu-box { display:flex; flex-direction:column; gap:0.15rem; width:100%; max-width:none; align-items:flex-start; padding-left:2vw; }
@@ -1285,6 +1295,23 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
     <button class="menu-btn" id="menu-multi"><span>Multiplayer</span></button>
     <button class="menu-btn" id="menu-collection"><span>Collection</span></button>
     <button class="menu-btn" id="menu-profile"><span>Profile</span></button>
+    <button class="menu-btn" id="menu-settings"><span>Settings</span></button>
+    <button class="menu-btn" id="menu-credits"><span>Credits</span></button>
+  </div>
+
+  <!-- SUBMENU: SINGLEPLAYER -->
+  <div class="menu-box hidden" id="menu-box-single">
+    <button class="menu-btn" id="sp-adventure"><span>Adventure</span></button>
+    <button class="menu-btn" id="sp-arena"><span>Arena</span></button>
+    <button class="menu-btn" id="sp-puzzle"><span>Puzzle Mode</span></button>
+    <button class="menu-btn menu-back" id="sp-back"><span>Back</span></button>
+  </div>
+
+  <!-- SUBMENU: MULTIPLAYER -->
+  <div class="menu-box hidden" id="menu-box-multi">
+    <button class="menu-btn" id="mp-proving"><span>Proving Grounds</span></button>
+    <button class="menu-btn" id="mp-adventure"><span>Adventure (2 vs 1)</span></button>
+    <button class="menu-btn menu-back" id="mp-back"><span>Back</span></button>
   </div>
 
   <!-- PROFILE -->
@@ -1346,6 +1373,36 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 </div>
 
 <!-- COLLECTION (placeholder for step 2) -->
+<div id="screen-mode" class="hidden">
+  <div class="col-header">
+    <button class="btn-back-link" id="mode-back">← Back</button>
+    <div class="col-title" id="mode-title">Adventure</div>
+  </div>
+  <div class="page-body" id="mode-body">
+    <p class="page-empty">Nothing here yet.</p>
+  </div>
+</div>
+
+<div id="screen-settings" class="hidden">
+  <div class="col-header">
+    <button class="btn-back-link" id="set-back">← Menu</button>
+    <div class="col-title">Settings</div>
+  </div>
+  <div class="page-body" id="settings-body">
+    <p class="page-empty">Nothing here yet.</p>
+  </div>
+</div>
+
+<div id="screen-credits" class="hidden">
+  <div class="col-header">
+    <button class="btn-back-link" id="cred-back">← Menu</button>
+    <div class="col-title">Credits</div>
+  </div>
+  <div class="page-body" id="credits-body">
+    <p class="page-empty">Nothing here yet.</p>
+  </div>
+</div>
+
 <div id="screen-collection" class="hidden">
   <div class="col-header">
     <button class="btn-back-link" id="col-back">← Menu</button>
@@ -1619,7 +1676,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T10:25:48';
+const APP_VERSION = '2026-07-20T13:39:50';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5539,21 +5596,43 @@ function renderCollection(){
   const show=(id)=>$(id).classList.remove('hidden');
   const hide=(id)=>$(id).classList.add('hidden');
   // Singleplayer → pick a deck first, then play it against the CPU.
-  $('menu-single').onclick=()=> openDeckPicker('solo');
+  $('menu-single').onclick=()=>{ hide('menu-box'); show('menu-box-single'); };
   // Multiplayer → reveal the create/join panel.
-  $('menu-multi').onclick=()=>{
+  // Singleplayer / Multiplayer open a submenu; the art and layout stay exactly as they are.
+  $('menu-multi').onclick=()=>{ hide('menu-box'); show('menu-box-multi'); };
+  $('sp-back').onclick=()=>{ hide('menu-box-single'); show('menu-box'); };
+  $('mp-back').onclick=()=>{ hide('menu-box-multi'); show('menu-box'); };
+
+  // Proving Grounds is the match lobby that used to sit under Multiplayer.
+  $('mp-proving').onclick=()=>{
     if(blockedByVersion()) return;
-    hide('menu-box'); show('lobby-box');
+    hide('menu-box-multi'); show('lobby-box');
     $('lb-asname').innerHTML='Playing as <strong style="color:var(--green2)">'+((myProfile&&myProfile.name)||'Hero')+'</strong>';
   };
-  $('lobby-back').onclick=()=>{ hide('lobby-box'); show('menu-box'); };
+  $('lobby-back').onclick=()=>{ hide('lobby-box'); show('menu-box-multi'); };
+
+  // Modes that aren't built yet: an empty page with a back button.
+  const openMode=(title, fromMenu)=>{
+    $('mode-title').textContent=title;
+    $('mode-back').dataset.from=fromMenu;
+    hide('screen-lobby'); show('screen-mode');
+  };
+  $('sp-adventure').onclick=()=> openMode('Adventure','menu-box-single');
+  $('sp-arena').onclick=()=> openDeckPicker('solo');          // Arena = play against the AI (the old Singleplayer)
+  $('sp-puzzle').onclick=()=> openMode('Puzzle Mode','menu-box-single');
+  $('mp-adventure').onclick=()=> openMode('Adventure (2 vs 1)','menu-box-multi');
+  $('mode-back').onclick=()=>{ hide('screen-mode'); show('screen-lobby'); };
   // Collection → open the collection screen (gallery filled in step 2).
   $('menu-collection').onclick=()=>{ hide('screen-lobby'); show('screen-collection'); colTab='common'; colPage=0; colDeck=null; renderCollection(); };
+  $('menu-settings').onclick=()=>{ hide('screen-lobby'); show('screen-settings'); };
+  $('menu-credits').onclick=()=>{ hide('screen-lobby'); show('screen-credits'); };
   $('col-prev').onclick=()=>{ colPage--; renderCollection(); };
   $('col-next').onclick=()=>{ colPage++; renderCollection(); };
   $('tab-common').onclick=()=>{ colTab='common'; colPage=0; renderCollection(); };
   $('tab-legendary').onclick=()=>{ colTab='legendary'; colPage=0; renderCollection(); };
   $('col-back').onclick=()=>{ hide('screen-collection'); show('screen-lobby'); };
+  $('set-back').onclick=()=>{ hide('screen-settings'); show('screen-lobby'); };
+  $('cred-back').onclick=()=>{ hide('screen-credits'); show('screen-lobby'); };
 })();
 
 function setStatus(msg,cls=''){const el=document.getElementById('lb-status');el.textContent=msg;el.className='status '+cls;}
