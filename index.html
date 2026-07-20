@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T14:29:32';
+const APP_VERSION = '2026-07-20T15:40:26';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5697,10 +5697,15 @@ function renderCollection(){
     const locked = n > advUnlocked();
     $('adv-level-title').textContent = 'Level ' + n + ' — ' + ADV_LEVELS[advIndex];
 
+    // Level art: art/level_<n>.png, falling back to .jpg, then to a plain panel if neither exists.
     const img = $('adv-level-art'), fb = $('adv-art-fallback');
     img.style.display = 'none'; fb.style.display = 'flex';
+    let triedJpg = false;
     img.onload  = ()=>{ img.style.display='block'; fb.style.display='none'; };
-    img.onerror = ()=>{ img.style.display='none';  fb.style.display='flex'; };
+    img.onerror = ()=>{
+      if(!triedJpg){ triedJpg = true; img.src = 'art/level_' + n + '.jpg'; return; }
+      img.style.display='none'; fb.style.display='flex';
+    };
     img.src = 'art/level_' + n + '.png';
 
     $('adv-lock').style.display = locked ? 'flex' : 'none';
