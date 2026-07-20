@@ -276,19 +276,26 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
 .status.err { color:var(--red2); } .status.ok { color:var(--green2); }
 
 /* MAIN MENU */
-.menu-box { display:flex; flex-direction:column; gap:0.9rem; width:100%; max-width:340px; }
+/* Main menu — no panels, just text over the art (Horizon-style): the entries sit left, muted
+   until you touch them, then they brighten, spread and grow a thin gold rule underneath. */
+.menu-box { display:flex; flex-direction:column; gap:0.15rem; width:100%; max-width:none; align-items:flex-start; padding-left:2vw; }
 .menu-btn {
-  display:flex; align-items:center; gap:1rem; width:100%;
-  padding:1.1rem 1.5rem; border-radius:var(--r); cursor:pointer;
-  font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:700; letter-spacing:0.04em;
-  color:var(--text); text-align:left;
-  background:rgba(8,22,30,0.9);
-  border:1px solid var(--border2);
-  box-shadow:0 8px 32px rgba(0,0,0,0.55);
-  transition:transform 0.16s, border-color 0.16s, box-shadow 0.16s, background 0.16s;
+  display:block; width:auto; background:none; border:0; box-shadow:none; border-radius:0;
+  padding:0.45rem 0; margin:0; cursor:pointer; text-align:left;
+  font-family:'Playfair Display',serif; font-size:clamp(1.1rem,2.2vw,1.5rem); font-weight:500;
+  letter-spacing:0.30em; text-transform:uppercase;
+  color:rgba(232,228,216,0.58);
+  text-shadow:0 2px 14px rgba(0,0,0,0.9);
+  transition:color 0.22s ease, letter-spacing 0.22s ease;
 }
-.menu-btn:hover { transform:translateY(-2px); border-color:var(--green2); background:rgba(14,34,44,0.85); box-shadow:0 12px 40px rgba(0,0,0,0.6), 0 0 24px rgba(126,200,50,0.25); }
-.menu-ico { font-size:1.5rem; width:2rem; text-align:center; flex-shrink:0; }
+.menu-btn::after {
+  content:''; display:block; height:1px; width:0; margin-top:0.42rem;
+  background:linear-gradient(90deg, var(--gold2), rgba(240,204,96,0));
+  transition:width 0.3s cubic-bezier(0.2,0.9,0.3,1);
+}
+.menu-btn:hover, .menu-btn:focus-visible { color:#fff; letter-spacing:0.34em; outline:none; transform:none; }
+.menu-btn:hover::after, .menu-btn:focus-visible::after { width:210px; }
+.menu-ico { display:none; }
 .btn-back-link { background:none; border:none; color:var(--text2); font-family:'Lora',serif; font-size:0.85rem; cursor:pointer; padding:0; margin-bottom:0.8rem; transition:color 0.15s; }
 .btn-back-link:hover { color:var(--green2); }
 
@@ -1274,10 +1281,10 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
   <!-- MAIN MENU (shown after sign-in) -->
   <div class="build-stamp" id="build-stamp" title="Build version"></div>
   <div class="menu-box hidden" id="menu-box">
-    <button class="menu-btn" id="menu-single"><span class="menu-ico">⚔️</span><span>Singleplayer</span></button>
-    <button class="menu-btn" id="menu-multi"><span class="menu-ico">🌐</span><span>Multiplayer</span></button>
-    <button class="menu-btn" id="menu-collection"><span class="menu-ico">🃏</span><span>Collection</span></button>
-    <button class="menu-btn" id="menu-profile"><span class="menu-ico">👤</span><span>Profile</span></button>
+    <button class="menu-btn" id="menu-single"><span>Singleplayer</span></button>
+    <button class="menu-btn" id="menu-multi"><span>Multiplayer</span></button>
+    <button class="menu-btn" id="menu-collection"><span>Collection</span></button>
+    <button class="menu-btn" id="menu-profile"><span>Profile</span></button>
   </div>
 
   <!-- PROFILE -->
@@ -1612,7 +1619,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T10:02:07';
+const APP_VERSION = '2026-07-20T10:25:48';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
