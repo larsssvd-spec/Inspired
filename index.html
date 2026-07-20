@@ -300,7 +300,7 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
   font-size:clamp(0.72rem, 1vw, 1rem); text-shadow:0 1px 0 rgba(255,255,255,0.35); }
 /* One level fills the parchment; the arrows sit against the inner edges, vertically centred. */
 .adv-stage { flex:1; width:100%; display:flex; align-items:center; justify-content:center; gap:2vw; min-height:0; }
-.adv-level { display:flex; flex-direction:column; align-items:center; gap:0.9rem; min-width:0; flex:1; max-width:56vw; }
+.adv-level { display:flex; flex-direction:column; align-items:center; gap:0.8rem; min-width:0; flex:1; max-width:55%; }
 .adv-level-title { font-family:'Playfair Display',serif; font-weight:600; color:#3a2a10;
   font-size:clamp(0.95rem,1.7vw,1.6rem); letter-spacing:0.06em; text-align:center;
   text-shadow:0 1px 0 rgba(255,255,255,0.45); }
@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T14:24:48';
+const APP_VERSION = '2026-07-20T14:29:32';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
