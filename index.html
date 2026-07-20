@@ -1612,7 +1612,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T09:43:13';
+const APP_VERSION = '2026-07-20T10:02:07';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1768,7 +1768,7 @@ const auth = getAuth(FB);
 const CARDS_DATA = [
 
   // ── Phase 3: while-holding / unplayable / graveyard chain (placeholder emoji, real art later) ──
-  {id:'nightlife', collectible:true,      name:'Nightlife',       text:'While holding: the first time your opponent would heal, that healing is stolen by you instead.', rarity:'legendary', emoji:'🌃', hold:true, art:'art/nightlife.png', type:'normal'},
+  {id:'nightlife', collectible:true,      name:'Nightlife',       text:'Endless. While holding: the first time your opponent would heal, that healing is stolen by you instead.', rarity:'legendary', emoji:'🌃', hold:true, endless:true, art:'art/nightlife.png', type:'normal'},
   {id:'starving_pyrax', collectible:true, name:'Starving Pyrax',  text:'If there are at least 6 cards to eat: eat them and put Hungry Pyrax in your hand.', rarity:'legendary', emoji:'🥚', art:'art/starving_pyrax.png', type:'normal'},
   {id:'hungry_pyrax',   name:'Hungry Pyrax',    text:'If there are at least 22 cards to eat: eat them and put Full Pyrax in your hand.', rarity:'legendary', emoji:'🐉', noDeck:true, art:'art/hungry_pyrax.png', type:'normal'},
   {id:'full_pyrax',     name:'Full Pyrax',      text:'Set your health to 150.',                              rarity:'legendary', emoji:'🐲', noDeck:true, art:'art/full_pyrax.png', type:'normal'},
@@ -2247,6 +2247,7 @@ const CARD_TOKENS = {
   starving_pyrax:   { label:'Pyrax',       ids: ['hungry_pyrax','full_pyrax'] },
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
+  mixed_energies:   { label:'Warp',        ids: ['dream_warp','nightmare_warp'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
 };
 const CARD_LOGIC = {
@@ -6943,11 +6944,23 @@ function resolveRound(gs){
   }
 
   // Sweep used-up while-holding cards (revive, Nightlife, Vantage, …) hand → graveyard.
+  // An Endless hold card (Nightlife) is shuffled back into its owner's deck instead, so it can be
+  // drawn and used again. A card consumed AS A DISCARD still goes to the graveyard as normal.
   ['p1','p2'].forEach(r=>{
     const hand=state[r].hand||[]; const keep=[]; const gy=state[r].graveyard||[];
-    const selfDiscarded=[];
-    hand.forEach(c=>{ if(c&&c._consumed){ const asDisc=c._consumedAsDiscard; delete c._consumed; delete c._consumedAsDiscard; gy.unshift(c); if(asDisc) selfDiscarded.push(c); } else keep.push(c); });
+    const selfDiscarded=[]; const endlessBack=[];
+    hand.forEach(c=>{ if(c&&c._consumed){ const asDisc=c._consumedAsDiscard; delete c._consumed; delete c._consumedAsDiscard;
+      if(c.endless && !asDisc){ endlessBack.push(c); }
+      else { gy.unshift(c); if(asDisc) selfDiscarded.push(c); }
+    } else keep.push(c); });
     state[r].hand=keep; state[r].graveyard=gy;
+    endlessBack.forEach(c=>{
+      const o=c.owner;
+      delete c.used;                                      // hold cards store "used" on the card itself: reset so it works again
+      const added=shuffleIntoDeck(state, r, c);            // may be intercepted (Devour Hope)
+      if(o!==undefined) c.owner=o;
+      if(added) log('  ↺ '+c.name+' returns endlessly to the deck.','effect');
+    });
     selfDiscarded.forEach(c=> fireDiscard(state, r, c));   // self-discard counts as a real discard
   });
 
