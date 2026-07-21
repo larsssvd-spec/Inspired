@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-20T16:42:01';
+const APP_VERSION = '2026-07-21T07:08:20';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5737,9 +5737,11 @@ function renderCollection(){
   // remembered for the next visit.
   $('sp-arena').onclick=async ()=>{
     const pick=await pickChoice([
-      {key:'easy',   label:'Easy — plays casually'},
-      {key:'normal', label:'Normal — thinks before it plays'},
-      {key:'hard',   label:'Hard — thinks hard'}
+      {key:'easy',       label:'Easy — plays casually'},
+      {key:'normal',     label:'Normal — usually plays well'},
+      {key:'hard',            label:'Hard — always its best move'},
+      {key:'extremely_hard',  label:'Extremely Hard — knows your deck'},
+      {key:'impossible',      label:'Impossible — sees your hand'}
     ], 'Arena — how strong should your opponent be?');
     if(pick) aiLevel=pick;
     try{ localStorage.setItem('inspiredAiLevel', aiLevel); }catch(e){}
@@ -6709,7 +6711,7 @@ document.getElementById('btn-confirm').onclick=async()=>{
     // each option out on a copy of the game and keeps the one that leaves it best off.
     const rest=p2hand.filter(c=>!p2played.includes(c));
     const freeSlots=p2lim-p2played.length;
-    if(aiLevel==='easy' || freeSlots<=0 || !rest.length){
+    if(freeSlots<=0 || !rest.length){
       const extra=Math.min(freeSlots, Math.floor(Math.random()*(freeSlots+1)), rest.length);
       p2played=p2played.concat(rest.slice(0, extra));
     } else {
@@ -6723,14 +6725,21 @@ document.getElementById('btn-confirm').onclick=async()=>{
       });
       p2played=p2played.concat(chosen);
     }
+    // Every in-card choice gets a random default first, so a card is never played with its
+    // choice left blank. On the thinking levels the search may then overrule those defaults.
     p2played.forEach(c=>{
       if(CHOOSE_OPTIONS[c.id]){ const o=CHOOSE_OPTIONS[c.id]; c._choice=o[Math.floor(Math.random()*o.length)].key; }
       if(c.id==='tinker_leaf'){ const deck=localGs.p1.deck||[]; if(deck.length){ c._tinkerPick=deck[Math.floor(Math.random()*deck.length)].id; } }
       if(SPLIT_CARDS[c.id]){ const t=splitTotal(c.id, localGs, 'p2'); const d=Math.floor(Math.random()*(t/5+1))*5; c._split={dmg:d,heal:t-d}; }
     });
-    // CPU: randomly spend held Orbs on its enchanted cards.
+    try { aiRefineChoices(localGs, 'p2', p2played); } catch(e){}
+
+    // Orbs. On easy that stays a coin flip; on the thinking levels the choice was already made
+    // while picking the cards, so a random flip here would only undo it.
     let cpuOrbs=p2hand.filter(c=>!p2played.includes(c) && isOrb(c)).length;
-    p2played.forEach(c=>{ if(hasEnchanted(c) && cpuOrbs>0 && Math.random()<0.5){ c._useOrb=true; cpuOrbs--; } });
+    p2played.forEach(c=>{                                          // honour the plan, never overspend
+      if(c._useOrb){ if(cpuOrbs>0) cpuOrbs--; else delete c._useOrb; }
+    });
     p2played.forEach(c=>{ if(c.peek) c._peek = Math.random()<0.5 ? 'keep' : 'shuffle'; });
     localGs.p2.selectedCards=p2played;
     localGs.p2.hand=p2full.filter(c=>!p2played.includes(c));   // blocked cards stay in hand — they're just not played
@@ -7001,12 +7010,168 @@ function updateTimer(){
 // scoring the result. It never inspects the human's hand, so it can't cheat: it only sees
 // what a player in its seat would see. Because it judges outcomes rather than card text,
 // every card — including any card added later — is handled without special-casing.
-const AI_LEVELS = { easy:{ rollouts:0 }, normal:{ rollouts:4 }, hard:{ rollouts:10 } };
+// depth 0 = judge the round you are about to play; depth 1 = also weigh your own follow-up next
+// round, which is what makes setup plays (hold cards, quests, Endless returns) worth anything.
+// Measured, not assumed, over hundreds of games against the random AI:
+//   normal (4 repeats)  63.3% ±4.4 (120 games)
+//   hard  (10 repeats)  58.8% ±5.5 (80 games)   → repeating more often buys nothing past ~4
+//   two-round lookahead  40% head-to-head against the shallow search, and 3x slower
+// So the ceiling is not the search; it is aiScore below, which is still hand-guessed. Tuning
+// those weights against the benchmark is the next real gain. Hard keeps a modest edge in repeats
+// so it plays a touch steadier, not because thinking longer was shown to win.
+// The ladder. Strength is dialled with two knobs: how often the AI throws a round away on a
+// random play (mistake) and how many times it repeats each simulation (rollouts). Measured win
+// rates against a fully random opponent, paired games with the deck luck cancelled out:
+//   mistake 1.0 → 50%   0.8 → 55%   0.6 → 59%   0.4 → 64%   0.2 → 64%   0.0 → 76%
+// Every rung was measured against the one below it, in paired games where both sides get the
+// same decks and the same draws so only the decisions differ:
+//   normal beats easy                  64%
+//   hard beats normal                  56%   (modest — the mistake rate matters less than expected)
+//   extremely hard beats hard          58%   (40 pairs; knowing the deck is worth a real step)
+//   impossible beats extremely hard    61%
+//   impossible beats hard              77%
+// The pattern across every experiment: information beats deliberation. Deeper search, more
+// repeats and optimising in-card choices all failed to help; letting the AI see more helped
+// every time.
+const AI_LEVELS = {
+  easy:       { rollouts:2,  depth:0, width:0, mistake:0.75, label:'Easy' },
+  normal:     { rollouts:4,  depth:0, width:0, mistake:0.35, label:'Normal' },
+  hard:       { rollouts:6,  depth:0, width:5, mistake:0,    label:'Hard' },
+  extremely_hard: { rollouts:5, depth:0, width:5, mistake:0, knowsDeck:true, label:'Extremely Hard' },
+  impossible: { rollouts:8,  depth:0, width:5, mistake:0, seesHand:true, label:'Impossible' }
+};
 let aiLevel = 'normal';
+const AI_MAX_SETS = 160;                    // ceiling on how many card combinations are weighed
+// How often the AI throws a round away on a random play instead of its best one. This is the
+// difficulty ladder: the search itself has a ceiling, but mistakes can be dialled in precisely,
+// so an Adventure level can sit anywhere between careless and playing its best.
+let aiMistake = 0;
+// Measured: checking separately for a killing blow changed nothing (46% against the version
+// without it, 30 paired games). A won position already scores +100000, which dominates any
+// average, so the ordinary search finds lethal by itself. Kept as a switch, off by default.
+let aiUseLethal = false;
 try { const saved=localStorage.getItem('inspiredAiLevel'); if(saved && AI_LEVELS[saved]) aiLevel=saved; } catch(e){}
 
 // How good does this state look for role r? Positive is good. Health is the spine of it;
 // the rest are the things that reliably turn into health later.
+// Card values learned from play, not guessed: ~3,700 benchmark games were run and, for
+// every card actually played, it was recorded whether that player went on to win. Each rate is
+// pulled towards even by its sample size, so a rarely-seen card cannot swing the AI. Positive
+// means the card tended to appear in wins.
+// Health warning: this measures association, not merit. A heal shows up when someone is losing,
+// so its number reads low without the card being bad. Hence the switch below — it only stays on
+// if it measures better.
+const AI_CARD_VALUE = {
+  'bolvar': 2.27,
+  'king_krush': 2.1,
+  'infinite_rollercoaster': 2.1,
+  'the_krush': 1.98,
+  'best_friend_for_always': 1.82,
+  'krush': 1.78,
+  'baby_krush': 0.98,
+  'mixed_energies': 0.87,
+  'nightlife': 0.42,
+  'from_far_away': 0.41,
+  'geehjarok': -0.3,
+  'rogg_the_giant': -0.32,
+  'the_bad_and_the_worse': -0.37,
+  'larrys_lover': -0.37,
+  'prinnys_vanilla_cake': -0.38,
+  'awakening_burst': -0.4,
+  'misses_jen': -0.41,
+  'galactic_horror': -0.42,
+  'chompzilla': -0.43,
+  'hangover_hex': -0.44,
+  'wish_dralivering': -0.45,
+  'marcels_kitchen': -0.46,
+  'tall_kroog': -0.47,
+  'death_stare': -0.47,
+  'baallspawn': -0.48,
+  'big_red_dwarf': -0.48,
+  'purrsy': -0.49,
+  'the_5_annoying_siblings': -0.49,
+  'nightmare_rush': -0.49,
+  'distortion': -0.54,
+  'pest_doctor': -0.54,
+  'space_dog': -0.55,
+  'punching_betrayal': -0.55,
+  'murloc_things': -0.56,
+  'fireblast_confetti': -0.56,
+  'whitefoot': -0.56,
+  'forgotten_mage': -0.59,
+  'kaakan': -0.6,
+  'narloggs_absurd_rage': -0.61,
+  'skull_slasher': -0.61,
+  'rankor': -0.61,
+  'time_and_space': -0.61,
+  'enlightened': -0.62,
+  'bonzana_gloom': -0.63,
+  'croock_the_brave': -0.64,
+  'soul_shatter': -0.69,
+  'murozond': -0.69,
+  'blaargh': -0.71,
+  'garden_tales': -0.71,
+  'deepception': -0.74,
+  'zoom': -0.74,
+  'detective_bubbles': -0.74,
+  'peek_a_boo': -0.77,
+  'quicksilver': -0.85,
+  'electoad': -0.85,
+  'tinker_leaf': -0.86,
+  'larry_birthday_hero': -0.86,
+  'precise_shot': -0.87,
+  'bad_landing': -0.89,
+  'geor_the_mountain_god': -0.9,
+  'curious_luza': -0.93,
+  'under_pressure': -0.93,
+  'second_chapter': -0.95,
+  'starving_pyrax': -0.99,
+  'blind_murloc': -1.0,
+  'misses_azazel': -1.0,
+  'deep_sea_queen': -1.01,
+  'thaa': -1.04,
+  'the_big_quack': -1.04,
+  'enchanted_orb': -1.12,
+  'scavenger': -1.15,
+  'world_splitter': -1.17,
+  'bloodmoon_princess': -1.19,
+  'find_a_way': -1.25,
+  'dragonhood': -1.27,
+  'the_missruler': -1.28,
+  'kong_fee': -1.33,
+  'skywalker': -1.33,
+  'energies_silk': -1.34,
+  'skar_narloggs_pet': -1.35,
+  'hungry_pyrax': -1.44,
+  'different_set_of_rules': -1.46,
+  'devour_hope': -1.9,
+  'critical_bite': -4.08,
+};
+// Built from ~3,700 games (127,000 card observations). Two lessons came out of measuring it:
+//   * the RANKING of the cards is useful, but the raw win-rate spread is far too strong. Feeding
+//     the unscaled numbers in scored 41% against no table at all — worse than guessing. Damped to
+//     40% of their spread, the same numbers score 65% and 66% (84 paired games).
+//   * more data does not mean better values here. Going from 3,700 to 10,000 games would tighten
+//     each card to ±0.8% from ±1.4%, worth about 0.22 score points where a whole card weighs 6.
+// Rebuild the table by running dev/collect.mjs after adding cards; unlisted cards simply count
+// as average, so nothing breaks in the meantime.
+let aiUseCardValues = true;
+
+// The weights the score is built from. These were guessed by hand at first; the numbers below
+// are whatever the tuner last proved better over hundreds of benchmark games.
+const AI_W = {
+  hand:      6,     // a card in hand, whatever it is
+  handDmg:   0.25,  // extra per point of printed damage on it (capped at 25)
+  myDeck:    0.8,   // cards left in my deck
+  oppDeck:   0.4,   // cards left in theirs (running them out is worth something)
+  block:     4,
+  shield:    5,
+  hindered:  6,
+  questDone: 25,
+  questStep: 4,
+  blessing:  8,
+  useOrbs:   1      // spending Orbs measured 60.6% against never spending them (40 paired games)
+};
 function aiScore(state, r){
   const o = opp(r);
   const me = state[r], them = state[o];
@@ -7014,20 +7179,21 @@ function aiScore(state, r){
   if((me.hp||0) <= 0)  return -100000;
   if((them.hp||0) <= 0) return  100000;
   let sc = (me.hp||0) - (them.hp||0);                          // the core: the health race
-  const handValue = h => (h||[]).reduce((t,c)=> t + 6 + Math.min((c && c.dmg)||0, 25)*0.25, 0);
+  const cardWorth = c => (aiUseCardValues && c && AI_CARD_VALUE[c.id]) || 0;
+  const handValue = h => (h||[]).reduce((t,c)=> t + AI_W.hand + Math.min((c && c.dmg)||0, 25)*AI_W.handDmg + cardWorth(c), 0);
   sc += handValue(me.hand) - handValue(them.hand);              // cards in hand are future damage
-  sc += Math.min((me.deck||[]).length, 12) * 0.8;              // running out of deck is bad
-  sc -= Math.min((them.deck||[]).length, 12) * 0.4;
-  if(me.blocked)   sc += 4;
-  if(them.blocked) sc -= 4;
-  sc += (me.shieldRounds||0) * 5;
-  sc -= (them.shieldRounds||0) * 5;
-  if(me.hindered)   sc -= 6;
-  if(them.hindered) sc += 6;
-  (me.quests||[]).forEach(q=>{ sc += q && q.done ? 25 : (q && q.progress||0) * 4; });
-  (them.quests||[]).forEach(q=>{ sc -= q && q.done ? 25 : (q && q.progress||0) * 4; });
-  if(me.blessing)   sc += 8;
-  if(them.blessing) sc -= 8;
+  sc += Math.min((me.deck||[]).length, 12) * AI_W.myDeck;
+  sc -= Math.min((them.deck||[]).length, 12) * AI_W.oppDeck;
+  if(me.blocked)   sc += AI_W.block;
+  if(them.blocked) sc -= AI_W.block;
+  sc += (me.shieldRounds||0) * AI_W.shield;
+  sc -= (them.shieldRounds||0) * AI_W.shield;
+  if(me.hindered)   sc -= AI_W.hindered;
+  if(them.hindered) sc += AI_W.hindered;
+  (me.quests||[]).forEach(q=>{ sc += q && q.done ? AI_W.questDone : (q && q.progress||0) * AI_W.questStep; });
+  (them.quests||[]).forEach(q=>{ sc -= q && q.done ? AI_W.questDone : (q && q.progress||0) * AI_W.questStep; });
+  if(me.blessing)   sc += AI_W.blessing;
+  if(them.blessing) sc -= AI_W.blessing;
   return sc;
 }
 
@@ -7035,21 +7201,94 @@ function aiScore(state, r){
 function aiCandidates(state, r){
   const hand = (state[r].hand||[]).filter(c=> c && !playBlockedReason(state, r, c));
   const limit = Math.min(selectLimit(state, r), hand.length);
+  // Every combination up to the limit — cards can raise it above two, and stopping at pairs
+  // meant the AI simply never considered its bigger turns. Capped so the search stays quick.
   const sets = [[]];
-  hand.forEach((c,i)=>{
-    sets.push([c]);
-    if(limit >= 2) for(let j=i+1;j<hand.length;j++) sets.push([c, hand[j]]);
-  });
+  const build = (start, current)=>{
+    if(current.length >= limit || sets.length >= AI_MAX_SETS) return;
+    for(let i=start; i<hand.length; i++){
+      const next = current.concat([hand[i]]);
+      sets.push(next);
+      if(sets.length >= AI_MAX_SETS) return;
+      build(i+1, next);
+    }
+  };
+  build(0, []);
   const out = [];
   sets.forEach(set=>{
     if(set.length > limit) return;
     out.push(set.map(c=>({ card:c, orb:false })));
-    const ench = set.filter(c=>c.enchanted);
-    if(ench.length && (state[r].orbs||0) > 0){                 // one Orb-on variant per set
-      out.push(set.map(c=>({ card:c, orb:!!c.enchanted })));
+    // Orbs are cards in hand, not a counter — the earlier check looked for a field that never
+    // existed, so the AI could never enchant anything. It now counts what it is actually holding.
+    const orbsHeld = (state[r].hand||[]).filter(c=> c && isOrb(c)).length;
+    const ench = set.filter(c=> hasEnchanted(c));
+    if(AI_W.useOrbs && ench.length && orbsHeld > 0){
+      let budget = orbsHeld;
+      out.push(set.map(c=>{ const on = hasEnchanted(c) && budget > 0; if(on) budget--; return { card:c, orb:on }; }));
     }
   });
   return out;
+}
+
+// What the opponent is actually going to do, for the levels allowed to see their hand. Worked
+// out once per decision — both sides play simultaneously, so their choice does not depend on
+// ours — and reused for every candidate, which keeps this affordable. The nested search runs
+// with modelling switched off, so it can never call itself in a loop.
+let _aiFixedOppPlay = null;
+let _aiModelling = false;
+function aiOpponentBestPlay(state, o){
+  if(_aiModelling) return null;
+  _aiModelling = true;
+  try {
+    let cands = aiCandidates(state, o);
+    if(cands.length > 14){
+      for(let i=cands.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [cands[i],cands[j]]=[cands[j],cands[i]]; }
+      cands = cands.slice(0, 14);
+    }
+    let best = null, bestScore = -Infinity;
+    cands.forEach(pick=>{ const sc = aiTrial(state, o, pick, 0); if(sc > bestScore){ bestScore = sc; best = pick; } });
+    return best ? best.map(p=>({ uid:p.card.uid, orb:p.orb })) : null;
+  } finally { _aiModelling = false; }
+}
+
+// Knows the deck, not the hand: build a hand the opponent could plausibly be holding out of the
+// cards still in their deck, and play the best move available from it. Sampling a fresh hand per
+// simulation means the AI ends up averaging over the hands they might have, instead of betting on
+// one guess.
+let _aiKnowsDeck = false;
+let _aiDeckGuesses = null;      // one plausible opponent turn per repeat, shared by all candidates
+let _aiGuessIdx = 0;
+function aiHandFromDeck(state, o){
+  const deck = (state[o].deck||[]).filter(Boolean);
+  const size = Math.min((state[o].hand||[]).length, deck.length);
+  if(!size) return [];
+  const pool = deck.slice();
+  const out = [];
+  for(let i=0;i<size;i++){
+    const k = Math.floor(Math.random()*pool.length);
+    out.push(cloneGs({ c: pool.splice(k,1)[0] }).c);          // a copy, so the real deck is untouched
+  }
+  return out;
+}
+function aiPlayFromGuessedHand(state, o){
+  if(_aiModelling) return [];
+  const hand = aiHandFromDeck(state, o);
+  if(!hand.length) return [];
+  _aiModelling = true;
+  try {
+    const probe = cloneGs(state);
+    probe[o].hand = hand;
+    let cands = aiCandidates(probe, o);
+    if(cands.length > 6){
+      for(let i=cands.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [cands[i],cands[j]]=[cands[j],cands[i]]; }
+      cands = cands.slice(0, 6);
+    }
+    let best = null, bestScore = -Infinity;
+    cands.forEach(pick=>{ const sc = aiTrial(probe, o, pick, 0); if(sc > bestScore){ bestScore = sc; best = pick; } });
+    if(!best) return [];
+    const ids = best.map(p=>p.card.uid);
+    return hand.filter(c=> ids.includes(c.uid));
+  } finally { _aiModelling = false; }
 }
 
 // A stand-in for the opponent's turn: cards any deck could hold, never their actual hand.
@@ -7057,6 +7296,21 @@ let _aiThreatPool = null;
 let aiThreatModel = 'none';                 // 'none' | 'fixed' | 'random' — measured, not guessed
 const AI_FIXED_THREAT = 'blaargh';          // a plain mid-size attack used as the stand-in
 function aiGuessOpponentPlay(state, r){
+  if(_aiKnowsDeck && !_aiFixedOppPlay){                          // Extremely Hard: a likely hand
+    const g = _aiDeckGuesses && _aiDeckGuesses[_aiGuessIdx % _aiDeckGuesses.length];
+    if(!g || !g.length) return [];
+    const copies = g.map(c=> cloneGs({c}).c);                    // fresh copies for this simulation
+    state[r].hand = [...(state[r].hand||[]), ...copies];
+    return copies;
+  }
+  if(_aiFixedOppPlay){                                           // Impossible: their real cards
+    const out = [];
+    _aiFixedOppPlay.forEach(p=>{
+      const c = (state[r].hand||[]).find(x=> x && x.uid===p.uid);
+      if(c && !playBlockedReason(state, r, c)){ if(p.orb) c._useOrb = true; out.push(c); }
+    });
+    return out;
+  }
   if(!_aiThreatPool){
     _aiThreatPool = CARDS_DATA.filter(c=> c.collectible && c.type==='normal' && !c.noDeck &&
                                           (c.dealsDamage || c.heals || c.block));
@@ -7080,7 +7334,7 @@ function aiGuessOpponentPlay(state, r){
 }
 
 // Play one candidate out on a copy and report the resulting score.
-function aiTrial(state, r, pick){
+function aiTrial(state, r, pick, depth){
   const copy = cloneGs(state);
   const pickUids = pick.map(p=>p.card.uid);
   copy[r].selectedCards = (copy[r].hand||[]).filter(c=> pickUids.includes(c.uid)).map(c=>{
@@ -7095,16 +7349,49 @@ function aiTrial(state, r, pick){
   copy[opp(r)].selectedCards = aiGuessOpponentPlay(copy, opp(r));
   copy[r].confirmed = true; copy[opp(r)].confirmed = true;
   const before = simMode; simMode = true;
-  let after;
+  let after, died = false;
   try { after = resolveRound(copy) || copy; }
   catch(e){
     // HALT means somebody died mid-resolution — that IS the outcome, and often the winning
     // one, so the mutated copy gets scored. Anything else is a genuine fault: never pick it.
-    if(e && e.halt) after = copy;
+    if(e && e.halt){ after = copy; died = true; }
     else { simMode = before; return -Infinity; }
   }
   simMode = before;
+  if(depth > 0 && !died && (after[r].hp||0) > 0 && (after[opp(r)].hp||0) > 0){
+    return aiLookahead(after, r, depth);        // how good is the position I'm left in?
+  }
   return aiScore(after, r);
+}
+
+// The value of a position = the best follow-up available from it. Only a handful of follow-ups
+// are tried, otherwise the search explodes; that is enough to spot the plays that set something up.
+function aiLookahead(state, r, depth){
+  const cfg = AI_LEVELS[aiLevel] || AI_LEVELS.normal;
+  let cands = aiCandidates(state, r);
+  if(!cands.length) return aiScore(state, r);
+  const width = Math.max(1, cfg.width || 4);
+  if(cands.length > width){
+    for(let i=cands.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [cands[i],cands[j]]=[cands[j],cands[i]]; }
+    cands = cands.slice(0, width);
+  }
+  // Taking the best of a few noisy samples flatters a position (whichever follow-up got lucky
+  // wins), so the average of the sampled follow-ups is used instead — a steadier estimate.
+  let total = 0, n = 0;
+  cands.forEach(pick=>{ const sc = aiTrial(state, r, pick, depth-1); if(sc > -Infinity){ total += sc; n++; } });
+  return n ? total / n : aiScore(state, r);
+}
+
+// Is there a play that simply wins the round? Averages can hide a kill — a candidate that ends
+// the game 4 times out of 5 may still score below a safe grinding play — so lethal is checked
+// separately and taken the moment it is confirmed twice.
+function aiFindLethal(state, r, cands){
+  for(const pick of cands){
+    if(!pick.length) continue;
+    if(aiTrial(state, r, pick, 0) < 90000) continue;      // not a win in this run
+    if(aiTrial(state, r, pick, 0) >= 90000) return pick;  // confirmed: take it
+  }
+  return null;
 }
 
 // Pick the best set of cards for role r.
@@ -7115,14 +7402,138 @@ function aiChoose(state, r){
   if(!cfg.rollouts){                                           // easy: the old random behaviour
     return cands[Math.floor(Math.random()*cands.length)];
   }
+  _aiFixedOppPlay = null;
+  _aiKnowsDeck = !!cfg.knowsDeck && !_aiModelling;
+  _aiDeckGuesses = null;
+  if(_aiKnowsDeck){
+    _aiDeckGuesses = [];
+    const n = Math.max(1, cfg.rollouts||1);
+    for(let i=0;i<n;i++){
+      try { _aiDeckGuesses.push(aiPlayFromGuessedHand(state, opp(r)) || []); }
+      catch(e){ _aiDeckGuesses.push([]); }
+    }
+  }
+  if(cfg.seesHand && !_aiModelling){
+    try { _aiFixedOppPlay = aiOpponentBestPlay(state, opp(r)); } catch(e){ _aiFixedOppPlay = null; }
+  }
+  const slip = (cfg.mistake !== undefined) ? cfg.mistake : aiMistake;
+  if(slip > 0 && Math.random() < slip){                        // a deliberate lapse
+    _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null;
+    return cands[Math.floor(Math.random()*cands.length)];
+  }
+  if(aiUseLethal){
+    const kill = aiFindLethal(state, r, cands);
+    if(kill){ _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null; return kill; }
+  }
   let best = null, bestScore = -Infinity;
   cands.forEach(pick=>{
     let total = 0;
-    for(let i=0;i<cfg.rollouts;i++) total += aiTrial(state, r, pick);
+    for(let i=0;i<cfg.rollouts;i++){ _aiGuessIdx = i; total += aiTrial(state, r, pick, cfg.depth||0); }
     const avg = total / cfg.rollouts;
     if(avg > bestScore){ bestScore = avg; best = pick; }
   });
+  _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null;
   return best || [];
+}
+
+// ── AI: the choices inside cards ─────────────────────────────────────────────────────
+// Picking the right cards is only half the turn. Which cards to discard, how to split damage
+// and healing, whether to spend an Orb — those are decided the same way: try each option, play
+// the round out, keep whatever leaves the AI best off.
+function aiTrialCards(state, r, cards){
+  const uids = cards.map(c=>c.uid);
+  const copy = cloneGs(state);
+  copy[r].selectedCards = (copy[r].hand||[]).filter(c=> uids.includes(c.uid));
+  copy[r].hand = (copy[r].hand||[]).filter(c=> !uids.includes(c.uid));
+  copy[opp(r)].selectedCards = aiGuessOpponentPlay(copy, opp(r));
+  copy[r].confirmed = true; copy[opp(r)].confirmed = true;
+  const before = simMode; simMode = true;
+  let after;
+  try { after = resolveRound(copy) || copy; }
+  catch(e){ if(e && e.halt) after = copy; else { simMode = before; return -Infinity; } }
+  simMode = before;
+  return aiScore(after, r);
+}
+// Apply each option in turn, keep the best, and leave that one applied.
+function aiPickBest(options, apply, evaluate){
+  if(!options || !options.length) return null;
+  let bestOpt = options[0], bestScore = -Infinity;
+  options.forEach(opt=>{
+    apply(opt);
+    const sc = evaluate();
+    if(sc > bestScore){ bestScore = sc; bestOpt = opt; }
+  });
+  apply(bestOpt);
+  return bestOpt;
+}
+// A handful of candidate subsets of `pool` of size n — all of them when there are few, a
+// random sample when there are many, so the search stays quick.
+function aiSubsets(pool, n, cap=8){
+  if(pool.length <= n) return [pool.map(c=>c.uid)];
+  const out = [pool.slice(0,n).map(c=>c.uid)];
+  for(let i=0;i<cap;i++){
+    const shuffled = pool.slice();
+    for(let j=shuffled.length-1;j>0;j--){ const k=Math.floor(Math.random()*(j+1)); [shuffled[j],shuffled[k]]=[shuffled[k],shuffled[j]]; }
+    out.push(shuffled.slice(0,n).map(c=>c.uid));
+  }
+  return out;
+}
+// Measured, not assumed: searching the in-card choices this way scored WORSE than leaving them
+// alone (60% baseline vs 55% for card fields, 52% for hand choices, 49% for both, over 60-70
+// games each against the random AI). A single round with an idle opponent is simply a poor judge
+// of choices that pay off later. Kept behind a switch, off by default, until deeper lookahead
+// makes the judgement trustworthy.
+let aiRefineParts = 'off';        // 'all' | 'cards' | 'keys' | 'off' — which choices get searched
+function aiRefineChoices(state, r, cards){
+  const cfg = AI_LEVELS[aiLevel] || AI_LEVELS.normal;
+  if(!cfg.rollouts || !cards.length || aiRefineParts==='off') return;                  // easy keeps its casual guesses
+  const runs = Math.max(1, Math.min(3, Math.round(cfg.rollouts/2)));
+  const evaluate = ()=>{ let t=0; for(let i=0;i<runs;i++) t += aiTrialCards(state, r, cards); return t/runs; };
+  const setChoice = (key, val)=>{ state[r].choices = Object.assign(state[r].choices||{}, { [key]: val }); };
+
+  if(aiRefineParts!=='keys') cards.forEach(c=>{
+    if(CHOOSE_OPTIONS[c.id]){
+      aiPickBest(CHOOSE_OPTIONS[c.id].map(o=>o.key), k=>{ c._choice = k; }, evaluate);
+    }
+    if(SPLIT_CARDS[c.id]){
+      const total = splitTotal(c.id, state, r);
+      const opts = []; for(let d=0; d<=total; d+=5) opts.push(d);
+      aiPickBest(opts, d=>{ c._split = { dmg:d, heal:total-d }; }, evaluate);
+    }
+    if(c.id === 'tinker_leaf'){
+      const ids = [...new Set(((state[opp(r)].deck)||[]).map(x=> x && x.id).filter(Boolean))].slice(0, 8);
+      if(ids.length) aiPickBest(ids, id=>{ c._tinkerPick = id; }, evaluate);
+    }
+    if(c.enchanted && (state[r].orbs||0) > 0){                 // spend the Orb only when it pays off
+      aiPickBest([false, true], on=>{ if(on) c._useOrb = true; else delete c._useOrb; }, evaluate);
+    }
+  });
+
+  // Choices made out of the hand that stays behind.
+  if(aiRefineParts==='cards') return;
+  const rest = (state[r].hand||[]).filter(c=> c && !cards.includes(c));
+  const has = id => cards.some(c=>c.id===id);
+  if(has('awakening_burst') && rest.length){
+    aiPickBest(aiSubsets(rest, Math.min(4, rest.length)), set=> setChoice('__awakeningBurst', set), evaluate);
+  }
+  if(has('second_chapter') && rest.length){
+    aiPickBest(aiSubsets(rest, Math.min(2, rest.length)), set=> setChoice('__secondChapter', set), evaluate);
+  }
+  if(has('zoom')){
+    const b = ((state[r].deck||[]).slice(-2));
+    if(b.length){
+      const opts = [[]];
+      b.forEach(cd=> opts.push([cd.uid]));
+      if(b.length === 2){ opts.push([b[0].uid, b[1].uid]); opts.push([b[1].uid, b[0].uid]); }
+      aiPickBest(opts, order=> setChoice('__zoom', order), evaluate);
+    }
+  }
+  // Mindy's Playtime: take their card and pay a discard, or just draw normally.
+  if(state[r].blessing && state[r].blessing.id === 'mindys_playtime' && (state[opp(r)].deck||[]).length && rest.length){
+    const opts = [[]];
+    rest.forEach(cd=> opts.push([cd.uid]));
+    aiPickBest(opts.slice(0, 9), pick=> setChoice('__mindy', pick), evaluate);
+  }
 }
 
 function resolveRound(gs){
