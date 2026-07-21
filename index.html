@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T07:08:20';
+const APP_VERSION = '2026-07-21T07:57:26';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -7023,21 +7023,24 @@ function updateTimer(){
 // random play (mistake) and how many times it repeats each simulation (rollouts). Measured win
 // rates against a fully random opponent, paired games with the deck luck cancelled out:
 //   mistake 1.0 → 50%   0.8 → 55%   0.6 → 59%   0.4 → 64%   0.2 → 64%   0.0 → 76%
-// Every rung was measured against the one below it, in paired games where both sides get the
-// same decks and the same draws so only the decisions differ:
-//   normal beats easy                  64%
-//   hard beats normal                  56%   (modest — the mistake rate matters less than expected)
-//   extremely hard beats hard          58%   (40 pairs; knowing the deck is worth a real step)
-//   impossible beats extremely hard    61%
-//   impossible beats hard              77%
-// The pattern across every experiment: information beats deliberation. Deeper search, more
-// repeats and optimising in-card choices all failed to help; letting the AI see more helped
-// every time.
+// Every rung is measured against the one below it, in paired games where both sides get the same
+// decks and the same draws so only the decisions differ. Final ladder:
+//   normal beats easy                 71%
+//   hard beats normal                 72%
+//   extremely hard beats hard         80%
+//   impossible beats extremely hard   63%
+//   hard beats easy                   83%
+// Two findings shaped this. First, a slip must be a DELIBERATE worst play, not a random one:
+// random is neutral and stumbles into good plays as often as bad ones. Switching to deliberate
+// slips took hard-beats-normal from 56% to 72%. Second, knowing the opponent's DECK turned out to
+// be worthless — a tier built on it scored 43-45% against plain hard, matching the earlier finding
+// that modelling the opponent adds noise. Knowing their HAND is what pays, so extremely hard and
+// impossible both see it and differ only in how often they blunder.
 const AI_LEVELS = {
-  easy:       { rollouts:2,  depth:0, width:0, mistake:0.75, label:'Easy' },
-  normal:     { rollouts:4,  depth:0, width:0, mistake:0.35, label:'Normal' },
-  hard:       { rollouts:6,  depth:0, width:5, mistake:0,    label:'Hard' },
-  extremely_hard: { rollouts:5, depth:0, width:5, mistake:0, knowsDeck:true, label:'Extremely Hard' },
+  easy:       { rollouts:2,  depth:0, width:0, mistake:0.75, label:'Easy' },   // shallow thinking, 3 in 4 rounds thrown away
+  normal:     { rollouts:4,  depth:0, width:0, mistake:0.30, label:'Normal' },
+  hard:       { rollouts:6,  depth:0, width:5, mistake:0.05, label:'Hard' },
+  extremely_hard: { rollouts:6, depth:0, width:5, mistake:0.05, seesHand:true, label:'Extremely Hard' },
   impossible: { rollouts:8,  depth:0, width:5, mistake:0, seesHand:true, label:'Impossible' }
 };
 let aiLevel = 'normal';
@@ -7058,9 +7061,12 @@ try { const saved=localStorage.getItem('inspiredAiLevel'); if(saved && AI_LEVELS
 // every card actually played, it was recorded whether that player went on to win. Each rate is
 // pulled towards even by its sample size, so a rarely-seen card cannot swing the AI. Positive
 // means the card tended to appear in wins.
-// Health warning: this measures association, not merit. A heal shows up when someone is losing,
-// so its number reads low without the card being bad. Hence the switch below — it only stays on
-// if it measures better.
+// Health warning: this measures association, not merit. Cards with a play CONDITION are the
+// clearest case — Critical Bite may only be played below 20 health, so it appears exclusively in
+// desperate positions and its raw number read as the worst card in the game while it is in fact
+// a strong comeback card. Every card carrying playIfHpBelow, requiresLowerHp, requiresHindered
+// or requiresPlayed is therefore left out of this table entirely, and the remaining negatives are
+// floored, so no card is ever treated as junk to be dumped from hand.
 const AI_CARD_VALUE = {
   'bolvar': 2.27,
   'king_krush': 2.1,
@@ -7416,21 +7422,26 @@ function aiChoose(state, r){
   if(cfg.seesHand && !_aiModelling){
     try { _aiFixedOppPlay = aiOpponentBestPlay(state, opp(r)); } catch(e){ _aiFixedOppPlay = null; }
   }
+  // A slip is now a DELIBERATE mistake, not a random play: the same options are weighed, and the
+  // worst one is taken. Random is merely neutral — it stumbles into good plays as often as bad
+  // ones — so choosing the worst is what actually separates the tiers.
   const slip = (cfg.mistake !== undefined) ? cfg.mistake : aiMistake;
-  if(slip > 0 && Math.random() < slip){                        // a deliberate lapse
-    _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null;
-    return cands[Math.floor(Math.random()*cands.length)];
-  }
-  if(aiUseLethal){
+  const blunder = slip > 0 && Math.random() < slip;
+  if(aiUseLethal && !blunder){
     const kill = aiFindLethal(state, r, cands);
     if(kill){ _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null; return kill; }
   }
-  let best = null, bestScore = -Infinity;
+  // Measured: a tier that always plays its worst move loses 100% to a tier that plays at random,
+  // and 97% to Impossible. That is where a really wide gap can be bought — at the bottom. The top
+  // cannot be stretched the same way: full information plus flawless play still only wins ~76%.
+  // Every option is weighed once; the blunder roll only decides which end of the list is taken.
+  const wantWorst = blunder || !!cfg.worst;
+  let best = null, bestScore = wantWorst ? Infinity : -Infinity;
   cands.forEach(pick=>{
     let total = 0;
     for(let i=0;i<cfg.rollouts;i++){ _aiGuessIdx = i; total += aiTrial(state, r, pick, cfg.depth||0); }
     const avg = total / cfg.rollouts;
-    if(avg > bestScore){ bestScore = avg; best = pick; }
+    if(wantWorst ? avg < bestScore : avg > bestScore){ bestScore = avg; best = pick; }
   });
   _aiFixedOppPlay = null; _aiKnowsDeck = false; _aiDeckGuesses = null;
   return best || [];
