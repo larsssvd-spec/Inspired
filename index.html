@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T08:04:33';
+const APP_VERSION = '2026-07-21T09:44:30';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5737,11 +5737,10 @@ function renderCollection(){
   // remembered for the next visit.
   $('sp-arena').onclick=async ()=>{
     const pick=await pickChoice([
-      {key:'easy',       label:'Easy — plays casually'},
-      {key:'normal',     label:'Normal — usually plays well'},
-      {key:'hard',            label:'Hard — always its best move'},
-      {key:'extremely_hard',  label:'Extremely Hard — knows your deck'},
-      {key:'impossible',      label:'Impossible — sees your hand'}
+      {key:'easy',       label:'Relaxed — blunders more often than not'},
+      {key:'normal',     label:'Challenging — plays well, slips regularly'},
+      {key:'hard',       label:'Expert — rarely puts a foot wrong'},
+      {key:'impossible', label:'Nightmare — flawless, and sees your hand'}
     ], 'Arena — how strong should your opponent be?');
     if(pick) aiLevel=pick;
     try{ localStorage.setItem('inspiredAiLevel', aiLevel); }catch(e){}
@@ -7025,25 +7024,26 @@ function updateTimer(){
 // random play (mistake) and how many times it repeats each simulation (rollouts). Measured win
 // rates against a fully random opponent, paired games with the deck luck cancelled out:
 //   mistake 1.0 → 50%   0.8 → 55%   0.6 → 59%   0.4 → 64%   0.2 → 64%   0.0 → 76%
-// Every rung is measured against the one below it, in paired games where both sides get the same
-// decks and the same draws so only the decisions differ. Final ladder:
-//   normal beats easy                 71%
-//   hard beats normal                 72%
-//   extremely hard beats hard         80%
-//   impossible beats extremely hard   63%
-//   hard beats easy                   83%
-// Two findings shaped this. First, a slip must be a DELIBERATE worst play, not a random one:
-// random is neutral and stumbles into good plays as often as bad ones. Switching to deliberate
-// slips took hard-beats-normal from 56% to 72%. Second, knowing the opponent's DECK turned out to
-// be worthless — a tier built on it scored 43-45% against plain hard, matching the earlier finding
-// that modelling the opponent adds noise. Knowing their HAND is what pays, so extremely hard and
-// impossible both see it and differ only in how often they blunder.
+// Every rung measured against the one below it over 1,182 games (paired and seeded: both sides get
+// the same decks and the same draws, sides swapped, so only the decisions differ):
+//   normal beats easy                 79.6% ±2.8   (422 games)
+//   hard beats normal                 69.2% ±4.8   (190 games)
+//   impossible beats hard             71.4% ±5.7   (126 games)
+//   impossible beats easy             86.9% ±3.7   (174 games)
+// A fifth tier sitting between hard and impossible was built and dropped: it beat hard 56.6% and
+// lost to impossible 56.6% — real edges, but far too thin to feel. Three levers move the needle
+// in this game (blunder rate, seeing the hand, and nothing else), so four tiers is what the game
+// can actually carry. Earlier figures from 22-30 pairs claimed 80% for that fifth tier; small
+// samples here are simply not to be trusted.
+// Two findings shaped the design. A slip must be a DELIBERATE worst play, not a random one —
+// random is neutral and stumbles into good plays as often as bad ones. And knowing the opponent's
+// DECK proved worthless (43-45% against plain hard), while knowing their HAND pays; extremely hard
+// and impossible therefore both see it and differ only in how often they blunder.
 const AI_LEVELS = {
-  easy:       { rollouts:2,  depth:0, width:0, mistake:0.75, label:'Easy' },   // shallow thinking, 3 in 4 rounds thrown away
-  normal:     { rollouts:4,  depth:0, width:0, mistake:0.30, label:'Normal' },
-  hard:       { rollouts:6,  depth:0, width:5, mistake:0.05, label:'Hard' },
-  extremely_hard: { rollouts:6, depth:0, width:5, mistake:0.05, seesHand:true, label:'Extremely Hard' },
-  impossible: { rollouts:8,  depth:0, width:5, mistake:0, seesHand:true, label:'Impossible' }
+  easy:       { rollouts:2,  depth:0, width:0, mistake:0.75, label:'Relaxed' },   // shallow thinking, 3 in 4 rounds thrown away
+  normal:     { rollouts:4,  depth:0, width:0, mistake:0.30, label:'Challenging' },
+  hard:       { rollouts:6,  depth:0, width:5, mistake:0.05, label:'Expert' },
+  impossible: { rollouts:8,  depth:0, width:5, mistake:0, seesHand:true, label:'Nightmare' }
 };
 let aiLevel = 'normal';
 const AI_MAX_SETS = 160;                    // ceiling on how many card combinations are weighed
@@ -7055,7 +7055,11 @@ let aiMistake = 0;
 // without it, 30 paired games). A won position already scores +100000, which dominates any
 // average, so the ordinary search finds lethal by itself. Kept as a switch, off by default.
 let aiUseLethal = false;
-try { const saved=localStorage.getItem('inspiredAiLevel'); if(saved && AI_LEVELS[saved]) aiLevel=saved; } catch(e){}
+try {
+  const saved=localStorage.getItem('inspiredAiLevel');
+  if(saved && AI_LEVELS[saved]) aiLevel=saved;
+  else if(saved) aiLevel='hard';        // a tier that no longer exists falls back rather than breaking
+} catch(e){}
 
 // How good does this state look for role r? Positive is good. Health is the spine of it;
 // the rest are the things that reliably turn into health later.
