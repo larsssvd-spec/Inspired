@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T07:57:26';
+const APP_VERSION = '2026-07-21T08:04:33';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -5827,6 +5827,7 @@ function showGameScreen(){
 
 // ── Render ──
 function renderBoard(){
+  if(simMode) return;        // no redraws while the AI is thinking
   if(!localGs?.p1||!localGs?.p2) return;
   const my=me(), th=them();
   document.getElementById('you-name').textContent=my.name;
@@ -5937,6 +5938,7 @@ function processTriggerQueue(){
 }
 // Revealed cards appear centre-screen, big and crisp, and STAY until you click them away.
 function showRevealedCards(entries, done){
+  if(simMode) return;        // never surface a reveal from a simulated round
   const defs=(entries||[]).map(e=>CARDS_DATA.find(x=>x.id===e.id)).filter(Boolean);
   if(!defs.length){ if(done) done(); return; }
   const back=document.createElement('div'); back.className='reveal-backdrop';
@@ -8187,6 +8189,7 @@ function hideCardPreview(){
 
 // ── Floater ──
 function spawnFloater(role,text,isHeal){
+  if(simMode) return;          // the AI plays rounds out in its head — nothing may reach the screen
   const isMe=role===myRole;
   const anchor=document.getElementById(isMe?'you-hp-bar':'opp-hp-bar');
   const r=anchor.getBoundingClientRect();
