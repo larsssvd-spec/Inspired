@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T09:44:30';
+const APP_VERSION = '2026-07-21T10:04:25';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -4364,8 +4364,11 @@ function dealDmg(gs,target,amt,trueDmg,attacker){
 // setHealth: hard-set HP to a value. NOT a heal — bypasses can't-heal and is not
 // stealable (e.g. Full Pyrax "set your health to 150"). Clamped to [0, maxHp].
 function setHealth(gs,r,v){
+  const before=gs[r].hp;
   gs[r].hp=Math.max(0,Math.min(gs[r].maxHp||150,v));
-  spawnFloater(r,'♥'+gs[r].hp,true);
+  // Only announce it when the number actually moved: a set-to-what-it-already-is changes nothing
+  // on screen, and repeats of it were showing up as a stack of identical figures.
+  if(gs[r].hp!==before) spawnFloater(r,'♥'+gs[r].hp,true);
   checkDeath(gs,r);   // setting to 0 or below still counts as death
 }
 
@@ -8196,7 +8199,11 @@ function spawnFloater(role,text,isHeal){
   if(simMode) return;          // the AI plays rounds out in its head — nothing may reach the screen
   const isMe=role===myRole;
   const anchor=document.getElementById(isMe?'you-hp-bar':'opp-hp-bar');
+  if(!anchor) return;
   const r=anchor.getBoundingClientRect();
+  // Between rounds the board is hidden, so the health bar measures zero and anything spawned here
+  // would pile up in the corner of the screen instead of over the bar. Skip it rather than misplace it.
+  if(!r.width && !r.height) return;
   const el=document.createElement('div');
   el.className='floater';
   el.style.left=(r.left+r.width/2-20)+'px';
