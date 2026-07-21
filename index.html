@@ -1738,7 +1738,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T10:04:25';
+const APP_VERSION = '2026-07-21T10:11:12';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -7983,6 +7983,7 @@ function drawCards(state,r,n,skip){
 // sides committed (empty slots keep the row readable), and the log. Cards hover into the
 // full-size preview, so you can actually read what hit you.
 function showResult(newGs,oldGs){
+  clearFloaters();
   const my=newGs[myRole], th=newGs[opp(myRole)];
   const myOld=(oldGs||newGs)[myRole], thOld=(oldGs||newGs)[opp(myRole)];
   const round=(newGs.round||1)-1;
@@ -8027,7 +8028,7 @@ function showResult(newGs,oldGs){
   document.getElementById('res-log').innerHTML=logs.map(l=>`<div class="log-entry ${l.type}">${l.msg}</div>`).join('');
   hideCardPreview();
   document.getElementById('hand').style.visibility='hidden';
-  document.getElementById('ov-result').classList.remove('hidden');
+  clearFloaters(); document.getElementById('ov-result').classList.remove('hidden');
 }
 
 document.getElementById('btn-view-table').onclick=()=>{
@@ -8037,7 +8038,7 @@ document.getElementById('btn-view-table').onclick=()=>{
 };
 document.getElementById('btn-back-summary').onclick=()=>{
   document.getElementById('btn-back-summary').style.display='none';
-  document.getElementById('ov-result').classList.remove('hidden');
+  clearFloaters(); document.getElementById('ov-result').classList.remove('hidden');
 };
 
 document.getElementById('btn-continue').onclick=async()=>{
@@ -8195,6 +8196,13 @@ function hideCardPreview(){
 }
 
 // ── Floater ──
+// Floaters live for 1.4s. The round result drops over the board almost immediately after the
+// damage resolves, so any still in flight would carry on animating over — or behind — that panel,
+// far away from the health bar they belong to. Clearing them as the panel opens keeps them where
+// they belong: on the board, during the round.
+function clearFloaters(){
+  try { document.querySelectorAll('.floater').forEach(el=>el.remove()); } catch(e){}
+}
 function spawnFloater(role,text,isHeal){
   if(simMode) return;          // the AI plays rounds out in its head — nothing may reach the screen
   const isMe=role===myRole;
