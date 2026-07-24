@@ -1741,7 +1741,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-23T12:27:18';
+const APP_VERSION = '2026-07-24T11:05:42';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1830,7 +1830,7 @@ const auth = getAuth(FB);
 // DECKBUILDING RULES (for the REAL game / future deck builder — NOT yet enforced;
 // current buildDeck() is a random test pool):
 //   • Deck size: exactly 40 cards.
-//   • Legendary: max 1 copy per deck.
+//   • Legendary: max 1 copy per deck, and max 4 legendaries in a deck all told.
 //   • Common: max 2 copies per deck.
 //   • Blessing: max 1 copy. Quest: max 1 copy.
 //
@@ -5637,11 +5637,12 @@ async function disenchantCard(card){
 // full card objects, so renaming or rebalancing a card updates every deck automatically.
 // RULES (enforced on add, so a saved deck is always legal — only its SIZE can be short):
 //   • exactly 40 cards to be playable        • common max 2, legendary max 1 (MAX_COPIES)
+//   • max 4 legendaries per deck in total
 //   • you must own the copies you put in     • max 2 quests, each quest once
 //   • max 1 blessing (optional)              • a deck may never mix Finale and Quickplay
 // A deck is pruned when you OPEN it (not before): copies you disenchanted in the meantime
 // are dropped and you get a notice. That way disenchanting never silently rewrites decks.
-const DECK_SIZE=40, MAX_DECKS=10, MAX_QUESTS=2, MAX_BLESSINGS=1;
+const DECK_SIZE=40, MAX_DECKS=10, MAX_QUESTS=2, MAX_BLESSINGS=1, MAX_LEGENDARIES=4;
 let colDeck=null;   // id of the deck open in the sidebar (null = deck list)
 
 function allDecks(){ return (myProfile && myProfile.decks) || {}; }
@@ -5684,6 +5685,11 @@ function whyNotAdd(d, card){
   if(deckSize(d)>=DECK_SIZE)        return 'Deck is full (40)';
   if(have>=maxCopies(card))         return 'Copy limit: '+maxCopies(card);
   if(have>=ownedCount(card.id))     return 'You only own '+ownedCount(card.id);
+  // A cap on legendaries as a whole, not per card: every legendary counts towards it, quests and
+  // blessings included. Only enforced when adding, like the rules below it — a deck saved before
+  // this cap existed keeps whatever it already holds.
+  if(card.rarity==='legendary' && deckCountWhere(d,c=>c.rarity==='legendary')>=MAX_LEGENDARIES)
+    return 'Max '+MAX_LEGENDARIES+' legendaries per deck';
   if(card.quest && deckCountWhere(d,c=>c.quest)>=MAX_QUESTS)               return 'Max 2 quests per deck';
   if(card.type==='blessing' && deckCountWhere(d,c=>c.type==='blessing')>=MAX_BLESSINGS) return 'Max 1 blessing per deck';
   const wish=deckWish(d);
