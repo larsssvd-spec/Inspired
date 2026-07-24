@@ -782,6 +782,9 @@ body { background:var(--deep); color:var(--text); font-family:'Lora',serif;
   font-size:0.7rem; text-shadow:0 1px 4px rgba(0,0,0,0.95); pointer-events:none; }
 .card.locked-req:hover { opacity:0.85; }
 
+/* Imprisoned cards: locked in hand — unplayable, undiscardable, unstealable, until something frees them. */
+.card.imprisoned { border-color:rgba(120,140,170,0.75); filter:grayscale(0.55) brightness(0.8); }
+.card.imprisoned::after { content:'⛓'; position:absolute; top:2px; right:4px; font-size:0.7rem; color:#9fb2c8; opacity:0.95; }
 /* Cursed cards: one playable round left, then they rot away. */.card.cursed { border-color:rgba(200,64,64,0.7); box-shadow:0 0 10px rgba(200,64,64,0.35) inset; }
 .card.cursed::after { content:'☠'; position:absolute; top:2px; right:4px; font-size:0.65rem; color:var(--red2); opacity:0.85; }
 @keyframes shakeNo { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
@@ -1738,7 +1741,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-21T10:11:12';
+const APP_VERSION = '2026-07-23T12:27:18';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1910,7 +1913,7 @@ const CARDS_DATA = [
   {id:'fifth_day',  name:'The Fifth Day',  text:"Choose: for the rest of the game you take 5 damage at the start of each round OR you can't play more than 1 card each round.", rarity:'legendary', emoji:'🎏', journeyDay:true, noDeck:true, art:'art/fifth_day.png', type:'normal'},
   // ── New cards (art + metadata; effects/logic added later) ──
   {id:'death_stare', collectible:true, name:'Death Stare', text:'When drawn: put a copy in both hands (you keep variant 1, your opponent gets variant 2).', rarity:'legendary', emoji:'👁️', hold:true, type:'normal', art:'art/death_stare.png'},
-  {id:'detective_bubbles', collectible:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, dmg:10, heals:true, type:'normal', art:'art/detective_bubbles.png'},
+  {id:'detective_bubbles', collectible:true, selfDamage:true, name:'Detective Bubbles', text:'Deal 10 damage to yourself. Heal 15 at the beginning of next round.', rarity:'common', emoji:'🫧', dealsDamage:true, dmg:10, heals:true, type:'normal', art:'art/detective_bubbles.png'},
   {id:'murloc_things', collectible:true, name:'Murloc Things', text:'Uncurse all cards in your hand. Enchanted: for each card that was Cursed, Curse a random card in your opponent\'s hand.', rarity:'common', emoji:'🐟', enchanted:true, type:'normal', art:'art/murloc_things.png'},
   {id:'enchanted_orb', name:'Enchanted Orb', text:'Hold this to enchant a card you play (spends the Orb). Does nothing if played.', rarity:'common', emoji:'🔮', type:'normal', art:'art/enchanted_orb.png'},
   {id:'skywalker', collectible:true, name:'Skywalker', text:'Choose: next round your opponent is forced to play all cards that deal damage, OR all cards that heal.', rarity:'common', emoji:'🌌', type:'normal', art:'art/skywalker.png'},
@@ -1952,6 +1955,8 @@ const CARDS_DATA = [
   // dead on its own — the effect only fires when you play BOTH halves in the SAME round.
   {id:'world_splitter',   collectible:true, name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌍', alterEgo:'world_splitter_b', type:'normal', art:'art/world_splitter.png'},
   {id:'world_splitter_b',                   name:'World Splitter', text:'Alter Ego: For the rest of the game, when you Discard a card, your opponent also Discards a card from their hand.', rarity:'legendary', emoji:'🌎', noDeck:true, alterEgoOf:'world_splitter', type:'normal', art:'art/world_splitter_b.png'},
+  {id:'thrive_to_suffer',   collectible:true, name:'Thrive to Suffer', text:'Alter Ego: Permanently, all healing of both players becomes damage instead. You may aim cards that would wound you at your opponent.', rarity:'legendary', emoji:'🥀', alterEgo:'thrive_to_suffer_b', type:'normal', art:'art/thrive_to_suffer.png'},
+  {id:'thrive_to_suffer_b',                   name:'Thrive to Suffer', text:'Alter Ego: Permanently, all healing of both players becomes damage instead. You may aim cards that would wound you at your opponent.', rarity:'legendary', emoji:'🌹', noDeck:true, alterEgoOf:'thrive_to_suffer', type:'normal', art:'art/thrive_to_suffer_b.png'},
   {id:'misses_azazel',    collectible:true, name:'Misses Azazel', text:'Alter Ego: Mister Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'😈', alterEgo:'mister_azazel', type:'normal', art:'art/misses_azazel.png'},
   {id:'mister_azazel',                      name:'Mister Azazel', text:'Alter Ego: Misses Azazel. Play both in the same round — Reward: True Form of the Azazel Family (for the rest of the game all True damage is doubled; deal 10 True damage).', rarity:'legendary', emoji:'👹', noDeck:true, alterEgoOf:'misses_azazel', type:'normal', art:'art/mister_azazel.png'},
   {id:'true_form', name:'True Form of the Azazel Family', text:'For the rest of the game all True damage is doubled. Deal 10 True damage.', rarity:'legendary', emoji:'🔥', noDeck:true, dealsDamage:true, dmg:10, art:'art/true_form.png', type:'normal'},
@@ -1989,7 +1994,7 @@ const CARDS_DATA = [
   {id:'the_bad_and_the_worse', collectible:true, name:'The Bad and the Worse', text:'Steal 1 of the cards that your opponent draws next round, randomly.', rarity:'common', emoji:'🎭', type:'normal', art:'art/the_bad_and_the_worse.png'},
   {id:'whitefoot', collectible:true, name:'Whitefoot', text:'Your opponent has to give you 1 non-legendary card (they choose which).', rarity:'common', emoji:'🐾', type:'normal', art:'art/white_foot.png'},
   {id:'from_far_away', collectible:true, name:'From Far Away', text:"Shuffle this card into your opponent's deck. When drawn: Deal 20 damage. Enchanted: Endless.", rarity:'common', emoji:'🌠', dealsDamage:true, dmg:20, enchanted:true, type:'normal', art:'art/from_far_away.png'},
-  {id:'wish_dralivering', collectible:true, name:'Wish Dralivering', text:'Transform this into a random non-legendary Celebration card.', rarity:'common', emoji:'🌟', type:'normal', art:'art/wish_dralivering.png'},
+  {id:'wish_dralivering', collectible:true, name:'Wish Dralivering', text:'Conjure a common Celebration card.', rarity:'common', emoji:'🌟', type:'normal', art:'art/wish_dralivering.png'},
   {id:'soul_shatter', collectible:true, name:'Soul Shatter', text:"Curse 2 random cards in your opponent's hand.", rarity:'common', emoji:'💔', type:'normal', art:'art/soul_shatter.png'},
   {id:'zargoor', collectible:true, name:'Zargoor', text:'Deal 10 damage. Deal 20 damage if your opponent has a Cursed card in their hand.', rarity:'common', emoji:'🗡️', dealsDamage:true, dmg:10, type:'normal', art:'art/zargoor.png'},
   {id:'nauren_shock', collectible:true, name:'Nauren Shock', text:'Deal 25 damage at the beginning of next round, decreased by the total damage your opponent deals this round.', rarity:'common', emoji:'⚡', dealsDamage:true, dmg:25, type:'normal', art:'art/nauren_shock.png'},
@@ -2005,6 +2010,18 @@ const CARDS_DATA = [
   {id:'bloodmoon_princess', collectible:true, name:'Bloodmoon Princess', text:'While holding: the first round your opponent discards a card, you gain all cards they discard that round. Then discard this card.', rarity:'common', emoji:'🌑', hold:true, type:'normal', art:'art/bloodmoon_princess.png'},
   {id:'peek_a_boo', collectible:true, name:'Peek A Boo', text:'Steal 2 Cursed cards from your opponent. Enchanted: steal any 2 random cards instead.', rarity:'common', emoji:'👀', enchanted:true, type:'normal', art:'art/peek_a_boo.png'},
   {id:'purrsy', collectible:true, name:'Purrsy', text:'Heal 10. Enchanted: Heal 5 for each card in your hand.', rarity:'common', emoji:'🐱', heals:true, enchanted:true, type:'normal', art:'art/purrsy.png'},
+  {id:'ready_for_launch', collectible:true, name:'Ready for Launch', text:'Shuffle 4 different endless Spaceships into your deck.', rarity:'legendary', emoji:'🚀', type:'normal', art:'art/ready_for_launch.png'},
+  {id:'spaceship_of_gravity', name:'Spaceship of Gravity', text:"Endless. Get 2 random copies of cards in your opponent's graveyard.", rarity:'legendary', emoji:'🕳️', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_gravity.png'},
+  {id:'spaceship_of_mass', name:'Spaceship of Mass', text:'Endless. You may draw as many cards as you want next round.', rarity:'legendary', emoji:'🌌', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_mass.png'},
+  {id:'spaceship_of_time', name:'Spaceship of Time', text:'Endless. Your health goes back in time 1 turn.', rarity:'legendary', emoji:'⏳', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_time.png'},
+  {id:'spaceship_of_light', name:'Spaceship of Light', text:'Endless. Look at the next 10 cards of your deck: You may draw up to 2 of them this round.', rarity:'legendary', emoji:'🛸', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_light.png'},
+  {id:'valora', collectible:true, name:'Valora', text:'When drawn: Shuffle this card back into your deck. The third time you draw it: Refill your deck to 40 with random cards.', rarity:'legendary', emoji:'♾️', endless:true, type:'normal', art:'art/valora.png'},
+  {id:'aurora', collectible:true, name:'Aurora', text:'Deal 10 damage to yourself. Conjure 2 common cards.', rarity:'common', emoji:'🌈', selfDamage:true, type:'normal', art:'art/aurora.png'},
+  {id:'dont_lighten_the_lanterns', collectible:true, name:"Don't Lighten the Lanterns", text:"Shuffle this card into your opponent's deck. They curse 4 random cards in their hand when they play this card.", rarity:'common', emoji:'🏮', type:'normal', art:'art/dont_lighten_the_lanterns.png'},
+  {id:'bowler_the_misunderstood', collectible:true, name:'Bowler the Misunderstood', text:'Deal 5 damage to yourself.', rarity:'common', emoji:'🎳', selfDamage:true, type:'normal', art:'art/bowler_the_misunderstood.png'},
+  {id:'spyros_adventure', collectible:true, name:"Spyro's Adventure", text:'Deal 5 damage. If you took damage this round: Deal 25 instead.', rarity:'common', emoji:'🐲', dealsDamage:true, dmg:5, type:'normal', art:'art/spyros_adventure.png'},
+  {id:'weraa_the_windcrafter', collectible:true, name:'Weraa the Windcrafter', text:'Shuffle Guardian Angel into your deck.', rarity:'common', emoji:'🍃', type:'normal', art:'art/weraa_the_windcrafter.png'},
+  {id:'guardian_angel', name:'Guardian Angel', text:'Block. Heal for 30.', rarity:'common', emoji:'👼', noDeck:true, block:true, heals:true, type:'normal', art:'art/guardian_angel.png'},
   {id:'zoom', collectible:true, name:'ZOOM', text:'Look at the bottom 2 cards of your deck. You may place any on top of your deck.', rarity:'common', emoji:'🔍', type:'normal', art:'art/zoom.png'},
   {id:'mixed_energies', collectible:true, name:'Mixed Energies', text:"Shuffle Dream Warp into your deck and Nightmare Warp into your opponent's. When the first one is drawn: Discard the other one.", rarity:'legendary', emoji:'🌗', type:'normal', art:'art/mixed_energies.png'},
   {id:'dream_warp', name:'Dream Warp', text:'When drawn: Shuffle the last 10 cards you played back into your deck.', rarity:'legendary', emoji:'💫', noDeck:true, type:'normal', art:'art/dream_warp.png'},
@@ -2029,6 +2046,7 @@ const CARDS_DATA = [
   {id:'second_chapter', collectible:true, name:'Second Chapter', text:'Both players shuffle 2 cards from their hand back into their deck.', rarity:'common', emoji:'📖', type:'normal', art:'art/second_chapter.png'},
   {id:'linn_the_elf_leader', collectible:true, name:'Linn the Elf Leader', text:'Block. If your opponent Blocked last round: get this card back into your hand.', rarity:'common', emoji:'🧝', block:true, type:'normal', art:'art/linn_the_elf_leader.png'},
   {id:'croock_the_brave', collectible:true, name:'Croock the Brave', text:'Block. If you drew an extra card last round: Also block the next round.', rarity:'common', emoji:'🛡️', block:true, type:'normal', art:'art/croock_the_brave.png'},
+  {id:'the_forgotten_metal_war', collectible:true, name:'The Forgotten Metal War', text:'Quest: Deal damage to yourself 4 times. Reward: Any damage you deal to yourself is blocked.', rarity:'common', emoji:'⚙️', type:'quest', quest:'forgotten_metal_war', art:'art/the_forgotten_metal_war.png'},
   {id:'dreaming_zephyrax', collectible:true, name:'Dreaming Zephyrax', text:'Quest: reach 20 health or less. Reward: Unleashed Zephyrax (added to your hand).', rarity:'legendary', emoji:'🌀', type:'quest', quest:'dreaming_zephyrax', art:'art/dreaming_zephyrax.png'},
   {id:'sheera_the_dragon_tamer', collectible:true, name:'Sheera the Dragon Tamer', text:'Quest: Your deck has 10 or less cards left. Reward: Fimm the Guardian of Dreams (added to your hand).', rarity:'legendary', emoji:'🐉', type:'quest', quest:'sheera_the_dragon_tamer', art:'art/sheera_the_dragon_tamer.png'},
   {id:'fimm_the_guardian_of_dreams', name:'Fimm the Guardian of Dreams', text:'Both decks are shuffled into one deck and split into two separate decks afterwards.', rarity:'legendary', emoji:'🌙', noDeck:true, type:'normal', art:'art/fimm_the_guardian_of_dreams.png'},
@@ -2212,6 +2230,7 @@ function krushSearch(c, n, findId, label){
 // the CPU never picks it, and runCard turns it away as a last guard.
 function playBlockedReason(state, r, card){
   if(!card) return null;
+  if(isImprisoned(card)) return 'This card is Imprisoned — it cannot be played.';
   // Best Friend for Always — only its owner (_bffOwner, the player whose deck it came from) can
   // ever play it. In anyone else's hand it is unplayable; they must steal it back to the owner.
   if(card._bffOwner!==undefined && card._bffOwner!==r){
@@ -2310,7 +2329,24 @@ function buildCtx(state, r, extra){
     dealDmgTo: (target, amt, trueDmg)=> dealDmg(state, target, amt, !!trueDmg, opp(target)),
     // hurtSelf: direct HP loss to yourself. Respects YOUR block (blocking negates it) and
     // can be lethal (the death-gate fires). Not routed through the offensive-damage machinery.
-    hurtSelf:  (amt)=>{ if(state[r].blocked){ log('  → '+state[r].name+' blocks the self-damage!','effect'); return; } const dmg=Math.max(0,amt); state[r].hp=Math.max(0,state[r].hp-dmg); spawnFloater(r,'-'+dmg,false); checkDeath(state,r); },
+    hurtSelf:  (amt)=>{
+      // Thrive to Suffer, second half: its owner may point this at the opponent instead. The
+      // choice is made per card before the round resolves and keyed on that card's uid.
+      if(thriveInstalled(state) && thriveOwner(state)===r){
+        const pickedBy=((state[r].choices||{})['__thriveAim'])||{};
+        const aim=extra.card && pickedBy[extra.card.uid];
+        if(aim==='opp'){
+          const o=opp(r);
+          log('  🥀 '+state[r].name+' turns '+Math.max(0,amt)+' damage onto '+state[o].name+' instead.','damage');
+          dealDmg(state, o, Math.max(0,amt), false, r);
+          return;
+        }
+      }
+      if(selfHarmShielded(state,r)){ log('  ⚙️ '+state[r].name+"'s own damage glances off — The Forgotten Metal War holds.",'effect'); return; }
+      if(state[r].blocked){ log('  → '+state[r].name+' blocks the self-damage!','effect'); return; }
+      const dmg=Math.max(0,amt); state[r].hp=Math.max(0,state[r].hp-dmg); state[r].dmgTakenThisRound=(state[r].dmgTakenThisRound||0)+dmg; spawnFloater(r,'-'+dmg,false);
+      if(dmg>0) noteSelfHarm(state, r);
+      checkDeath(state,r); },
     // queueHeal: heal at the start of NEXT round (Detective Bubbles). Each call stacks.
     queueHeal: (amt)=>{ state[r].pendingHeals=[...(state[r].pendingHeals||[]), amt]; },
     heal:      (amt)=> heal(state, r, amt),
@@ -2362,8 +2398,20 @@ const CARD_VARIANTS = {
 // Journey Days). Those tokens are noDeck, so they never show up in the collection on their
 // own — hovering their source card is the only place you can read them. Same showcase as
 // the variants: source card centre-screen, tokens lined up to the right.
+// The Spaceship fleet. Ready for Launch plants one of each, and the draw throttle watches for any
+// of them, so adding a Spaceship here is all it takes to fold it into both.
+const SPACESHIP_IDS = ['spaceship_of_light','spaceship_of_time','spaceship_of_mass','spaceship_of_gravity'];
+// Spaceship of Mass promises a free draw NEXT round, so the promise is stamped with the round it
+// was made in and comes due one round later. Both the draw itself and Ready for Launch's throttle
+// ask this question, which keeps the two in agreement about which round is the free one.
+function massDrawDue(state, r){
+  const round=state.round||1;
+  return ((state[r]&&state[r].effects)||[]).find(e=> e && e.id==='spaceship_of_mass' && round===(e.from||0)+1) || null;
+}
+
 const CARD_TOKENS = {
   zorya:            { label:'Sin',         ids: SIN_IDS },
+  thrive_to_suffer: { label:'Alter Ego',   ids: ['thrive_to_suffer_b'] },
   world_splitter:   { label:'Alter Ego',   ids: ['world_splitter_b'] },
   misses_azazel:    { label:'Alter Ego',   ids: ['mister_azazel','true_form'], labelFor:{true_form:'Reward'} },
   dreaming_zephyrax:{ label:'Reward',      ids: ['unleashed_zephyrax'] },
@@ -2374,6 +2422,8 @@ const CARD_TOKENS = {
   baby_krush:       { label:'Krush',       ids: ['krush','king_krush','the_krush'] },
   vol_dor_mook:     { label:'Token',       ids: ['fireball'] },
   mixed_energies:   { label:'Warp',        ids: ['dream_warp','nightmare_warp'] },
+  weraa_the_windcrafter: { label:'Token',  ids: ['guardian_angel'] },
+  ready_for_launch: { label:'Spaceship',   ids: SPACESHIP_IDS },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
 };
 const CARD_LOGIC = {
@@ -2472,6 +2522,8 @@ const CARD_LOGIC = {
   // you, which forces one back at them… the chain ping-pongs until a hand runs dry. That is
   // intended. It always ends: every step removes a card and nothing adds one. SPLIT_CHAIN is
   // only a fuse against a future card that could break that assumption.
+  thrive_to_suffer:   { onPlay:(c)=>thrivePlay(c) },
+  thrive_to_suffer_b: { onPlay:(c)=>thrivePlay(c) },
   world_splitter:   { onPlay:(c)=>splitterPlay(c), onDiscard:(c)=>splitterDiscard(c) },
   world_splitter_b: { onPlay:(c)=>splitterPlay(c) },
   // ── Azazel Family (Alter Ego) ──
@@ -3226,6 +3278,217 @@ const CARD_LOGIC = {
     st[oR].deck=pile.slice(half);
     c.log(st[meR].name+' plays Fimm the Guardian of Dreams — both decks are shuffled together and split: '+st[meR].deck.length+' / '+st[oR].deck.length+'.','effect');
   } },
+  // Ready for Launch — one of each Spaceship goes into the deck. The cost that used to sit here
+  // (draw 1 instead of 2 while any Spaceship remained) has been taken out; a different drawback
+  // is still to be decided.
+  ready_for_launch: {
+    onPlay:(c)=>{
+      const st=c.state, R=c.self;
+      const ships=[];
+      SPACESHIP_IDS.forEach(id=>{ const def=CARDS_DATA.find(x=>x.id===id); if(def) ships.push(mkCard(def)); });
+      if(!ships.length){ c.log('The Spaceships are missing.','system'); return; }
+      const added=shuffleIntoDeck(st, R, ships);
+      c.log(st[R].name+' plays Ready for Launch — '+(added?ships.length+' Spaceships are shuffled into their deck':'the Spaceships never reached the deck')+'.','effect');
+    }
+  },
+  // Spaceship of Gravity — two random cards are copied out of the opponent's graveyard into your
+  // hand. Copies, so their graveyard is left exactly as it was. The copies are stamped as THEIRS,
+  // the same way Tinker Leaf does it: a card's deck of origin follows it wherever it goes.
+  spaceship_of_gravity: { onPlay:(c)=>{
+    const st=c.state, R=c.self, O=c.opp;
+    const gy=(st[O].graveyard||[]).filter(Boolean);
+    if(!gy.length){ c.log(st[R].name+' plays Spaceship of Gravity — '+st[O].name+"'s graveyard is empty.",'system'); return; }
+    const room=Math.max(0, maxHandSize(st,R)-((st[R].hand||[]).length));
+    const n=Math.min(2, gy.length, room);
+    if(n<=0){ c.log(st[R].name+' plays Spaceship of Gravity — no room left in hand.','system'); return; }
+    const pool=gy.slice(), names=[];
+    for(let i=0;i<n;i++){
+      const src=pool.splice(Math.floor(Math.random()*pool.length), 1)[0];
+      const def=CARDS_DATA.find(x=>x.id===src.id);
+      if(!def) continue;
+      const copy=mkCard(def); copy.owner=O;
+      st[R].hand=[...(st[R].hand||[]), copy];
+      names.push(def.name);
+    }
+    c.log(st[R].name+' plays Spaceship of Gravity — copies '+(names.join(' and ')||'nothing')+' out of '+st[O].name+"'s graveyard.",'effect');
+  } },
+  // Spaceship of Mass — next round you draw whatever number you ask for, up to what your hand can
+  // hold and what your deck still has. The promise is marked used the moment it is cashed in and
+  // swept away at the end of that round, so it can never pay out twice.
+  spaceship_of_mass: {
+    onPlay:(c)=>{
+      const st=c.state, R=c.self;
+      st[R].effects=[...(st[R].effects||[])];
+      st[R].effects.push({id:'spaceship_of_mass', from:(st.round||1)});
+      c.log(st[R].name+' plays Spaceship of Mass — next round they may draw as many cards as they want.','effect');
+    },
+    // The number is captured at the START of the round: choices are wiped partway through
+    // resolution, well before the draw happens, so reading them at draw time finds nothing.
+    onRoundStart:(c)=>{
+      const st=c.state, R=c.self;
+      const due=massDrawDue(st, R);
+      if(!due) return;
+      const asked=(st[R].choices||{})['__massDraw'];
+      if(asked!==undefined && asked!==null) due.want=Math.max(0, +asked);
+    },
+    drawMod:(c)=>{
+      const st=c.state, R=c.self;
+      const due=massDrawDue(st, R);
+      if(!due) return c.amount;                         // a plain value hook: it changes nothing
+      const room=Math.max(0, maxHandSize(st,R)-((st[R].hand||[]).length));
+      const ceiling=Math.min(room, (st[R].deck||[]).length);
+      return (due.want===undefined||due.want===null) ? ceiling : Math.min(due.want, ceiling);
+    },
+    // Swept away a round after it came due — round-end runs before the draw, so clearing it any
+    // earlier would cancel the very draw it promised.
+    onRoundEnd:(c)=>{
+      const st=c.state, R=c.self, round=(st.round||1);
+      st[R].effects=((st[R].effects)||[]).filter(e=> !(e && e.id==='spaceship_of_mass' && round>(e.from||0)+1));
+    }
+  },
+  // Spaceship of Time — winds your health back to where it stood when the PREVIOUS round opened.
+  // It is a rewind, not a heal: it undoes healing just as readily as damage, and it goes through
+  // setHealth, so can't-heal cannot stop it and it is not stealable. In the opening round there is
+  // no earlier round to reach for, so it falls back to the start of this one.
+  spaceship_of_time: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const back=(st[R].hpStartLastRound===undefined||st[R].hpStartLastRound===null)
+      ? st[R].hpStartThisRound : st[R].hpStartLastRound;
+    if(back===undefined||back===null){ c.log(st[R].name+' plays Spaceship of Time — nothing to wind back to yet.','effect'); return; }
+    const now=st[R].hp;
+    setHealth(st, R, back);
+    c.log(st[R].name+' plays Spaceship of Time — health winds back from '+now+' to '+st[R].hp+'.','effect');
+  } },
+  // Spaceship of Light — look at the next 10 and take up to 2 of them straight into hand. Being
+  // Endless, it goes back into the deck afterwards, so the fleet keeps coming round again.
+  spaceship_of_light: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const deck=st[R].deck||(st[R].deck=[]);
+    const top=deck.slice(0,10);
+    if(!top.length){ c.log(st[R].name+' plays Spaceship of Light — their deck is empty.','system'); return; }
+    markRevealed(st, R, top);
+    const chose=!!(st[R].choices && Object.prototype.hasOwnProperty.call(st[R].choices,'__spaceship'));
+    const picks=((st[R].choices||{})['__spaceship'])||[];
+    const take=[];
+    picks.forEach(uid=>{ if(take.length>=2) return; const cd=top.find(x=> x.uid===uid && !take.includes(x)); if(cd) take.push(cd); });
+    if(!chose){                                        // CPU: no menu was shown, so grab two
+      top.slice(0,2).forEach(cd=>{ if(take.length<2) take.push(cd); });
+    }
+    const room=Math.max(0, maxHandSize(st,R)-((st[R].hand||[]).length));
+    const moving=take.slice(0, room);
+    moving.forEach(cd=>{ const i=deck.indexOf(cd); if(i>=0) deck.splice(i,1); st[R].hand=[...(st[R].hand||[]), cd]; });
+    if(moving.length){
+      st[R].drewExtraNow=true;                         // counts as drawing extra, like Electoad
+      fireDrawTriggers(st, R, moving);
+    }
+    c.log(st[R].name+' plays Spaceship of Light — looks at '+top.length+' card'+(top.length===1?'':'s')+' and takes '+moving.length+'.','effect');
+  } },
+  // Don't Lighten the Lanterns — a trap planted in the opponent's deck, built the same way as
+  // From Far Away: a copy goes into their deck and only that planted copy does anything. The one
+  // still sitting in YOUR deck is inert if you draw it again — play it and it plants another.
+  // Their copy fires when THEY play it, cursing four cards left in their hand.
+  dont_lighten_the_lanterns: { onPlay:(c)=>{
+    const st=c.state, R=c.self, O=c.opp;
+    if(c.card._planted){                                  // they just played the trap
+      const hand=(st[R].hand||[]);
+      let cursed=0;
+      for(let i=0;i<4;i++){
+        const pool=hand.filter(x=> x && !isImmune(x) && x.cursedUntil===undefined);
+        if(!pool.length) break;
+        if(curseCard(st, pool[Math.floor(Math.random()*pool.length)])) cursed++;
+      }
+      c.log('  🏮 '+st[R].name+" plays Don't Lighten the Lanterns — "+(cursed
+        ? cursed+' card'+(cursed===1?'':'s')+' in their hand '+(cursed===1?'is':'are')+' Cursed!'
+        : 'but there was nothing left to curse.'),'effect');
+      return;
+    }
+    const copy=mkCard(CARDS_DATA.find(x=>x.id==='dont_lighten_the_lanterns'));
+    copy.owner=O;                                         // it lives in their deck now
+    copy._planted=true;                                   // only the planted copy has teeth
+    st[O].deck=[...(st[O].deck||[]), copy];
+    shuffleDeck(st, O);
+    c.log(st[R].name+" plays Don't Lighten the Lanterns — a cursed lantern is shuffled into "+st[O].name+"'s deck.",'effect');
+  } },
+  // Valora — a card you never get to hold: every draw sends it straight back into the deck, so it
+  // circles your deck forever. The draws are counted per player, and the THIRD one tops that deck
+  // back up to 40 with cards made out of nothing — both rarities, ordinary collectible cards only.
+  // Once and once only: after that Valora keeps circling for nothing.
+  // The refill pushes cards in directly instead of going through shuffleIntoDeck. That choke point
+  // feeds shuffledInThisRound, and up to 40 cards at once would hand Time and Space a payout of
+  // 200 health — the same reason Nightmare Warp moves its cards by hand.
+  valora: { onDraw:(c)=>{
+    const st=c.state, R=c.self;
+    const n=(st[R].valoraDraws||0)+1;
+    st[R].valoraDraws=n;
+    if(n!==3){
+      c.log('  ♾️ '+st[R].name+' draws Valora ('+n+'/3) — it slips back into the deck.','effect');
+      return true;
+    }
+    const deck=st[R].deck||(st[R].deck=[]);
+    // Valora slots back into the deck the moment this returns, so its place is held open here:
+    // topping up to a plain 40 would leave the deck sitting at 41.
+    const need=Math.max(0, 40-deck.length-1);
+    for(let i=0;i<need;i++){
+      const def=conjureRoll();                      // 90% common, 10% legendary, card by card
+      if(!def) break;
+      const made=mkCard(def);
+      made.owner=R;                                 // made out of nothing, so it counts as yours
+      deck.push(made);
+    }
+    if(need) shuffleDeck(st, R);
+    c.log('  ♾️ '+st[R].name+' draws Valora for the third time — '+(need
+      ? 'their deck is refilled to 40 with '+need+' new card'+(need===1?'':'s')+'!'
+      : 'but their deck is already full.'),'effect');
+    return true;                                    // consumed → endless puts it back in the deck
+  } },
+  // Aurora — you pay in blood for two cards out of nowhere. The wound goes through hurtSelf, so
+  // it behaves exactly like Bowler's: your own Block negates it, it counts towards The Forgotten
+  // Metal War, and that quest's shield turns it off entirely — while the conjuring still happens.
+  // The order on the card is the order here: if the 10 kills you the death-gate fires first and
+  // you never see the cards, the same deal Kong Fee offers.
+  aurora: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    c.hurtSelf(10);
+    const got=conjureCards(st, R, 2, 'common');
+    c.log(st[R].name+' plays Aurora — 10 damage to themselves, and conjures '+(got.length
+      ? got.map(x=>x.name).join(' and ')
+      : 'nothing (no room in hand)')+'.','effect');
+  } },
+  // Bowler the Misunderstood — hurts nobody but you. hurtSelf is the right channel for it: your
+  // own Block negates it, and the hit registers as damage taken this round, which is what turns
+  // cards like Spyro's Adventure on.
+  bowler_the_misunderstood: { onPlay:(c)=>{
+    c.hurtSelf(5);
+    c.log(c.state[c.self].name+' plays Bowler the Misunderstood — 5 damage to themselves.','damage');
+  } },
+  // Spyro's Adventure — 5 damage, or 25 once you have been hit this round, from any source
+  // including your own cards. Cards resolve in turn order, so the second player often has the
+  // first player's damage on the board already; that ordering is the point of the card.
+  spyros_adventure: { onPlay:(c)=>{
+    const st=c.state, meR=c.self, oR=c.opp;
+    const hurt=(st[meR].dmgTakenThisRound||0) > 0;
+    c.dealDmgTo(oR, hurt?25:5, false);
+    c.log(st[meR].name+" plays Spyro's Adventure — "+(hurt
+      ? 'already wounded this round ('+st[meR].dmgTakenThisRound+' damage taken) → 25 damage'
+      : 'unharmed so far this round → 5 damage')+'.','damage');
+  } },
+  // Weraa the Windcrafter — plants one Guardian Angel in your deck. shuffleIntoDeck is the single
+  // choke-point for this, so effects that intercept a shuffle (Devour Hope) still get their say.
+  weraa_the_windcrafter: { onPlay:(c)=>{
+    const st=c.state, R=c.self;
+    const def=CARDS_DATA.find(x=>x.id==='guardian_angel');
+    if(!def){ c.log('Guardian Angel is missing.','system'); return; }
+    const added=shuffleIntoDeck(st, R, mkCard(def));
+    c.log(st[R].name+' plays Weraa the Windcrafter — '+(added
+      ? 'a Guardian Angel is shuffled into their deck.'
+      : 'the Guardian Angel never made it into the deck.'),'effect');
+  } },
+  // Guardian Angel — the Block itself is handled by the block:true flag in the card data, exactly
+  // as it is for Croock and Linn; all this hook has to add is the healing.
+  guardian_angel: { onPlay:(c)=>{
+    c.heal(30);
+    c.log(c.state[c.self].name+' plays Guardian Angel — blocks and heals 30.','heal');
+  } },
   // ZOOM — peek at the bottom two of your own deck and optionally move them to the top, in the
   // order you picked (__zoom holds the uids, first = topmost). Anything you leave stays put.
   zoom: { onPlay:(c)=>{
@@ -3835,12 +4098,15 @@ const CARD_LOGIC = {
   // Wish Dralivering — transforms (Pyrax-style, via toHand) into a random non-legendary
   // Celebration card placed in your hand. The pool is read live from the card data, so any
   // Celebration card added later is automatically eligible. Legendary Celebrations (Larry) are out.
+  // Wish Dralivering — Conjure, narrowed to Celebration cards. It carries no Celebration tag
+  // itself, so it can never conjure a copy of itself. Going through conjureCards rather than
+  // toHand gains it the two rules every conjure follows: a full hand loses the card, and what
+  // it makes is stamped as yours (it came from no deck, so it never counts as the opponent's).
   wish_dralivering: { onPlay:(c)=>{
-    const pool=CARDS_DATA.filter(x=>x.collectible && x.rarity!=='legendary' && x.tags && x.tags.includes('celebration'));
-    if(pool.length===0){ c.log(c.state[c.self].name+' plays Wish Dralivering — but there are no Celebration cards to become.','system'); return; }
-    const pick=pool[Math.floor(Math.random()*pool.length)];
-    c.toHand(pick.id);
-    c.log(c.state[c.self].name+' plays Wish Dralivering — it transforms into '+pick.name+'!','effect');
+    const got=conjureCards(c.state, c.self, 1, 'common', 'celebration');
+    c.log(c.state[c.self].name+' plays Wish Dralivering — '+(got.length
+      ? 'conjures '+got[0].name+'!'
+      : 'but nothing was conjured.'),'effect');
   } },
   // Soul Shatter — Curse 2 random cards in the opponent's hand (Immune and already-Cursed cards
   // are skipped). curseCard stamps cursedUntil = round+1, so they have exactly next round to
@@ -4135,7 +4401,61 @@ function journeyLabel(dayId, opt){
 // A card is "takeable" by an effect unless it's immune. Immunity only matters in
 // hand/deck; callers that operate on the graveyard ignore this on purpose.
 function isImmune(card){ return !!(card && (card.immune || card._tempImmune)); }   // _tempImmune: round-scoped, granted by Quicksilver
-function takeable(card){ return !isImmune(card); }
+// ── IMPRISONED ──
+// A locked card. It sits in your hand taking up a slot and nothing can touch it: you cannot play
+// it, it cannot be discarded (by you or by your opponent), it cannot be stolen, swapped or given
+// away, and its when-drawn effect never fires. It does not wear off — something has to free it.
+// Everything that reaches into a hand asks isImprisoned first; freeCard is the only way out.
+function isImprisoned(card){ return !!(card && card.imprisoned); }
+function imprisonCard(card){ if(!card || card.imprisoned) return false; card.imprisoned=true; return true; }
+function freeCard(card){ if(!card || !card.imprisoned) return false; delete card.imprisoned; return true; }
+
+// ── CONJURE ──
+// Conjure N cards of a rarity: they are made out of nothing and land straight in your hand.
+// Conjuring is not drawing, so "when drawn" effects never fire — the same deal as the Enchanted
+// Orb from Kong Fee. The pool is every ordinary collectible card in the game, regardless of what
+// anyone owns or plays: no tokens, no quests, no blessings. Every pick is independent, so the same
+// card can turn up twice. A full hand means the rest is simply lost — conjure never makes room.
+// Conjured cards are stamped as yours: they came from no deck, so they never count as "played from
+// your opponent's deck" for Constellation Council Control.
+function conjurePool(rarity, tag){
+  return CARDS_DATA.filter(c=> c && c.collectible===true && c.type==='normal' && !c.noDeck
+    && (!rarity || c.rarity===rarity)
+    && (!tag || hasTag(c, tag)));
+}
+// When a conjure does not name a rarity, the rarity is rolled FIRST — 90% common, 10% legendary —
+// and only then a card is picked from within it. Picking straight out of the merged pool would
+// follow the pool's own shape instead: 74 commons against 21 legendaries is a 22% legendary rate,
+// which makes legendaries far too easy to come by.
+const CONJURE_LEGENDARY_CHANCE = 0.10;
+function conjureRoll(rarity, tag){
+  const want = rarity || (Math.random() < CONJURE_LEGENDARY_CHANCE ? 'legendary' : 'common');
+  let pool = conjurePool(want, tag);
+  if(!pool.length) pool = conjurePool(rarity, tag);   // that rarity has nothing → take what there is
+  return pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+}
+
+function conjureCards(state, r, n, rarity, tag){
+  const pool=conjurePool(rarity, tag);
+  const got=[];
+  if(!pool.length) return got;
+  for(let i=0;i<n;i++){
+    if((state[r].hand||[]).length >= maxHandSize(state, r)){
+      const lost=n-i;
+      log('  ✨ '+state[r].name+"'s hand is full — "+lost+' conjured card'+(lost===1?'':'s')+' lost.','system');
+      break;
+    }
+    const def=conjureRoll(rarity, tag);
+    if(!def) break;
+    const made=mkCard(def);
+    made.owner=r;                      // conjured by you: belongs to no deck, counts as yours
+    state[r].hand=[...(state[r].hand||[]), made];
+    got.push(made);
+  }
+  return got;
+}
+
+function takeable(card){ return !isImmune(card) && !isImprisoned(card); }
 function hasTag(card, tag){ return !!(card && card.tags && card.tags.includes(tag)); }
 // Enchanted: some cards have an extra "enchanted" part that only fires if you spend an
 // Enchanted Orb held in hand (chosen per card at reveal, like Split/Choose). isOrb finds
@@ -4145,7 +4465,7 @@ function hasEnchanted(card){ return !!(card && card.enchanted); }
 // Curse a card: it must be played within one full round or it rots away. Immune cards and
 // already-cursed cards are skipped. Returns true if it newly cursed the card.
 function curseCard(state, card){
-  if(!card || isImmune(card) || card.id==='best_friend_for_always' || card.cursedUntil!==undefined) return false;   // Best Friend can't be cursed
+  if(!card || isImmune(card) || isImprisoned(card) || card.id==='best_friend_for_always' || card.cursedUntil!==undefined) return false;   // Best Friend can't be cursed
   card.cursedUntil=(state.round||1)+1;
   return true;
 }
@@ -4349,8 +4669,32 @@ function cloneGs(gs){
 }
 
 // attacker is passed explicitly (defaults to opp(target)) so damage-source is unambiguous.
+// The Forgotten Metal War counts every wound you inflict on YOURSELF — whether by a card aimed at
+// you (Bowler) or one that catches both players (Nightmare Rush). Four of them and the quest pays
+// out a permanent shield: from then on your own cards can no longer hurt you.
+// The blow that COMPLETES the quest still lands; the shield covers everything after it.
+function selfHarmShielded(gs, r){ return !!(gs[r] && gs[r].selfHarmShield); }
+function noteSelfHarm(gs, r){
+  (gs[r].quests||[]).forEach(q=>{
+    if(q.done || q.id!=='forgotten_metal_war') return;
+    const def=QUEST_DEFS.forgotten_metal_war;
+    q.progress=(q.progress||0)+1;
+    log('  ⚙️ The Forgotten Metal War — '+q.progress+'/'+def.goal+' wounds dealt to themselves.','effect');
+    if(q.progress>=def.goal){
+      q.progress=def.goal; q.done=true;
+      gs[r].selfHarmShield=true;
+      log('  ★ Quest complete: '+def.name+'! '+gs[r].name+' can no longer be harmed by their own cards.','effect');
+    }
+  });
+}
+
 function dealDmg(gs,target,amt,trueDmg,attacker){
   if(attacker===undefined) attacker=opp(target);
+  const selfInflicted = (attacker===target);
+  if(selfInflicted && selfHarmShielded(gs,target)){
+    log('  ⚙️ '+gs[target].name+"'s own damage glances off — The Forgotten Metal War holds.",'effect');
+    return;
+  }
   if(!trueDmg&&gs[target].blocked){log('  → Blocked!','effect');return;}
   // Fold the amount through the attacker's damage modifiers (e.g. EXTERNUS +5).
   let dmg=foldValue(gs,attacker,'modifyDamage',amt,{target});
@@ -4358,6 +4702,8 @@ function dealDmg(gs,target,amt,trueDmg,attacker){
   gs[target].hp=Math.max(0,gs[target].hp-dmg);
   spawnFloater(target,'-'+dmg,false);
   gs[attacker].dmgDealtThisRound=(gs[attacker].dmgDealtThisRound||0)+dmg;
+  gs[target].dmgTakenThisRound=(gs[target].dmgTakenThisRound||0)+dmg;   // Spyro's Adventure reads this
+  if(selfInflicted && dmg>0) noteSelfHarm(gs, target);
   checkDeath(gs,target);   // death-gate: fires the instant HP hits 0 (may throw HALT)
 }
 
@@ -4388,6 +4734,17 @@ function tryInterceptHeal(gs, healTarget, amt){
 }
 
 function heal(gs,r,amt,raw){
+  if(thriveInstalled(gs)){
+    // Thrive to Suffer: the heal never happens — the same number arrives as damage. True damage,
+    // because this is not an attack and there is nothing to block; a Block card protects against
+    // what your opponent throws, not against your own medicine turning on you.
+    const hurt=Math.max(0, amt);
+    if(hurt>0){
+      log('  🥀 Thrive to Suffer — '+gs[r].name+"'s heal of "+hurt+' turns into '+hurt+' damage.','damage');
+      dealDmg(gs, r, hurt, true, opp(r));
+    }
+    return;
+  }
   if(!canHeal(gs,r)){ log('  → '+gs[r].name+" can't heal right now.",'system'); return; }  // First Day: no_heal, Nightmare Rush, ...
   if(!raw && gs[r].blessing && gs[r].blessing.id==='inner_focus') amt=Math.max(0, amt-5);   // Inner Focus: your OTHER heals are reduced by 5
   if(amt<=0) return;
@@ -4439,6 +4796,26 @@ function azazelPlay(c){
 }
 
 let SPLIT_CHAIN = 0;   // fuse: the forced-discard ping-pong can never run away
+
+// ── Thrive to Suffer (Alter Ego) ──
+// Two halves, one card, installed the same way World Splitter is: both halves in the same round or
+// nothing happens. Once installed it never lifts, and it reaches across BOTH players — every heal
+// either of you would receive lands as damage instead. The second half of the card belongs to the
+// player who installed it: cards that would wound them may be aimed at the opponent instead.
+const THRIVE_HALVES = ['thrive_to_suffer','thrive_to_suffer_b'];
+function thriveInstalled(state){ return !!(state && state._thriveToSuffer); }
+function thriveOwner(state){ return (state && state._thriveToSuffer && state._thriveToSuffer.by) || null; }
+function thrivePlay(c){
+  const st=c.state, r=c.self;
+  if(thriveInstalled(st)) return;                                   // already running, never doubles up
+  const row=(st[r].selectedCards||[]).filter(Boolean).map(x=>x.id);
+  if(!THRIVE_HALVES.every(id=>row.includes(id))){
+    c.log(st[r].name+' plays Thrive to Suffer — but only one half. Nothing takes root.','system');
+    return;
+  }
+  st._thriveToSuffer={by:r};
+  c.log(st[r].name+' plays BOTH halves of Thrive to Suffer — from now on every heal, for either player, cuts instead of mends.','effect');
+}
 
 function splitterPlay(c){
   const st=c.state, r=c.self;
@@ -4631,6 +5008,7 @@ const QUEST_DEFS = {
   sheera_the_dragon_tamer: { name:'Sheera the Dragon Tamer', goal:1, reward:'fimm' },
   hatching_egg: { name:'Hatching Egg', goal:1, reward:'mothers_firebreath' },
   seven_symphonies: { name:'7 Symphonies of Java', goal:7, reward:'seven_symphonies_system' },
+  forgotten_metal_war: { name:'The Forgotten Metal War', goal:4, reward:'self_harm_shield' },
 };
 
 // State/threshold quests complete on a game-state condition (not a counted event), so they are
@@ -6329,7 +6707,7 @@ if(document.fonts && document.fonts.ready){
 function makeCardEl(c){
   const rar = c.rarity==='legendary'?'legendary':'common';
   const el=document.createElement('div');
-  el.className='card '+rar+(c.unplayable?' unplayable':'')+(c.cursedUntil?' cursed':'');
+  el.className='card '+rar+(c.unplayable?' unplayable':'')+(c.cursedUntil?' cursed':'')+(isImprisoned(c)?' imprisoned':'');
   el.dataset.sig=(c.id||'?')+'|'+(c.name||'')+'|'+(c.text||'');   // key for the text-fit cache
   if(c.art){
     const z=FRAME_ZONES[rar];
@@ -6424,6 +6802,43 @@ async function onRevealPhase(gs){
                   : pick==='ab'    ? [b[0].uid, b[1].uid]
                   : pick==='ba'    ? [b[1].uid, b[0].uid] : [];
       choices['__zoom']=order;
+    }
+  }
+
+  // Thrive to Suffer — I own it, so anything that would wound me can be aimed at them instead.
+  if(thriveInstalled(gs) && thriveOwner(gs)===myRole){
+    const wounding=(gs[myRole].selectedCards||[]).filter(c=> c && c.selfDamage);
+    if(wounding.length){
+      const aim={};
+      for(const w of wounding){
+        const pick=await pickChoice([
+          {key:'self', label:'Take it yourself'},
+          {key:'opp',  label:'Aim at your opponent'}
+        ], w.name+' — who takes the damage?');
+        aim[w.uid]=(pick==='opp') ? 'opp' : 'self';
+      }
+      choices['__thriveAim']=aim;
+    }
+  }
+
+  // Spaceship of Mass — the free draw comes due this round, so ask how many before resolving.
+  if(massDrawDue(gs, myRole)){
+    const room=Math.max(0, maxHandSize(gs,myRole)-((me().hand||[]).length));
+    const ceiling=Math.min(room, (me().deck||[]).length);
+    if(ceiling>0){
+      const opts=[];
+      for(let n=0;n<=ceiling;n++) opts.push({key:String(n), label:(n===0?'Draw nothing':'Draw '+n+' card'+(n===1?'':'s'))});
+      const pick=await pickChoice(opts, 'Spaceship of Mass — how many cards?');
+      choices['__massDraw']=(pick===undefined||pick===null) ? ceiling : +pick;
+    }
+  }
+
+  // Spaceship of Light — I look at the next 10 and may take up to 2 of them.
+  if((gs[myRole].selectedCards||[]).some(c=>c && c.id==='spaceship_of_light')){
+    const top=((me().deck||[]).slice(0,10));
+    if(top.length){
+      const ch=await pickDiscards(top, Math.min(2, top.length), 'Spaceship of Light', 'draw', 0);
+      choices['__spaceship']=ch;
     }
   }
 
@@ -6785,6 +7200,25 @@ document.getElementById('btn-confirm').onclick=async()=>{
           localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__zoom: order});
         }
       }
+    // Spaceship of Mass — the free draw comes due this round, so ask how many before resolving.
+    if(massDrawDue(localGs, 'p1')){
+      const room=Math.max(0, maxHandSize(localGs,'p1')-((me().hand||[]).length));
+      const ceiling=Math.min(room, (me().deck||[]).length);
+      if(ceiling>0){
+        const opts=[];
+        for(let n=0;n<=ceiling;n++) opts.push({key:String(n), label:(n===0?'Draw nothing':'Draw '+n+' card'+(n===1?'':'s'))});
+        const pick=await pickChoice(opts, 'Spaceship of Mass — how many cards?');
+        localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__massDraw:(pick===undefined||pick===null) ? ceiling : +pick});
+      }
+    }
+
+      if((localGs.p1.selectedCards||[]).some(c=>c && c.id==='spaceship_of_light')){
+        const top=((me().deck||[]).slice(0,10));
+        if(top.length){
+          const ch=await pickDiscards(top, Math.min(2, top.length), 'Spaceship of Light', 'draw', 0);
+          localGs.p1.choices=Object.assign(localGs.p1.choices||{}, {__spaceship: ch});
+        }
+      }
       if((localGs.p1.selectedCards||[]).some(c=>c && c.id==='awakening_burst')){
         const hand=(me().hand||[]);
         const n=Math.min(4, hand.length);
@@ -6882,13 +7316,15 @@ function larryGains(state, r, peekCount){
   return { top, gained: top.filter(c=>hasTag(c,'celebration')).slice(0, space) };
 }
 
-function pickDiscards(hand, count, cardName, verb){
+function pickDiscards(hand, count, cardName, verb, minCount){
+  hand=(hand||[]).filter(c=> !isImprisoned(c));      // locked cards can never be chosen for anything
   return new Promise(resolve=>{
     const ov=document.getElementById('ov-discard');
     const grid=document.getElementById('discard-grid');
     const sub=document.getElementById('discard-sub');
     const btn=document.getElementById('btn-discard-confirm');
-    sub.textContent=cardName+': choose '+count+' card'+(count>1?'s':'')+' to '+(verb||'discard')+'.';
+    const need = (minCount===undefined) ? count : minCount;
+  sub.textContent = cardName+': choose '+(need===count ? count : 'up to '+count)+' card'+(count>1?'s':'')+' to '+(verb||'discard')+'.';
     const chosen=[];
     grid.innerHTML='';
     hand.forEach(c=>{
@@ -6901,11 +7337,11 @@ function pickDiscards(hand, count, cardName, verb){
           if(chosen.length>=count) return;
           chosen.push(c.uid); el.classList.add('selected');
         }
-        btn.disabled = chosen.length!==count;
+        btn.disabled = chosen.length<need || chosen.length>count;
       });
       grid.appendChild(el);
     });
-    btn.disabled=true;
+    btn.disabled = need>0;                 // "up to" pickers may be confirmed with nothing chosen
     btn.onclick=()=>{
       ov.classList.add('hidden');
       resolve(chosen);
@@ -7575,6 +8011,13 @@ function resolveRound(gs){
     state[r].skipRound=false;   // Dragonhood: the skipped round's select phase already used this
     state[r].dmgDealtLastRound=state[r].dmgDealtThisRound||0;
     state[r].dmgDealtThisRound=0;
+    state[r].dmgTakenLastRound=state[r].dmgTakenThisRound||0;
+    state[r].dmgTakenThisRound=0;
+    // Two snapshots of health, taken before any card resolves: where it stood when this round
+    // opened, and where it stood when the previous one did. Spaceship of Time winds back to the
+    // older of the two.
+    state[r].hpStartLastRound=state[r].hpStartThisRound;
+    state[r].hpStartThisRound=state[r].hp;
     state[r].shuffledInLastRound=state[r].shuffledInThisRound||0;   // Time and Space reads this
     state[r].shuffledInThisRound=0;
     state[r].healedThisRound=0;
@@ -7755,7 +8198,7 @@ function resolveRound(gs){
   // (Hindered gives no reprieve — the round still counts.)
   ['p1','p2'].forEach(r=>{
     const cur=state.round||1; const hand=state[r].hand||[]; const keep=[]; const gy=state[r].graveyard||[];
-    hand.forEach(c=>{ if(c&&c.cursedUntil && c.cursedUntil<=cur){ delete c.cursedUntil; gy.unshift(c); log(state[r].name+"'s "+c.name+' rots away (Cursed).','system'); } else keep.push(c); });
+    hand.forEach(c=>{ if(c && c.cursedUntil && c.cursedUntil<=cur && !isImprisoned(c)){ delete c.cursedUntil; gy.unshift(c); log(state[r].name+"'s "+c.name+' rots away (Cursed).','system'); } else keep.push(c); });
     state[r].hand=keep; state[r].graveyard=gy;
   });
 
@@ -7931,6 +8374,7 @@ function markRevealed(state, viewer, cards){
 function fireDrawTriggers(state, r, drawn){
   if(!drawn || !drawn.length) return;
   drawn.forEach(dc=>{
+    if(isImprisoned(dc)) return;             // locked: nothing about it activates
     const L=CARD_LOGIC[dc&&dc.id];
     if(L&&L.onDraw){
       log('🌀 '+state[r].name+' drew '+dc.name+' — its "when drawn" effect triggers.','effect');
