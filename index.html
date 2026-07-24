@@ -1741,7 +1741,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 // moment you sign in. If a client ever finds a profile stamped with a NEWER build than its
 // own, it knows it is out of date and refuses to touch your decks — that is what stopped an
 // old tab from eating a deck full of cards it had never heard of.
-const APP_VERSION = '2026-07-24T11:05:42';
+const APP_VERSION = '2026-07-24T11:45:22';
 let staleClient = false;   // true = this build is older than the one that last used this account
 
 const FB = initializeApp({
@@ -1986,8 +1986,8 @@ const CARDS_DATA = [
   // game start and shuffles the 4 Sins into it. Quest: play all 4 Sins. Once they're all
   // played you must survive ONE more full round — then you instantly win. The Sins are
   // noDeck tokens: they can ONLY arrive via Zorya.
-  // TODO: Sins 2-4 are still placeholders — names/texts/effects to be written. sin:true is
-  //       all the quest needs to count them; their own effect can be anything.
+  // All four Sins are written and working — Deep Envy, Deep Greed, Deep Lust and Deep Pride.
+  // sin:true is all the quest needs to count them; their own effects are independent.
   {id:'zorya', collectible:true, name:'Zorya, Goddess of the Deep', text:'Shuffle the 4 Sins into your deck. Quest: play all 4 Sins. Survive 1 more round afterwards: you instantly win the game.', rarity:'legendary', emoji:'🔱', quest:'zorya', type:'quest', art:'art/zorya.png'},
   {id:'constellation_council_control', collectible:true, name:'Constellation Council Control', text:"Quest: play 10 cards from your opponent's deck. Reward: your maximum hand size is increased by 2.", rarity:'legendary', emoji:'🔭', quest:'constellation_council_control', type:'quest', art:'art/constellation_council_control.png'},
   {id:'deep_sea_queen', collectible:true, name:'Deepsea Queen', text:"Swap a card in your hand with a random card in your opponent's hand.", rarity:'common', emoji:'🧜‍♀️', swapHands:true, type:'normal', art:'art/deep_sea_queen.png'},
@@ -2015,6 +2015,11 @@ const CARDS_DATA = [
   {id:'spaceship_of_mass', name:'Spaceship of Mass', text:'Endless. You may draw as many cards as you want next round.', rarity:'legendary', emoji:'🌌', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_mass.png'},
   {id:'spaceship_of_time', name:'Spaceship of Time', text:'Endless. Your health goes back in time 1 turn.', rarity:'legendary', emoji:'⏳', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_time.png'},
   {id:'spaceship_of_light', name:'Spaceship of Light', text:'Endless. Look at the next 10 cards of your deck: You may draw up to 2 of them this round.', rarity:'legendary', emoji:'🛸', noDeck:true, endless:true, type:'normal', art:'art/spaceship_of_light.png'},
+  {id:'lockwood', collectible:true, name:'Lockwood', text:'You Conjure 2 legendary cards and your opponent Conjures 2 common cards.', rarity:'legendary', emoji:'🔐', type:'normal', art:'art/lockwood.png'},
+  {id:'yukae', collectible:true, name:'Yukae', text:'Deal 25 true damage. Decrease with 5 for each card in your hand.', rarity:'common', emoji:'❄️', dealsDamage:true, dmg:25, type:'normal', art:'art/yukae.png'},
+  {id:'the_echo_chamber', collectible:true, name:'The Echo Chamber', text:'Permanently: Deal 10 damage at the end of each round that your opponent has the same amount of cards in their hand as you.', rarity:'legendary', emoji:'🔊', type:'normal', art:'art/the_echo_chamber.png'},
+  {id:'gamma_2', collectible:true, name:'Gamma 2', text:"Shuffle 2 Unexpected Invasions into your opponent's deck.", rarity:'common', emoji:'📡', type:'normal', art:'art/gamma_2.png'},
+  {id:'unexpected_invasion', name:'Unexpected Invasion', text:'When drawn: You are Hindered next round.', rarity:'common', emoji:'👾', noDeck:true, type:'normal', art:'art/unexpected_invasion.png'},
   {id:'valora', collectible:true, name:'Valora', text:'When drawn: Shuffle this card back into your deck. The third time you draw it: Refill your deck to 40 with random cards.', rarity:'legendary', emoji:'♾️', endless:true, type:'normal', art:'art/valora.png'},
   {id:'aurora', collectible:true, name:'Aurora', text:'Deal 10 damage to yourself. Conjure 2 common cards.', rarity:'common', emoji:'🌈', selfDamage:true, type:'normal', art:'art/aurora.png'},
   {id:'dont_lighten_the_lanterns', collectible:true, name:"Don't Lighten the Lanterns", text:"Shuffle this card into your opponent's deck. They curse 4 random cards in their hand when they play this card.", rarity:'common', emoji:'🏮', type:'normal', art:'art/dont_lighten_the_lanterns.png'},
@@ -2360,6 +2365,7 @@ function buildCtx(state, r, extra){
     addEffect: (e)=>{ (state[r].effects||(state[r].effects=[])).push(e); },   // install a persistent effect (for-the-rest-of-the-game)
     toVoid:    (card)=>{ (state[r].void||(state[r].void=[])).push(card); },     // destroy a card into the permanent void (unreachable, not even by Pyrax)
     setHindered:()=>{ state[r].hindered = true; },
+    setHinderedNext:()=>{ state[r].hinderedNext = true; },   // for triggers that fire during the draw
     log:       (msg, type)=> log(msg, type||'effect'),
     // --- Phase 3 helpers ---
     // gainHealth: raw HP gain (clamped), NOT routed through heal() — used by heal
@@ -2424,6 +2430,7 @@ const CARD_TOKENS = {
   mixed_energies:   { label:'Warp',        ids: ['dream_warp','nightmare_warp'] },
   weraa_the_windcrafter: { label:'Token',  ids: ['guardian_angel'] },
   ready_for_launch: { label:'Spaceship',   ids: SPACESHIP_IDS },
+  gamma_2:          { label:'Token',       ids: ['unexpected_invasion'] },
   opening_ceremony: { label:'Journey Day', ids: ['first_day','second_day','third_day','fourth_day','fifth_day'] }
 };
 const CARD_LOGIC = {
@@ -3408,6 +3415,71 @@ const CARD_LOGIC = {
     st[O].deck=[...(st[O].deck||[]), copy];
     shuffleDeck(st, O);
     c.log(st[R].name+" plays Don't Lighten the Lanterns — a cursed lantern is shuffled into "+st[O].name+"'s deck.",'effect');
+  } },
+  // Lockwood — the trade at the heart of the card: two legendaries for you, two commons for them.
+  // Both sides go through the ordinary conjure rules, so a full hand on either side simply loses
+  // what will not fit, and what each player gets is stamped as their own.
+  lockwood: { onPlay:(c)=>{
+    const st=c.state, R=c.self, O=c.opp;
+    const mine=conjureCards(st, R, 2, 'legendary');
+    const theirs=conjureCards(st, O, 2, 'common');
+    c.log(st[R].name+' plays Lockwood — conjures '+(mine.length
+      ? mine.map(x=>x.name).join(' and ')
+      : 'nothing')+', while '+st[O].name+' conjures '+(theirs.length
+      ? theirs.map(x=>x.name).join(' and ')
+      : 'nothing')+'.','effect');
+  } },
+  // Yukae — 25 true damage, blunted by 5 for every card you are still holding. The cards you play
+  // this round have already left your hand by the time this resolves, so emptying your hand is
+  // what sharpens it; sitting on a full hand puts it out altogether. It never goes below zero.
+  yukae: { onPlay:(c)=>{
+    const st=c.state, R=c.self, O=c.opp;
+    const held=(st[R].hand||[]).length;
+    const dmg=Math.max(0, 25 - held*5);
+    if(dmg>0) c.dealDmgTo(O, dmg, true);
+    c.log(st[R].name+' plays Yukae — holding '+held+' card'+(held===1?'':'s')+' → '+(dmg>0
+      ? dmg+' true damage.'
+      : 'their hand is too full, the blow fizzles.'),'damage');
+  } },
+  // The Echo Chamber — a standing effect that watches both hands. It is checked at the end of the
+  // round, after every card has resolved but before anyone draws, so how many cards you spend that
+  // round is what decides whether it fires. Ordinary damage, so a Block your opponent played that
+  // round still stops it. Two empty hands count as matching — nothing is still the same nothing.
+  the_echo_chamber: {
+    onPlay:(c)=>{
+      const st=c.state, R=c.self;
+      st[R].effects=[...(st[R].effects||[])];
+      if(!st[R].effects.some(e=> e && e.id==='the_echo_chamber')) st[R].effects.push({id:'the_echo_chamber'});
+      c.log(st[R].name+' plays The Echo Chamber — from now on, any round that ends with both hands level costs their opponent 10 damage.','effect');
+    },
+    onRoundEnd:(c)=>{
+      const st=c.state, R=c.self, O=c.opp;
+      const mine=(st[R].hand||[]).length, theirs=(st[O].hand||[]).length;
+      if(mine!==theirs) return;
+      c.dealDmgTo(O, 10, false);
+      c.log('  🔊 The Echo Chamber — both hands hold '+mine+' card'+(mine===1?'':'s')+': 10 damage to '+st[O].name+'.','damage');
+    }
+  },
+  // Gamma 2 — two Invasions are planted in the opponent's deck. They go through shuffleIntoDeck,
+  // which stamps them as theirs: the cards were never in your deck, so they are foreign to you and
+  // native to them, the same way Scavenger's planted copy works.
+  gamma_2: { onPlay:(c)=>{
+    const st=c.state, R=c.self, O=c.opp;
+    const def=CARDS_DATA.find(x=>x.id==='unexpected_invasion');
+    if(!def){ c.log('Unexpected Invasion is missing.','system'); return; }
+    const added=shuffleIntoDeck(st, O, [mkCard(def), mkCard(def)]);
+    c.log(st[R].name+' plays Gamma 2 — '+(added
+      ? '2 Unexpected Invasions are shuffled into '+st[O].name+"'s deck."
+      : 'the Invasions never reached the deck.'),'effect');
+  } },
+  // Unexpected Invasion — fires the moment they draw it and is spent doing so. It uses the
+  // next-round Hindered, because a plain setHindered here would be wiped by the reset that comes
+  // straight after the draw.
+  unexpected_invasion: { onDraw:(c)=>{
+    const st=c.state, R=c.self;
+    c.setHinderedNext();
+    c.log('  👾 '+st[R].name+' draws an Unexpected Invasion — they are Hindered next round.','effect');
+    return true;                                  // consumed → straight to the graveyard
   } },
   // Valora — a card you never get to hold: every draw sends it straight back into the deck, so it
   // circles your deck forever. The draws are counted per player, and the THIRD one tops that deck
@@ -8314,7 +8386,13 @@ function resolveRound(gs){
   state.p1.thaaDiscard=null; state.p2.thaaDiscard=null;   // Thaa — one round only
   state.curseDrawsNext=false;   // Bad Landing — one round only
   state.p1.noDraw=false; state.p2.noDraw=false;
-  state.p1.hindered=false; state.p2.hindered=false;
+  // "Hindered next round" set during the DRAW (Unexpected Invasion) cannot use the hindered flag
+  // itself: the draw happens moments before this line, so the flag would be wiped before it ever
+  // bit. hinderedNext survives that and becomes the real thing here, exactly one round later.
+  ['p1','p2'].forEach(pr=>{
+    state[pr].hindered = !!state[pr].hinderedNext;
+    state[pr].hinderedNext = false;
+  });
 
   // Quicksilver — a hand queued for immunity activates NOW, after the draw, so the cards drawn
   // entering this round are covered too. Every card in hand gets the temp flag; it is stripped
